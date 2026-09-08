@@ -23,13 +23,20 @@ pipeline:
                   identifier: installdependencies
                   name: install dependencies
                   spec:
+                    connectorRef: shadows_of_judgement_GCP_project
+                    image: node:20-bookworm
+                    shell: Sh
                     command: npm install
+                    privileged: false
                   timeout: ""
                   type: Run
               - step:
                   identifier: test
                   name: test
                   spec:
+                    connectorRef: shadows_of_judgement_GCP_project
+                    image: node:20-bookworm
+                    shell: Sh
                     command: npm run test
                   timeout: ""
                   type: Run
@@ -52,9 +59,10 @@ pipeline:
                   timeout: ""
                   type: BuildAndPushDockerRegistry
           platform:
-            arch: Amd64
             os: Linux
+            arch: Amd64
           runtime:
-            spec: {}
             type: Cloud
+            spec: {}
         type: CI
+        description: ""
