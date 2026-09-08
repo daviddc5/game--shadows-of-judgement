@@ -23,7 +23,7 @@ pipeline:
                   identifier: installdependencies
                   name: install dependencies
                   spec:
-                    connectorRef: shadows_of_judgement_GCP_project
+                    connectorRef: dockerhubpublic
                     image: node:20-bookworm
                     shell: Sh
                     command: npm install
