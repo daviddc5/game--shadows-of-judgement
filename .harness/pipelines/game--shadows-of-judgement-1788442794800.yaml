@@ -54,11 +54,11 @@ pipeline:
                   identifier: dockerbuild
                   name: docker_build
                   spec:
-                    caching: true
                     connectorRef: <+input>
-                    repo: hello/world
+                    repo: europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
                     tags:
-                      - latest
+                      - <+codebase.commitSha>
+                    caching: true
                   timeout: ""
                   type: BuildAndPushDockerRegistry
           platform:
