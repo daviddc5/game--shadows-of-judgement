@@ -34,7 +34,7 @@ pipeline:
                   identifier: test
                   name: test
                   spec:
-                    connectorRef: shadows_of_judgement_GCP_project
+                    connectorRef: dockerhubpublic
                     image: node:20-bookworm
                     shell: Sh
                     command: npm run test
@@ -44,6 +44,9 @@ pipeline:
                   identifier: build
                   name: build
                   spec:
+                    connectorRef: account.harnessImage
+                    image: node:20-bookworm
+                    shell: Sh
                     command: npm run build
                   timeout: ""
                   type: Run
