@@ -106,6 +106,8 @@ The game will be available at `http://localhost:5173`
 
 The game is deployed to **Google Cloud Run**. See [DEPLOYMENT.md](docs/DEPLOYMENT.md) for full setup instructions.
 
+Harness CI validates changes by installing dependencies, running the test suite, building the Vite client, and publishing a versioned container image to Artifact Registry.
+
 ```bash
 # Deploy to Cloud Run
 npm run deploy
