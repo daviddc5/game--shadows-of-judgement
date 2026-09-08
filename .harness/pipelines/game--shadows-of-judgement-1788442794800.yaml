@@ -44,7 +44,7 @@ pipeline:
                   identifier: build
                   name: build
                   spec:
-                    connectorRef: account.harnessImage
+                    connectorRef: dockerhubpublic
                     image: node:20-bookworm
                     shell: Sh
                     command: npm run build
