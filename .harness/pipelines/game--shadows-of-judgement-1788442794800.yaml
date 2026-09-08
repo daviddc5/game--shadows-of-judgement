@@ -54,7 +54,7 @@ pipeline:
                   identifier: dockerbuild
                   name: docker_build
                   spec:
-                    connectorRef: <+input>
+                    connectorRef: account.harnessImage
                     repo: europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
                     tags:
                       - <+codebase.commitSha>
