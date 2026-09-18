@@ -69,3 +69,89 @@ pipeline:
             spec: {}
         type: CI
         description: ""
+    - stage:
+        name: CD
+        identifier: CD
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: GoogleCloudRun
+          service:
+            serviceRef: shadows_of_judgement
+            serviceInputs:
+              serviceDefinition:
+                type: GoogleCloudRun
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: development
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: devcloudrun
+          execution:
+            steps:
+              - stepGroup:
+                  steps:
+                    - step:
+                        type: DownloadManifests
+                        name: DownloadManifests
+                        identifier: DownloadManifests
+                        spec: {}
+                        failureStrategies: []
+                    - step:
+                        type: GoogleCloudRunPrepareRollbackData
+                        name: Google Cloud Run Prepare Rollback Data
+                        identifier: Google_Cloud_Run_Prepare_Rollback_Data
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/google-cloud-run-plugin:1.0.9-linux-amd64
+                          imagePullPolicy: Always
+                    - step:
+                        type: GoogleCloudRunDeploy
+                        name: Google Cloud Run Deploy
+                        identifier: Google_Cloud_Run_Deploy
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/google-cloud-run-plugin:1.0.9-linux-amd64
+                          imagePullPolicy: Always
+                  name: Google Cloud Run Step Group
+                  identifier: Google_Cloud_Run_Step_Group
+                  sharedPaths:
+                    - /var/run
+                    - /var/lib/docker
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: default
+            rollbackSteps:
+              - stepGroup:
+                  identifier: Google_Cloud_Run_Rollback_Step_Group
+                  name: Google Cloud Run Rollback Step Group
+                  steps:
+                    - step:
+                        type: GoogleCloudRunRollback
+                        name: Google Cloud Run Rollback
+                        identifier: Google_Cloud_Run_Rollback
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/google-cloud-run-plugin:1.0.9-linux-amd64
+                          imagePullPolicy: Always
+                  sharedPaths:
+                    - /var/run
+                    - /var/lib/docker
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: default
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
