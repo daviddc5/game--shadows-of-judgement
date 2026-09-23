@@ -130,6 +130,8 @@ pipeline:
                         type: Secret
                         value: shadowskey
                     outputVariables: []
+                    delegateSelectors:
+                      - docker-delegate
                   timeout: 10m
             rollbackSteps: []
         tags: {}
