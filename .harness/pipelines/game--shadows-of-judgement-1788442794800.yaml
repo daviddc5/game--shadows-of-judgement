@@ -61,6 +61,11 @@ pipeline:
                     caching: true
                   timeout: ""
                   type: BuildAndPushDockerRegistry
+              - step:
+                  type: Run
+                  name: Run_4
+                  identifier: Run_4
+                  spec: {}
           platform:
             os: Linux
             arch: Amd64
