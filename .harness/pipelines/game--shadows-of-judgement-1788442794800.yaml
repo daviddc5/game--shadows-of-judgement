@@ -93,40 +93,39 @@ pipeline:
               - identifier: devcloudrun
           execution:
             steps:
-              - stepGroup:
-                  steps:
-                    - step:
-                        type: DownloadManifests
-                        name: DownloadManifests
-                        identifier: DownloadManifests
-                        spec: {}
-                        failureStrategies: []
-                    - step:
-                        type: GoogleCloudRunPrepareRollbackData
-                        name: Google Cloud Run Prepare Rollback Data
-                        identifier: Google_Cloud_Run_Prepare_Rollback_Data
-                        spec:
-                          connectorRef: account.harnessImage
-                          image: harness/google-cloud-run-plugin:1.0.9-linux-amd64
-                          imagePullPolicy: Always
-                    - step:
-                        type: GoogleCloudRunDeploy
-                        name: Google Cloud Run Deploy
-                        identifier: Google_Cloud_Run_Deploy
-                        spec:
-                          connectorRef: account.harnessImage
-                          image: harness/google-cloud-run-plugin:1.0.9-linux-amd64
-                          imagePullPolicy: Always
-                  name: Google Cloud Run Step Group
-                  identifier: Google_Cloud_Run_Step_Group
-                  sharedPaths:
-                    - /var/run
-                    - /var/lib/docker
-                  stepGroupInfra:
-                    type: KubernetesDirect
-                    spec:
-                      connectorRef: <+input>
-                      namespace: default
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          # Write service account key to file
+                          echo $GCP_KEY > /tmp/gcp-key.json
+
+                          # Authenticate gcloud
+                          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+
+                          # Deploy to Cloud Run
+                          gcloud run deploy shadows-of-judgment \
+                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/shadows-docker/shadows-of-judgement:<+artifact.tag> \
+                            --region europe-west1 \
+                            --project shadowsofjudgement \
+                            --allow-unauthenticated \
+                            --platform managed
+
+                          # Clean up key file
+                          rm /tmp/gcp-key.json
+                    environmentVariables:
+                      - name: GCP_KEY
+                        type: Secret
+                        value: shadowskey
+                    outputVariables: []
+                  timeout: 10m
             rollbackSteps:
               - stepGroup:
                   identifier: Google_Cloud_Run_Rollback_Step_Group
