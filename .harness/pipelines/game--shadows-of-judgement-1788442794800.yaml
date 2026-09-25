@@ -104,6 +104,10 @@ pipeline:
                       type: Inline
                       spec:
                         script: |-
+                          # Install gcloud
+                          curl -sSL https://sdk.cloud.google.com | bash -s -- --disable-prompts
+                          export PATH=$PATH:/root/google-cloud-sdk/bin
+
                           # Write service account key to file
                           echo $GCP_KEY > /tmp/gcp-key.json
 
@@ -112,13 +116,13 @@ pipeline:
 
                           # Deploy to Cloud Run
                           gcloud run deploy shadows-of-judgment \
-                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/shadows-docker/shadows-of-judgement:<+artifact.tag> \
+                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+artifact.tag> \
                             --region europe-west1 \
                             --project shadowsofjudgement \
                             --allow-unauthenticated \
                             --platform managed
 
-                          # Clean up key file
+                          # Clean up
                           rm /tmp/gcp-key.json
                     environmentVariables:
                       - name: GCP_KEY
