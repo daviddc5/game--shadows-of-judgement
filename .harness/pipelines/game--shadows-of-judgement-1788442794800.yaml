@@ -104,6 +104,7 @@ pipeline:
                       type: Inline
                       spec:
                         script: |-
+                          ls /usr/local/google-cloud-sdk/bin/
                           export PATH=$PATH:/usr/local/google-cloud-sdk/bin
 
                           echo $GCP_KEY > /tmp/gcp-key.json
