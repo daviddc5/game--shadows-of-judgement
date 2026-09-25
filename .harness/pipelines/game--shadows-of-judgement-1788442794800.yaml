@@ -104,17 +104,17 @@ pipeline:
                       type: Inline
                       spec:
                         script: |-
-                          # Install gcloud
-                          curl -sSL https://sdk.cloud.google.com | bash -s -- --disable-prompts
-                          export PATH=$PATH:/root/google-cloud-sdk/bin
+                          # Install gcloud via apt
+                          echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee /etc/apt/sources.list.d/google-cloud-sdk.list
+                          apt-get install -y apt-transport-https ca-certificates gnupg
+                          curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+                          apt-get update && apt-get install -y google-cloud-cli
 
-                          # Write service account key to file
+                          # Authenticate
                           echo $GCP_KEY > /tmp/gcp-key.json
-
-                          # Authenticate gcloud
                           gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
 
-                          # Deploy to Cloud Run
+                          # Deploy
                           gcloud run deploy shadows-of-judgment \
                             --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+artifact.tag> \
                             --region europe-west1 \
@@ -122,7 +122,6 @@ pipeline:
                             --allow-unauthenticated \
                             --platform managed
 
-                          # Clean up
                           rm /tmp/gcp-key.json
                     environmentVariables:
                       - name: GCP_KEY
