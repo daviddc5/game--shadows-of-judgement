@@ -120,7 +120,7 @@ pipeline:
                           gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
                           gcloud run deploy shadows-of-judgment \
-                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+artifact.tag> \
+                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+codebase.commitSha> \
                             --region europe-west1 \
                             --project shadowsofjudgement \
                             --allow-unauthenticated \

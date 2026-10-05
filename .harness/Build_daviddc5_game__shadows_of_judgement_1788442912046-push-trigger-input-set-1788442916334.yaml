@@ -12,3 +12,21 @@ inputSet:
             type: branch
             spec:
               branch: <+trigger.branch>
+    stages:
+      - stage:
+          identifier: CD
+          type: Deployment
+          spec:
+            service:
+              serviceInputs:
+                serviceDefinition:
+                  type: GoogleCloudRun
+                  spec:
+                    artifacts:
+                      primary:
+                        primaryArtifactRef: shadowsdocker
+                        sources:
+                          - identifier: shadowsdocker
+                            type: GoogleArtifactRegistry
+                            spec:
+                              version: <+codebase.commitSha>
