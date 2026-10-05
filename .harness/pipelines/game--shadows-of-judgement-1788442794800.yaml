@@ -104,20 +104,30 @@ pipeline:
                       type: Inline
                       spec:
                         script: |-
-                          ls /usr/local/google-cloud-sdk/bin/
-                          export PATH=$PATH:/usr/local/google-cloud-sdk/bin
+                          set -euo pipefail
+                          workdir=$(mktemp -d)
+                          trap 'rm -rf "$workdir"' EXIT
+                          export CLOUDSDK_CONFIG="$workdir/config"
 
-                          echo $GCP_KEY > /tmp/gcp-key.json
-                          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+                          if ! command -v gcloud >/dev/null 2>&1; then
+                            curl -fsSL --retry 3 https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-558.0.0-linux-x86_64.tar.gz -o "$workdir/gcloud.tar.gz"
+                            tar -xzf "$workdir/gcloud.tar.gz" -C "$workdir"
+                            export PATH="$workdir/google-cloud-sdk/bin:$PATH"
+                          fi
+
+                          printf '%s' "$GCP_KEY" > "$workdir/key.json"
+                          chmod 600 "$workdir/key.json"
+                          gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
                           gcloud run deploy shadows-of-judgment \
                             --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+artifact.tag> \
                             --region europe-west1 \
                             --project shadowsofjudgement \
                             --allow-unauthenticated \
-                            --platform managed
+                            --platform managed \
+                            --quiet
 
-                          rm /tmp/gcp-key.json
+                          gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.latestReadyRevisionName)' --quiet
                     environmentVariables:
                       - name: GCP_KEY
                         type: Secret
