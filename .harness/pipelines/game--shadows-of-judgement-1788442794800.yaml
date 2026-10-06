@@ -135,7 +135,7 @@ pipeline:
                     environmentVariables:
                       - name: GCP_KEY
                         type: Secret
-                        value: shadowsofjudgementkey
+                        value: gcp-key-fresh
                     outputVariables: []
                     delegateSelectors:
                       - docker-delegate
