@@ -142,15 +142,6 @@ export default class CardHand {
       })
       .setOrigin(0.5);
 
-    const detailsHint = this.scene.add
-      .text(0, 16, "Tap for details", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "11px",
-        color: isAffordable ? "#888888" : "#555555",
-        align: "center",
-      })
-      .setOrigin(0.5);
-
     // Energy cost and speed display (side by side at bottom)
     const costColor = isAffordable ? "#ffffff" : "#666666";
     const costText = this.scene.add
@@ -185,7 +176,6 @@ export default class CardHand {
       typeChipBg,
       typeChipText,
       summaryText,
-      detailsHint,
       costText,
       speedText,
     ]);

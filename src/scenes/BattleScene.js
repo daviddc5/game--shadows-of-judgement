@@ -1814,29 +1814,6 @@ export default class BattleScene extends Phaser.Scene {
       ease: "Sine.easeInOut",
     });
 
-    // Add "RESOLVES FIRST" text above/below the card
-    const textY = isPlayer ? targetY - 120 : targetY + 120;
-    const priorityText = this.add
-      .text(375, textY, "⚡ RESOLVES FIRST ⚡", {
-        fontSize: "16px",
-        color: "#ffd700",
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 3,
-      })
-      .setOrigin(0.5)
-      .setDepth(102);
-    targetObjects.push(priorityText);
-
-    // Pulse the text
-    this.tweens.add({
-      targets: priorityText,
-      scale: 1.1,
-      duration: 400,
-      yoyo: true,
-      repeat: 2,
-      ease: "Sine.easeInOut",
-    });
   }
 
   createRevealedPlayerCard() {
