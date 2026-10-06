@@ -28,10 +28,6 @@ export default class StatBarGroup {
     const value = this.scene.stats[key];
 
     const barWidth = 200;
-    const barHeight = 24;
-    const labelWidth = 160;
-
-    // Label with prefix
     const prefix = isPositive ? "+ " : "- ";
     const labelText = this.scene.add
       .text(this.x, y, prefix + label, {
@@ -43,43 +39,24 @@ export default class StatBarGroup {
       .setOrigin(0, 0.5);
     this.objects.push(labelText);
 
-    // Container for bar and border
-    const barY = y + 22;
-
-    // Border (slightly larger than bar)
-    const border = this.scene.add
-      .rectangle(this.x, barY, barWidth + 4, barHeight + 4, 0x666666)
-      .setOrigin(0, 0.5);
-    this.objects.push(border);
-
-    // Background bar (dark)
-    const background = this.scene.add
-      .rectangle(this.x + 2, barY, barWidth, barHeight, 0x222222)
-      .setOrigin(0, 0.5);
-    this.objects.push(background);
-
-    // Foreground bar (colored, animated)
     const bar = this.scene.add
-      .rectangle(this.x + 2, barY, (value / 100) * barWidth, barHeight, color)
+      .rectangle(this.x + 2, y, (value / 100) * barWidth, 1, color)
       .setOrigin(0, 0.5);
-    this.objects.push(bar);
+    bar.setVisible(false);
 
-    // Store current value for change detection
     bar.setData("currentValue", value);
 
-    // Store reference with isPositive flag
     this.bars[key] = {
       bar,
       color,
       x: this.x + 2,
-      y: barY,
+      y,
       maxWidth: barWidth,
-      isPositive: isPositive, // Track whether this stat is positive or negative
+      isPositive,
     };
 
-    // Value text (inside the bar, right aligned)
     const valueText = this.scene.add
-      .text(this.x + barWidth - 10, barY, value, {
+      .text(this.x + barWidth - 10, y, value, {
         fontFamily: "Arial, sans-serif",
         fontSize: "16px",
         color: "#ffffff",
