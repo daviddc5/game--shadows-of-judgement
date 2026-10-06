@@ -98,6 +98,20 @@ pipeline:
           execution:
             steps:
               - step:
+                  type: HarnessApproval
+                  name: Approve production deployment
+                  identifier: Approve_production_deployment
+                  spec:
+                    approvalMessage: "Approve deploying this build to the public Shadows of Judgment Cloud Run service."
+                    includePipelineExecutionHistory: true
+                    isAutoRejectEnabled: false
+                    approvers:
+                      userGroups:
+                        - _account_all_users
+                      minimumCount: 1
+                    approverInputs: []
+                  timeout: 1d
+              - step:
                   type: ShellScript
                   name: ShellScript_1
                   identifier: ShellScript_1
