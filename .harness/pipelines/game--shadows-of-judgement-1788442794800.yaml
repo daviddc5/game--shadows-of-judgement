@@ -108,8 +108,12 @@ pipeline:
                 spec:
                   artifacts:
                     primary:
-                      primaryArtifactRef: <+input>
-                      sources: <+input>
+                      primaryArtifactRef: shadowsdocker
+                      sources:
+                        - identifier: shadowsdocker
+                          type: GoogleArtifactRegistry
+                          spec:
+                            version: <+codebase.commitSha>
           environment:
             environmentRef: development
             deployToAll: false
@@ -117,6 +121,51 @@ pipeline:
               - identifier: devcloudrun
           execution:
             steps:
+              - step:
+                  type: ShellScript
+                  name: Record serving revision
+                  identifier: Record_serving_revision
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          set -euo pipefail
+                          workdir=$(mktemp -d)
+                          trap 'rm -rf "$workdir"' EXIT
+                          export CLOUDSDK_CONFIG="$workdir/config"
+
+                          if ! command -v gcloud >/dev/null 2>&1; then
+                            curl -fsSL --retry 3 https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-558.0.0-linux-x86_64.tar.gz -o "$workdir/gcloud.tar.gz"
+                            tar -xzf "$workdir/gcloud.tar.gz" -C "$workdir"
+                            export PATH="$workdir/google-cloud-sdk/bin:$PATH"
+                          fi
+
+                          printf '%s' "$GCP_KEY" > "$workdir/key.json"
+                          chmod 600 "$workdir/key.json"
+                          gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
+
+                          previous_revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format=json --quiet | python3 -c 'import json,sys; traffic=json.load(sys.stdin)["status"]["traffic"]; assert len(traffic)==1 and traffic[0]["percent"]==100, "Expected one revision with 100% traffic"; print(traffic[0]["revisionName"])')
+                          printf 'Serving before deployment: %s\n' "$previous_revision"
+                    environmentVariables:
+                      - name: GCP_KEY
+                        type: Secret
+                        value: gcp-key-fresh
+                    outputVariables:
+                      - name: previous_revision
+                        type: String
+                        value: previous_revision
+                    delegateSelectors:
+                      - docker-delegate
+                  timeout: 10m
+                  failureStrategies:
+                    - onFailure:
+                        errors:
+                          - AllErrors
+                        action:
+                          type: Abort
               - step:
                   type: ShellScript
                   name: ShellScript_1
@@ -128,29 +177,85 @@ pipeline:
                       type: Inline
                       spec:
                         script: |-
-                          ls /usr/local/google-cloud-sdk/bin/
-                          export PATH=$PATH:/usr/local/google-cloud-sdk/bin
+                          set -euo pipefail
+                          workdir=$(mktemp -d)
+                          trap 'rm -rf "$workdir"' EXIT
+                          export CLOUDSDK_CONFIG="$workdir/config"
 
-                          echo $GCP_KEY > /tmp/gcp-key.json
-                          gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+                          if ! command -v gcloud >/dev/null 2>&1; then
+                            curl -fsSL --retry 3 https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-558.0.0-linux-x86_64.tar.gz -o "$workdir/gcloud.tar.gz"
+                            tar -xzf "$workdir/gcloud.tar.gz" -C "$workdir"
+                            export PATH="$workdir/google-cloud-sdk/bin:$PATH"
+                          fi
+
+                          printf '%s' "$GCP_KEY" > "$workdir/key.json"
+                          chmod 600 "$workdir/key.json"
+                          gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
                           gcloud run deploy shadows-of-judgment \
-                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+artifact.tag> \
+                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+codebase.commitSha> \
                             --region europe-west1 \
                             --project shadowsofjudgement \
                             --allow-unauthenticated \
-                            --platform managed
+                            --platform managed \
+                            --quiet
 
-                          rm /tmp/gcp-key.json
+                          service_url=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.url)' --quiet)
+                          curl -fsSL --retry 3 --retry-delay 2 --max-time 20 "$service_url/" > /dev/null
                     environmentVariables:
                       - name: GCP_KEY
                         type: Secret
-                        value: shadowsofjudgementkey
+                        value: gcp-key-fresh
                     outputVariables: []
                     delegateSelectors:
                       - docker-delegate
                   timeout: 10m
-            rollbackSteps: []
+            rollbackSteps:
+              - step:
+                  type: ShellScript
+                  name: Restore serving revision
+                  identifier: Restore_serving_revision
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          set -euo pipefail
+                          case "$PREVIOUS_REVISION" in
+                            shadows-of-judgment-*) ;;
+                            *) printf 'Missing or invalid prior revision\n' >&2; exit 1 ;;
+                          esac
+
+                          workdir=$(mktemp -d)
+                          trap 'rm -rf "$workdir"' EXIT
+                          export CLOUDSDK_CONFIG="$workdir/config"
+
+                          if ! command -v gcloud >/dev/null 2>&1; then
+                            curl -fsSL --retry 3 https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-558.0.0-linux-x86_64.tar.gz -o "$workdir/gcloud.tar.gz"
+                            tar -xzf "$workdir/gcloud.tar.gz" -C "$workdir"
+                            export PATH="$workdir/google-cloud-sdk/bin:$PATH"
+                          fi
+
+                          printf '%s' "$GCP_KEY" > "$workdir/key.json"
+                          chmod 600 "$workdir/key.json"
+                          gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
+
+                          gcloud run services update-traffic shadows-of-judgment --region europe-west1 --project shadowsofjudgement --to-revisions "$PREVIOUS_REVISION=100" --quiet
+                          gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format=json --quiet | python3 -c 'import json,os,sys; traffic=json.load(sys.stdin)["status"]["traffic"]; assert len(traffic)==1 and traffic[0]["percent"]==100 and traffic[0]["revisionName"]==os.environ["PREVIOUS_REVISION"], "Rollback traffic does not match the prior revision"'
+                          printf 'Restored 100%% of traffic to %s\n' "$PREVIOUS_REVISION"
+                    environmentVariables:
+                      - name: GCP_KEY
+                        type: Secret
+                        value: gcp-key-fresh
+                      - name: PREVIOUS_REVISION
+                        type: String
+                        value: <+execution.steps.Record_serving_revision.output.outputVariables.previous_revision>
+                    outputVariables: []
+                    delegateSelectors:
+                      - docker-delegate
+                  timeout: 10m
         tags: {}
         failureStrategies:
           - onFailure:
