@@ -380,12 +380,12 @@ export default class CaseBattleScene extends Phaser.Scene {
     const outline = this.cardOutline(style);
     const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(3, style.edge);
 
-    const icon = this.add.image(left + 18, top + 16, iconKey(card.type)).setDisplaySize(20, 20).setTint(style.ink);
+    const icon = this.add.image(left + 22, top + 19, iconKey(card.type)).setDisplaySize(28, 28).setTint(style.ink);
     const typeLabel = this.add
-      .text(left + 32, top + 16, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "17px", color: ink })
+      .text(left + 40, top + 19, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "17px", color: ink })
       .setOrigin(0, 0.5);
     const cost = this.add
-      .text(-left - 10, top + 16, `${card.cost} ⬢`, {
+      .text(-left - 10, top + 19, `${card.cost} ⬢`, {
         fontFamily: FONT_BODY,
         fontSize: "18px",
         fontStyle: "600",
@@ -437,8 +437,8 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   /**
    * The art box. A card with an `art` texture key (loaded in BootScene from
-   * public/assets/images/cards/) shows its picture; otherwise a drawn night
-   * scene with the card type's symbol (src/ui/cardArtPlaceholder.js).
+   * public/assets/images/cards/) shows its picture; otherwise a drawn scene
+   * for the card type (src/ui/cardArtPlaceholder.js).
    */
   buildCardArt(card, side, style) {
     if (card.art && this.textures.exists(card.art)) {
