@@ -64,9 +64,9 @@ After several rounds of look boards, the owner chose:
 ### Telling cards apart, and card art
 
 Cards looked too alike, so each type has its own **symbol** (crown, shield,
-mask, dagger, bolt, ink drop: `src/ui/cardIcons.js`) and its own **frame**
-(Power double border, Counter dashed, Bait clipped corner, Ambush ink bar,
-Quick thin line: `CARD_FRAMES` in `CaseBattleScene.js`).
+mask, dagger, bolt, ink drop: `src/ui/cardIcons.js`). Per-type frames (a
+dashed Counter border, clipped corners) were tried and dropped: the owner
+prefers every card to share one plain border.
 
 Every card has an **art box**. Owning art is a big part of why people love
 card games, so art is a long-term goal; the owner may learn to draw or hire an

@@ -39,64 +39,6 @@ const TYPE_NAMES = {
   AMBUSH: "Ambush",
 };
 
-const dashedRect = (g, w, h, dash, gap) => {
-  const edges = [
-    [-w / 2, -h / 2, w / 2, -h / 2],
-    [w / 2, -h / 2, w / 2, h / 2],
-    [w / 2, h / 2, -w / 2, h / 2],
-    [-w / 2, h / 2, -w / 2, -h / 2],
-  ];
-  for (const [x1, y1, x2, y2] of edges) {
-    const len = Math.hypot(x2 - x1, y2 - y1);
-    for (let d = 0; d < len; d += dash + gap) {
-      const a = d / len;
-      const b = Math.min(d + dash, len) / len;
-      g.lineBetween(x1 + (x2 - x1) * a, y1 + (y2 - y1) * a, x1 + (x2 - x1) * b, y1 + (y2 - y1) * b);
-    }
-  }
-};
-
-/**
- * Each card type has its own frame so cards read differently at a glance.
- * `edgeWidth` is the main border; `draw` adds the type's detail on top
- * (coordinates are relative to the card's centre). `paper` is the page colour.
- */
-const CARD_FRAMES = {
-  NORMAL: { edgeWidth: 3, draw() {} },
-  QUICK: { edgeWidth: 1.5, draw() {} },
-  POWER: {
-    edgeWidth: 3,
-    draw(g, style) {
-      g.lineStyle(1.5, style.ink, 0.9).strokeRect(-CARD_W / 2 + 6, -CARD_H / 2 + 6, CARD_W - 12, CARD_H - 12);
-    },
-  },
-  COUNTER: {
-    edgeWidth: 0,
-    draw(g, style) {
-      g.lineStyle(3, style.edge, 1);
-      dashedRect(g, CARD_W, CARD_H, 12, 7);
-    },
-  },
-  BAIT: {
-    edgeWidth: 3,
-    draw(g, style, paper) {
-      // A clipped top-right corner.
-      const x = CARD_W / 2;
-      const y = -CARD_H / 2;
-      g.fillStyle(paper, 1).fillTriangle(x - 20, y - 5, x + 5, y - 5, x + 5, y + 20);
-      g.lineStyle(3, style.edge, 1).lineBetween(x - 20, y, x, y + 20);
-      if (style.outline != null) g.lineStyle(1.5, style.outline, 1).lineBetween(x - 22, y - 2, x + 2, y + 22);
-    },
-  },
-  AMBUSH: {
-    edgeWidth: 3,
-    draw(g, style) {
-      // An ink bar down the left side.
-      g.fillStyle(style.ink, 1).fillRect(-CARD_W / 2 + 4, -CARD_H / 2 + 30, 6, CARD_H - 60);
-    },
-  },
-};
-
 const wait = (scene, ms) =>
   new Promise((resolve) => scene.time.delayedCall(ms, resolve));
 
@@ -429,15 +371,14 @@ export default class CaseBattleScene extends Phaser.Scene {
     const left = -CARD_W / 2;
     const c = this.add.container(0, 0);
     const outline = this.cardOutline(style);
-    const frame = CARD_FRAMES[card.type] ?? CARD_FRAMES.NORMAL;
-    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(frame.edgeWidth, style.edge);
+    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(3, style.edge);
 
     const icon = this.add.image(left + 18, top + 16, iconKey(card.type)).setDisplaySize(20, 20).setTint(style.ink);
     const typeLabel = this.add
       .text(left + 32, top + 16, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "17px", color: ink })
       .setOrigin(0, 0.5);
     const cost = this.add
-      .text(-left - 10 - (card.type === "BAIT" ? 14 : 0), top + 16, `${card.cost} ⬢`, {
+      .text(-left - 10, top + 16, `${card.cost} ⬢`, {
         fontFamily: FONT_BODY,
         fontSize: "18px",
         fontStyle: "600",
@@ -480,14 +421,10 @@ export default class CaseBattleScene extends Phaser.Scene {
       .text(0, CARD_H / 2 - 18, ruleText, { fontFamily: FONT_BODY, fontSize: "16px", color: ink })
       .setOrigin(0.5);
 
-    const decor = this.add.graphics();
-    frame.draw(decor, style, this.z(SLOT.player.y).paper);
-
-    c.add([outline, bg, ...art, decor, icon, typeLabel, cost, name, big, rule]);
+    c.add([outline, bg, ...art, icon, typeLabel, cost, name, big, rule]);
     c.setSize(CARD_W, CARD_H);
     c.bg = bg;
     c.edge = style.edge;
-    c.edgeWidth = frame.edgeWidth;
     return c;
   }
 
@@ -583,7 +520,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.handCards.forEach((c) => {
       const selected = c.index === index;
       this.tweens.add({ targets: c, y: selected ? HAND_Y - 40 : HAND_Y, scale: selected ? 1.06 : 1, duration: 140 });
-      c.bg.setStrokeStyle(selected ? 5 : c.edgeWidth, selected ? this.theme.red : c.edge);
+      c.bg.setStrokeStyle(selected ? 5 : 3, selected ? this.theme.red : c.edge);
     });
     this.playButton.setEnabled(index !== null);
   }
