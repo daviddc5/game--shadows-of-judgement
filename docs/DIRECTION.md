@@ -61,6 +61,10 @@ by whether they give players more to read, not more to calculate.
 3. **Later: variety.** Either selectable characters with one passive ability each
    (cheap step toward the long-term teams idea), or a single-player campaign of
    escalating cases with card rewards between fights.
+   Long term, the owner wants more detectives and vigilantes (keeping the
+   Detective vs Vigilante split), personalisable decks, and a shop for opening
+   cards, with shared and character-specific cards. This is also the main
+   marketing hook. See [COLLECTION_AND_SHOP.md](COLLECTION_AND_SHOP.md).
 4. **Visual pass.** Unify title, menu and lobby screens with the battle screen
    (they still use the old plain style), add sound, settle the art direction.
 5. ~~Port multiplayer~~ Done: the server runs the same rules engine, and the
@@ -68,7 +72,8 @@ by whether they give players more to read, not more to calculate.
 
 ## Known issues and housekeeping
 
-- `Death Note.ttf` and the `lCards` / `kiraCards` names are an IP risk; replace
-  before promoting the game.
+- `Death Note.ttf` is copyrighted and must be replaced (the owner loves its
+  look, so pick an openly licensed font with a similar feel). The old
+  `lCards` / `kiraCards` names were removed with the old code.
 - Card type names (QUICK / NORMAL) no longer describe anything since speed was
   removed. Consider MINOR / MAJOR.
