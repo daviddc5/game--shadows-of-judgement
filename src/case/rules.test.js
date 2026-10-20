@@ -64,6 +64,38 @@ describe("Case meter rules", () => {
     expect(state.sides.vigilante.energy).toBe(10 - cost);
   });
 
+  it("BAIT pushes big when the opponent COUNTERs, and the COUNTER fizzles", () => {
+    const state = setup("COUNTER", "BAIT");
+    const bait = state.sides.vigilante.hand[0];
+    const { events } = resolveTurn(state, play(true, true));
+    expect(events.map((e) => e.type)).toEqual(["fizzle", "sprung"]);
+    expect(state.caseValue).toBe(50 - pushFor(state, bait, bait.bigPush));
+  });
+
+  it("BAIT only pushes a little against anything else", () => {
+    const state = setup("QUICK", "BAIT");
+    const quick = state.sides.detective.hand[0];
+    const bait = state.sides.vigilante.hand[0];
+    resolveTurn(state, play(true, true));
+    expect(state.caseValue).toBe(50 + pushFor(state, quick) - pushFor(state, bait));
+  });
+
+  it("AMBUSH pushes big when the opponent WAITs", () => {
+    const state = setup("AMBUSH", "QUICK");
+    const ambush = state.sides.detective.hand[0];
+    const { events } = resolveTurn(state, play(true, false));
+    expect(events.map((e) => e.type)).toEqual(["wait", "sprung"]);
+    expect(state.caseValue).toBe(50 + pushFor(state, ambush, ambush.bigPush));
+  });
+
+  it("AMBUSH only pushes a little when the opponent plays a card", () => {
+    const state = setup("AMBUSH", "QUICK");
+    const ambush = state.sides.detective.hand[0];
+    const quick = state.sides.vigilante.hand[0];
+    resolveTurn(state, play(true, true));
+    expect(state.caseValue).toBe(50 + pushFor(state, ambush) - pushFor(state, quick));
+  });
+
   it("waiting banks bonus energy", () => {
     const state = setup("QUICK", "QUICK");
     state.sides.vigilante.energy = 3;

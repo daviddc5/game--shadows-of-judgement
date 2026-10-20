@@ -12,8 +12,14 @@ Single player uses it (`CaseBattleScene`); multiplayer still runs the original
   Both cards land together and their pushes add up; the case ends if the net
   result reaches an end. (Card speed was removed: it only mattered on the final
   turn.)
-- **COUNTER only stops POWER.** It cancels the POWER card (its energy is still
-  spent) and pushes for its owner. Against anything else it fizzles.
+- **Each special card beats one thing** (a mind-game loop):
+
+  | Card | Does | Beats | Loses to |
+  | --- | --- | --- | --- |
+  | POWER | Big push | Ordinary cards | COUNTER |
+  | COUNTER | Cancels POWER (its energy is still spent) and pushes; fizzles otherwise | POWER | BAIT |
+  | BAIT | Small push, big push if the opponent COUNTERs | COUNTER | Ordinary cards |
+  | AMBUSH | Small push, big push if the opponent WAITs | WAIT | Ordinary cards |
 - **Scarce, visible energy.** +2 per turn, max 10. WAIT gives +1 extra. Both
   players see each other's energy and recent card types, so 6+ banked energy
   signals a possible POWER card.
@@ -40,5 +46,6 @@ length. Pass rule overrides to try changes without editing code:
 npm run simulate -- 10000 escalationFlat=2 energyPerTurn=1
 ```
 
-Current defaults: detective 50.1% / vigilante 49.6%, median game 8 turns,
-about 13% decided by the turn-12 verdict.
+Current defaults: detective 50.2% / vigilante 49.7%, median game 7 turns,
+about 8% decided by the turn-12 verdict. The simulator also reports how often
+each card type is played and how often COUNTER, BAIT and AMBUSH pay off.

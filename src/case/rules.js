@@ -16,11 +16,18 @@ export const RULES = {
   escalationFlat: 4, // flat push added per turn: push + escalationFlat * (turn - 1)
 };
 
-/** How far a card moves the meter this turn. */
-export function pushFor(state, card) {
+/** How far a card moves the meter this turn (`amount` defaults to its normal push). */
+export function pushFor(state, card, amount = card.push) {
   const { pushScale, escalation, escalationFlat } = state.rules;
   const turns = state.turn - 1;
-  return Math.round(card.push * pushScale * (1 + escalation * turns) + escalationFlat * turns);
+  return Math.round(amount * pushScale * (1 + escalation * turns) + escalationFlat * turns);
+}
+
+/** True when a BAIT or AMBUSH card's condition is met by the opponent's play. */
+export function trapSprung(card, opponentCard) {
+  if (card?.type === "BAIT") return opponentCard?.type === "COUNTER";
+  if (card?.type === "AMBUSH") return opponentCard == null;
+  return false;
 }
 
 export const SIDE_IDS = ["detective", "vigilante"];
@@ -164,10 +171,11 @@ export function resolveTurn(state, plays) {
       events.push({ type: "fizzle", side, card });
       continue;
     }
+    const sprung = trapSprung(card, played[otherSide(side)]);
     const from = clampCase(state, running);
-    running += direction * pushFor(state, card);
+    running += direction * pushFor(state, card, sprung ? card.bigPush : card.push);
     events.push({
-      type: card.type === "COUNTER" ? "counter" : "push",
+      type: card.type === "COUNTER" ? "counter" : sprung ? "sprung" : "push",
       side,
       card,
       from,

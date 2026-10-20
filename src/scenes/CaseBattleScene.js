@@ -368,7 +368,8 @@ export default class CaseBattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const arrow = SIDES[side].direction > 0 ? "▶" : "◀";
-    const push = pushFor(this.state, card);
+    // Traps show their sprung value; the rule line gives the fallback.
+    const push = pushFor(this.state, card, card.bigPush ?? card.push);
     const big = this.add
       .text(0, 22, `${arrow} ${push}`, {
         fontFamily: FONT_TITLE,
@@ -377,7 +378,14 @@ export default class CaseBattleScene extends Phaser.Scene {
         fontStyle: "bold",
       })
       .setOrigin(0.5);
-    const ruleText = { COUNTER: "only vs POWER", POWER: "can be countered" }[card.type] ?? "";
+    const small = pushFor(this.state, card);
+    const ruleText =
+      {
+        COUNTER: "only vs POWER",
+        POWER: "can be countered",
+        BAIT: `vs COUNTER, else ${small}`,
+        AMBUSH: `vs WAIT, else ${small}`,
+      }[card.type] ?? "";
     const rule = this.add
       .text(0, 62, ruleText, {
         fontFamily: FONT_BODY,
@@ -528,7 +536,8 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.handCards.forEach((c) => this.tweens.add({ targets: c, alpha: 0.25, duration: 200 }));
     await wait(this, 520);
 
-    const { events } = resolveTurn(this.state, plays);
+    const { events, played } = resolveTurn(this.state, plays);
+    this.turnPlayed = played;
 
     // Reveal both at once.
     const faces = {};
@@ -602,7 +611,12 @@ export default class CaseBattleScene extends Phaser.Scene {
       face.iterate((o) => o.setTint && o.setTint(0x555555));
       this.tweens.add({ targets: face, alpha: 0.45, angle: who === "player" ? 6 : -6, duration: 300 });
       this.floatText(x, y, "FIZZLED", "#8a90a0", 30);
-      this.hintText.setText("A COUNTER only stops POWER cards.");
+      const target = this.turnPlayed[otherSide(event.side)];
+      this.hintText.setText(
+        target?.type === "BAIT"
+          ? "Baited! That looked like a POWER play."
+          : "A COUNTER only stops POWER cards.",
+      );
       await wait(this, 700);
       return;
     }
@@ -616,9 +630,16 @@ export default class CaseBattleScene extends Phaser.Scene {
       return;
     }
 
-    if (event.type === "push" || event.type === "counter") {
+    if (event.type === "push" || event.type === "counter" || event.type === "sprung") {
       // Lift, then slam.
-      const big = event.card.type === "POWER" || event.type === "counter";
+      const big = event.card.type === "POWER" || event.type !== "push";
+      if (event.type === "sprung") {
+        const label = event.card.type === "BAIT" ? "BAITED!" : "AMBUSHED!";
+        this.cameras.main.flash(160, 255, 180, 90);
+        this.floatText(x, y + 40, label, hex(CARD_TYPES[event.card.type].color), 40);
+      } else if (event.card.type === "BAIT" || event.card.type === "AMBUSH") {
+        this.floatText(x, y + 40, "no bite", COLORS.muted, 24);
+      }
       await new Promise((resolve) =>
         this.tweens.add({
           targets: face,
@@ -809,7 +830,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const text = this.add
       .text(
         60,
-        200,
+        140,
         [
           "HOW IT WORKS",
           "",
@@ -820,8 +841,11 @@ export default class CaseBattleScene extends Phaser.Scene {
           "  Both cards land together and their",
           "  pushes add up.",
           "",
-          "• COUNTER only stops POWER cards. Guess",
-          "  wrong and it fizzles.",
+          "• Every special card beats one thing:",
+          "  POWER   big push, unless COUNTERED",
+          "  COUNTER stops POWER, else fizzles",
+          "  BAIT    big push if they COUNTER",
+          "  AMBUSH  big push if they WAIT",
           "",
           `• You gain +${r.energyPerTurn}⬢ a turn (max ${r.maxEnergy}). WAIT`,
           `  gives an extra +${r.waitBonus}⬢. Watch their energy:`,
