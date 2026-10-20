@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { CARD_TYPES, SIDES } from "../case/cards.js";
+import { SIDES } from "../case/cards.js";
 import {
   canAfford,
   createMatch,
@@ -10,37 +10,46 @@ import {
 } from "../case/rules.js";
 import { chooseAiPlay } from "../case/ai.js";
 import NetworkManager from "../network/NetworkManager.js";
-import { FONTS } from "../theme.js";
+import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
+import { button } from "../ui/widgets.js";
 
 const W = 750;
 const H = 1334;
 
-const COLORS = {
-  bgTop: 0x0d1018,
-  bgBottom: 0x05060a,
-  panel: 0x141925,
-  panelEdge: 0x2a3142,
-  ink: "#ece6d6",
-  muted: "#8a90a0",
-  detective: 0x4cc9f0,
-  vigilante: 0xe0315f,
-  gold: 0xf2b33d,
-};
-
-const hex = (n) => `#${n.toString(16).padStart(6, "0")}`;
-
 const FONT_DISPLAY = FONTS.display;
-const FONT_TITLE = FONTS.title;
 const FONT_BODY = FONTS.body;
 
-const METER = { x: 60, y: 362, w: 630, h: 34 };
-const SLOT = { opponent: { x: 230, y: 615 }, player: { x: 520, y: 615 } };
+const METER = { x: 60, y: 372, w: 630, h: 18 };
+const SLOT = { opponent: { x: 230, y: 625 }, player: { x: 520, y: 625 } };
 const CARD_W = 168;
 const CARD_H = 228;
 const HAND_Y = 1075;
 
+const TYPE_NAMES = {
+  COUNTER: "Counter",
+  QUICK: "Quick",
+  NORMAL: "Normal",
+  POWER: "Power",
+  BAIT: "Bait",
+  AMBUSH: "Ambush",
+};
+
 const wait = (scene, ms) =>
   new Promise((resolve) => scene.time.delayedCall(ms, resolve));
+
+function roman(n) {
+  const table = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
+  let out = "";
+  for (const [value, letters] of table) {
+    while (n >= value) {
+      out += letters;
+      n -= value;
+    }
+  }
+  return out;
+}
+
+const rgb = (n) => [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 
 /** Builds a client-side match state from a server view (the opponent's hand stays hidden). */
 function stateFromView(view) {
@@ -71,6 +80,7 @@ function applyView(state, view) {
  * Single player runs the rules locally against the AI. Online play
  * (scene data `{ online: matchFoundData }`) sends choices to the server,
  * which runs the same rules, and animates the events it sends back.
+ * Colours come from the player's chosen theme (src/theme.js).
  */
 export default class CaseBattleScene extends Phaser.Scene {
   constructor() {
@@ -89,13 +99,14 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.state = createMatch();
     }
     this.opponentSide = otherSide(this.playerSide);
+    this.theme = getTheme();
     this.selectedIndex = null;
     this.busy = false;
     this.handCards = [];
     this.arenaObjects = [];
 
     this.createTextures();
-    this.createBackground();
+    paintBackground(this, this.theme);
     this.createTopBar();
     this.createOpponentPanel();
     this.createMeter();
@@ -110,6 +121,11 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.events.once("shutdown", () => NetworkManager.clearCallbacks());
 
     this.beginTurn(true);
+  }
+
+  /** Theme colours for something drawn at height y (split themes differ at the top). */
+  z(y) {
+    return zone(this.theme, y);
   }
 
   setupNetwork() {
@@ -147,130 +163,84 @@ export default class CaseBattleScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 1).fillCircle(6, 6, 6);
     g.generateTexture("cb-spark", 12, 12);
     g.clear();
-    g.fillStyle(0xffffff, 1).fillRect(0, 0, 2, 22);
-    g.generateTexture("cb-rain", 2, 22);
-    g.clear();
     g.fillStyle(0xffffff, 1).fillTriangle(0, 0, 14, 4, 4, 16);
     g.generateTexture("cb-shard", 14, 16);
     g.destroy();
   }
 
-  createBackground() {
-    const bg = this.add.graphics();
-    bg.fillGradientStyle(COLORS.bgTop, COLORS.bgTop, COLORS.bgBottom, COLORS.bgBottom, 1);
-    bg.fillRect(0, 0, W, H);
-
-    // A low city skyline behind the arena.
-    const city = this.add.graphics().setAlpha(0.5);
-    city.fillStyle(0x0a0d14, 1);
-    let x = 0;
-    const rng = new Phaser.Math.RandomDataGenerator(["skyline"]);
-    while (x < W) {
-      const bw = rng.between(40, 90);
-      const bh = rng.between(80, 220);
-      city.fillRect(x, 830 - bh, bw, bh);
-      city.fillStyle(0x2b2f3d, 1);
-      for (let wy = 830 - bh + 12; wy < 820; wy += 22) {
-        for (let wx = x + 8; wx < x + bw - 8; wx += 16) {
-          if (rng.frac() < 0.18) city.fillRect(wx, wy, 6, 9);
-        }
-      }
-      city.fillStyle(0x0a0d14, 1);
-      x += bw + rng.between(2, 10);
-    }
-
-    this.add.particles(0, -30, "cb-rain", {
-      x: { min: -100, max: W + 50 },
-      speedY: { min: 900, max: 1300 },
-      speedX: { min: 120, max: 180 },
-      rotate: -8,
-      lifespan: 1400,
-      quantity: 2,
-      frequency: 25,
-      alpha: { min: 0.08, max: 0.22 },
-      scaleY: { min: 0.6, max: 1.3 },
-    });
-
-    if (this.renderer.type === Phaser.WEBGL) {
-      this.cameras.main.postFX.addVignette(0.5, 0.5, 0.95, 0.35);
-    }
-  }
-
   createTopBar() {
+    const z = this.z(38);
     this.turnText = this.add
-      .text(W / 2, 38, "", { fontFamily: FONT_TITLE, fontSize: "30px", color: COLORS.ink })
+      .text(W / 2, 38, "", { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: hex(z.soft) })
       .setOrigin(0.5);
     this.stakesText = this.add
-      .text(W / 2, 72, "", { fontFamily: FONT_BODY, fontSize: "18px", color: hex(COLORS.gold) })
+      .text(W / 2, 70, "", { fontFamily: FONT_BODY, fontSize: "20px", fontStyle: "italic", color: hex(z.soft) })
       .setOrigin(0.5);
 
     const exit = this.add
-      .text(W - 34, 38, "✕", { fontFamily: FONT_BODY, fontSize: "34px", color: COLORS.muted })
+      .text(W - 36, 38, "✕", { fontFamily: FONT_BODY, fontSize: "34px", color: hex(z.soft) })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     exit.on("pointerdown", () => this.leaveToMenu());
 
     const help = this.add
-      .text(34, 38, "?", { fontFamily: FONT_TITLE, fontSize: "34px", color: COLORS.muted })
+      .text(36, 38, "?", { fontFamily: FONT_DISPLAY, fontSize: "40px", color: hex(z.soft) })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     help.on("pointerdown", () => this.toggleRules());
   }
 
   createPortrait(x, y, side, size) {
-    const color = COLORS[side];
-    const frame = this.add.rectangle(x, y, size + 8, size + 8, 0x000000).setStrokeStyle(3, color);
+    const frame = this.add.rectangle(x, y, size + 6, size + 6).setStrokeStyle(2, this.z(y).line);
     const img = this.add.image(x, y, `${SIDES[side].portrait}-neutral`).setDisplaySize(size, size);
-    return { frame, img, side };
+    return { frame, img, side, size };
   }
 
   createEnergyPips(x, y) {
+    const z = this.z(y);
     const pips = [];
     for (let i = 0; i < this.state.rules.maxEnergy; i++) {
-      pips.push(
-        this.add
-          .rectangle(x + i * 26, y, 20, 20, 0x1f2533)
-          .setStrokeStyle(2, 0x3a4256)
-          .setAngle(45)
-          .setScale(0.75),
-      );
+      pips.push(this.add.rectangle(x + i * 26, y, 14, 14).setStrokeStyle(2, z.ink).setAngle(45));
     }
     const label = this.add
-      .text(x + this.state.rules.maxEnergy * 26 + 6, y, "", {
+      .text(x + this.state.rules.maxEnergy * 26 + 4, y, "", {
         fontFamily: FONT_BODY,
-        fontSize: "20px",
-        color: hex(COLORS.gold),
+        fontSize: "24px",
+        fontStyle: "600",
+        color: hex(z.ink),
       })
       .setOrigin(0, 0.5);
-    return { pips, label };
+    return { pips, label, z };
   }
 
   createOpponentPanel() {
     const side = this.opponentSide;
-    this.add.rectangle(W / 2, 185, W - 32, 170, COLORS.panel, 0.85).setStrokeStyle(2, COLORS.panelEdge);
-    this.opponentPortrait = this.createPortrait(100, 185, side, 128);
-    this.add.text(180, 118, SIDES[side].name.toUpperCase(), {
-      fontFamily: FONT_TITLE,
-      fontSize: "30px",
-      color: hex(COLORS[side]),
-    });
-    this.add.text(180, 154, "OPPONENT", { fontFamily: FONT_BODY, fontSize: "16px", color: COLORS.muted });
-    this.opponentEnergy = this.createEnergyPips(192, 198);
+    const z = this.z(185);
+    this.opponentPortrait = this.createPortrait(100, 190, side, 124);
+    this.add
+      .text(184, 140, SIDES[side].name, { fontFamily: FONT_DISPLAY, fontSize: "52px", color: hex(z.ink) })
+      .setOrigin(0, 0.5);
+    this.opponentEnergy = this.createEnergyPips(194, 198);
 
-    this.add.text(180, 228, "RECENT", { fontFamily: FONT_BODY, fontSize: "15px", color: COLORS.muted });
+    this.add
+      .text(184, 240, "Recent", { fontFamily: FONT_BODY, fontSize: "20px", fontStyle: "italic", color: hex(z.soft) })
+      .setOrigin(0, 0.5);
     this.historyDots = [];
     for (let i = 0; i < 5; i++) {
       this.historyDots.push(
-        this.add.text(258 + i * 82, 237, "", { fontFamily: FONT_BODY, fontSize: "14px" }).setOrigin(0, 0.5),
+        this.add
+          .text(262 + i * 86, 240, "", { fontFamily: FONT_BODY, fontSize: "20px", color: hex(z.ink) })
+          .setOrigin(0, 0.5),
       );
     }
 
+    const card = this.theme.cards[side];
     this.opponentHand = [];
     for (let i = 0; i < this.state.rules.handSize; i++) {
       this.opponentHand.push(
         this.add
-          .rectangle(560 + i * 34, 138, 44, 60, 0x1a1f2c)
-          .setStrokeStyle(2, COLORS[side])
+          .rectangle(580 + i * 30, 140, 40, 56, card.bg)
+          .setStrokeStyle(1, z.line)
           .setAngle(-12 + i * 8),
       );
     }
@@ -278,38 +248,39 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   createMeter() {
     const { x, y, w, h } = METER;
+    const z = this.z(y);
     this.add
-      .text(W / 2, y - 78, "THE CASE", { fontFamily: FONT_DISPLAY, fontSize: "30px", color: COLORS.ink })
+      .text(W / 2, y - 70, "The Case", { fontFamily: FONT_DISPLAY, fontSize: "46px", color: hex(z.ink) })
       .setOrigin(0.5);
 
-    this.add
-      .text(x, y - 34, "◀ ESCAPE", { fontFamily: FONT_BODY, fontSize: "18px", color: hex(COLORS.vigilante) })
-      .setOrigin(0, 0.5);
-    this.add
-      .text(x + w, y - 34, "CAPTURE ▶", { fontFamily: FONT_BODY, fontSize: "18px", color: hex(COLORS.detective) })
-      .setOrigin(1, 0.5);
+    const label = (lx, text, origin) =>
+      this.add
+        .text(lx, y - 30, text, { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "italic", color: hex(z.soft) })
+        .setOrigin(origin, 0.5);
+    label(x, "Escape", 0);
+    label(x + w, "Capture", 1);
 
-    this.add.rectangle(x + w / 2, y, w + 8, h + 8, 0x000000).setStrokeStyle(2, COLORS.panelEdge);
+    this.add.rectangle(x + w / 2, y, w, h).setStrokeStyle(2, z.line);
     this.meterGfx = this.add.graphics();
     for (let i = 1; i < 10; i++) {
-      this.add.rectangle(x + (w * i) / 10, y, 2, i === 5 ? h + 14 : h, 0x000000, i === 5 ? 0.9 : 0.35);
+      this.add.rectangle(x + (w * i) / 10, y + h / 2 + 6, 2, i === 5 ? 14 : 6, z.line, i === 5 ? 1 : 0.4);
     }
 
     this.needle = this.add.container(0, y);
     this.needle.add([
-      this.add.rectangle(0, 0, 6, h + 26, 0xffffff),
-      this.add.triangle(0, -h / 2 - 20, -10, -8, 10, -8, 0, 6, 0xffffff),
+      this.add.rectangle(0, 0, 5, h + 28, this.theme.red),
+      this.add.triangle(0, -h / 2 - 20, -9, -7, 9, -7, 0, 5, this.theme.red),
     ]);
     this.needleValue = this.add
-      .text(0, y + h / 2 + 20, "", { fontFamily: FONT_BODY, fontSize: "22px", color: COLORS.ink })
+      .text(0, y + h / 2 + 26, "", { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: hex(z.ink) })
       .setOrigin(0.5);
 
     const dirText =
       this.playerSide === "detective"
-        ? "You push the needle ▶ toward CAPTURE"
-        : "You push the needle ◀ toward ESCAPE";
+        ? "You push the needle toward Capture ▶"
+        : "◀ You push the needle toward Escape";
     this.add
-      .text(W / 2, y + h / 2 + 52, dirText, { fontFamily: FONT_BODY, fontSize: "17px", color: COLORS.muted })
+      .text(W / 2, y + h / 2 + 58, dirText, { fontFamily: FONT_BODY, fontSize: "20px", fontStyle: "italic", color: hex(z.soft) })
       .setOrigin(0.5);
 
     this.meterValue = this.state.caseValue;
@@ -320,15 +291,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     const { x, y, w, h } = METER;
     const split = x + (w * value) / 100;
     const mid = x + w / 2;
-    const top = y - h / 2;
     this.meterGfx.clear();
-    this.meterGfx.fillStyle(0x1c2130, 1).fillRect(x, top, w, h);
-    // Each end is a goal zone for one side.
-    this.meterGfx.fillStyle(COLORS.vigilante, 0.25).fillRect(x, top, w * 0.1, h);
-    this.meterGfx.fillStyle(COLORS.detective, 0.25).fillRect(x + w * 0.9, top, w * 0.1, h);
     // Fill from the centre toward whoever is ahead.
-    const leader = value >= 50 ? COLORS.detective : COLORS.vigilante;
-    this.meterGfx.fillStyle(leader, 0.9).fillRect(Math.min(mid, split), top, Math.abs(split - mid), h);
+    this.meterGfx.fillStyle(this.z(y).ink, 1).fillRect(Math.min(mid, split), y - h / 2, Math.abs(split - mid), h);
     this.needle.x = split;
     this.needleValue.x = split;
     this.needleValue.setText(Math.round(value));
@@ -337,153 +302,146 @@ export default class CaseBattleScene extends Phaser.Scene {
   createArena() {
     ["opponent", "player"].forEach((who) => {
       const { x, y } = SLOT[who];
-      const outline = this.add.graphics();
-      outline.lineStyle(2, 0x3a4256, 0.8);
-      outline.strokeRoundedRect(x - CARD_W / 2, y - CARD_H / 2, CARD_W, CARD_H, 12);
+      const z = this.z(y);
+      this.add.rectangle(x, y, CARD_W, CARD_H).setStrokeStyle(1, z.line, 0.3);
       this.add
-        .text(x, y - CARD_H / 2 - 22, who === "player" ? "YOU" : "THEM", {
+        .text(x, y - CARD_H / 2 - 20, who === "player" ? "You" : "Them", {
           fontFamily: FONT_BODY,
-          fontSize: "18px",
-          color: COLORS.muted,
+          fontSize: "20px",
+          fontStyle: "italic",
+          color: hex(z.soft),
         })
         .setOrigin(0.5);
     });
     this.add
-      .text(W / 2, SLOT.player.y, "VS", { fontFamily: FONT_TITLE, fontSize: "40px", color: "#3a4256" })
+      .text(W / 2, SLOT.player.y, "vs", {
+        fontFamily: FONT_BODY,
+        fontSize: "32px",
+        fontStyle: "italic",
+        color: hex(this.z(SLOT.player.y).soft),
+      })
       .setOrigin(0.5);
 
     this.hintText = this.add
-      .text(W / 2, 770, "", { fontFamily: FONT_BODY, fontSize: "19px", color: COLORS.ink, align: "center" })
+      .text(W / 2, 782, "", {
+        fontFamily: FONT_BODY,
+        fontSize: "22px",
+        fontStyle: "italic",
+        color: hex(this.z(782).ink),
+        align: "center",
+      })
       .setOrigin(0.5);
   }
 
   createPlayerPanel() {
     const side = this.playerSide;
-    this.add.rectangle(W / 2, 880, W - 32, 110, COLORS.panel, 0.85).setStrokeStyle(2, COLORS.panelEdge);
+    const z = this.z(880);
     this.playerPortrait = this.createPortrait(80, 880, side, 88);
-    this.add.text(140, 836, `${SIDES[side].name.toUpperCase()}  (YOU)`, {
-      fontFamily: FONT_TITLE,
-      fontSize: "26px",
-      color: hex(COLORS[side]),
-    });
-    this.playerEnergy = this.createEnergyPips(152, 900);
-  }
-
-  createButton(x, y, w, label, color, onClick) {
-    const bg = this.add.rectangle(x, y, w, 76, color).setStrokeStyle(3, 0x000000);
-    const text = this.add
-      .text(x, y, label, { fontFamily: FONT_TITLE, fontSize: "30px", color: "#0b0d12", fontStyle: "bold" })
-      .setOrigin(0.5);
-    bg.setInteractive({ useHandCursor: true });
-    bg.on("pointerdown", () => {
-      if (!bg.input.enabled) return;
-      this.tweens.add({ targets: [bg, text], scale: 0.95, duration: 60, yoyo: true });
-      onClick();
-    });
-    return {
-      bg,
-      text,
-      setEnabled(enabled) {
-        bg.input.enabled = enabled;
-        bg.setAlpha(enabled ? 1 : 0.3);
-        text.setAlpha(enabled ? 1 : 0.5);
-      },
-      setLabel(t) {
-        text.setText(t);
-      },
-    };
+    const name = this.add
+      .text(144, 856, SIDES[side].name, { fontFamily: FONT_DISPLAY, fontSize: "40px", color: hex(z.ink) })
+      .setOrigin(0, 0.5);
+    this.add
+      .text(name.x + name.width + 14, 860, "you", {
+        fontFamily: FONT_BODY,
+        fontSize: "20px",
+        fontStyle: "italic",
+        color: hex(z.soft),
+      })
+      .setOrigin(0, 0.5);
+    this.playerEnergy = this.createEnergyPips(156, 906);
   }
 
   createButtons() {
-    this.waitButton = this.createButton(195, 1272, 300, "", 0x8a90a0, () => this.confirmPlay(null));
-    this.playButton = this.createButton(555, 1272, 330, "PLAY CARD", COLORS.gold, () =>
-      this.confirmPlay(this.selectedIndex),
-    );
+    this.waitButton = button(this, this.theme, 195, 1272, 300, "Wait", () => this.confirmPlay(null), { h: 76, size: 34 });
+    this.playButton = button(this, this.theme, 555, 1272, 330, "Play card", () => this.confirmPlay(this.selectedIndex), {
+      h: 76,
+      size: 34,
+      primary: true,
+    });
   }
 
   // ---------------------------------------------------------------- cards
 
   buildCardFace(card, side) {
+    const style = this.theme.cards[side];
+    const ink = hex(style.ink);
     const c = this.add.container(0, 0);
-    const type = CARD_TYPES[card.type];
-    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, 0x161b27).setStrokeStyle(3, type.color);
-    const band = this.add.rectangle(0, -CARD_H / 2 + 18, CARD_W - 6, 30, type.color, 0.9);
+    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(2, style.edge);
     const typeLabel = this.add
-      .text(-CARD_W / 2 + 10, -CARD_H / 2 + 18, type.label, {
+      .text(-CARD_W / 2 + 10, -CARD_H / 2 + 16, TYPE_NAMES[card.type], {
         fontFamily: FONT_BODY,
-        fontSize: "15px",
-        color: "#0b0d12",
-        fontStyle: "bold",
+        fontSize: "17px",
+        fontStyle: "italic",
+        color: ink,
       })
-      .setOrigin(0, 0.5);
+      .setOrigin(0, 0.5)
+      .setAlpha(0.8);
     const cost = this.add
-      .text(CARD_W / 2 - 10, -CARD_H / 2 + 18, `${card.cost}⬢`, {
+      .text(CARD_W / 2 - 10, -CARD_H / 2 + 16, `${card.cost} ⬢`, {
         fontFamily: FONT_BODY,
-        fontSize: "19px",
-        color: "#0b0d12",
-        fontStyle: "bold",
+        fontSize: "18px",
+        fontStyle: "600",
+        color: ink,
       })
       .setOrigin(1, 0.5);
     const name = this.add
-      .text(0, -CARD_H / 2 + 60, card.name, {
-        fontFamily: FONT_TITLE,
-        fontSize: "21px",
-        color: COLORS.ink,
+      .text(0, -CARD_H / 2 + 58, card.name, {
+        fontFamily: FONT_DISPLAY,
+        fontSize: "25px",
+        color: ink,
         align: "center",
         wordWrap: { width: CARD_W - 16 },
       })
       .setOrigin(0.5);
 
-    const arrow = SIDES[side].direction > 0 ? "▶" : "◀";
     // Traps show their sprung value; the rule line gives the fallback.
     const push = pushFor(this.state, card, card.bigPush ?? card.push);
     const big = this.add
-      .text(0, 22, `${arrow} ${push}`, {
-        fontFamily: FONT_TITLE,
-        fontSize: "40px",
-        color: hex(COLORS[side]),
-        fontStyle: "bold",
+      .text(0, 24, `${push}`, {
+        fontFamily: FONT_DISPLAY,
+        fontSize: "64px",
+        color: side === "vigilante" ? hex(this.theme.red) : ink,
       })
       .setOrigin(0.5);
     const small = pushFor(this.state, card);
     const ruleText =
       {
-        COUNTER: "only vs POWER",
+        COUNTER: "only vs Power",
         POWER: "can be countered",
-        BAIT: `vs COUNTER, else ${small}`,
-        AMBUSH: `vs WAIT, else ${small}`,
+        BAIT: `vs Counter, else ${small}`,
+        AMBUSH: `vs Wait, else ${small}`,
       }[card.type] ?? "";
     const rule = this.add
-      .text(0, 62, ruleText, {
-        fontFamily: FONT_BODY,
-        fontSize: "14px",
-        color: hex(type.color),
-      })
-      .setOrigin(0.5);
+      .text(0, 70, ruleText, { fontFamily: FONT_BODY, fontSize: "16px", fontStyle: "italic", color: ink })
+      .setOrigin(0.5)
+      .setAlpha(0.85);
     const flavor = this.add
-      .text(0, CARD_H / 2 - 28, card.flavor, {
+      .text(0, CARD_H / 2 - 22, card.flavor, {
         fontFamily: FONT_BODY,
-        fontSize: "12px",
-        color: COLORS.muted,
+        fontSize: "13px",
         fontStyle: "italic",
+        color: ink,
         align: "center",
         wordWrap: { width: CARD_W - 18 },
       })
-      .setOrigin(0.5);
-    c.add([bg, band, typeLabel, cost, name, big, rule, flavor]);
+      .setOrigin(0.5)
+      .setAlpha(0.6);
+    c.add([bg, typeLabel, cost, name, big, rule, flavor]);
     c.setSize(CARD_W, CARD_H);
     c.bg = bg;
+    c.edge = style.edge;
     return c;
   }
 
   buildCardBack(side) {
+    const style = this.theme.cards[side];
     const c = this.add.container(0, 0);
-    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, 0x10141e).setStrokeStyle(3, COLORS[side]);
-    const inner = this.add.rectangle(0, 0, CARD_W - 28, CARD_H - 28, 0x000000, 0).setStrokeStyle(1, COLORS[side], 0.5);
+    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(2, style.edge);
+    const inner = this.add.rectangle(0, 0, CARD_W - 24, CARD_H - 24).setStrokeStyle(1, style.ink, 0.4);
     const mark = this.add
-      .text(0, 0, "?", { fontFamily: FONT_TITLE, fontSize: "72px", color: hex(COLORS[side]) })
+      .text(0, 0, "?", { fontFamily: FONT_DISPLAY, fontSize: "80px", color: hex(style.ink) })
       .setOrigin(0.5)
-      .setAlpha(0.6);
+      .setAlpha(0.7);
     c.add([bg, inner, mark]);
     return c;
   }
@@ -531,7 +489,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.handCards.forEach((c) => {
       const selected = c.index === index;
       this.tweens.add({ targets: c, y: selected ? HAND_Y - 40 : HAND_Y, scale: selected ? 1.06 : 1, duration: 140 });
-      c.bg.setStrokeStyle(selected ? 5 : 3, selected ? 0xffffff : CARD_TYPES[this.state.sides[this.playerSide].hand[c.index].type].color);
+      c.bg.setStrokeStyle(selected ? 5 : 2, selected ? this.theme.red : c.edge);
     });
     this.playButton.setEnabled(index !== null);
   }
@@ -543,10 +501,10 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.selectedIndex = null;
     this.busy = false;
     this.clearArena();
-    this.turnText.setText(`TURN ${turn} / ${rules.maxTurns}`);
+    this.turnText.setText(`TURN ${roman(turn)} OF ${roman(rules.maxTurns)}`);
     const bonus = rules.escalationFlat * (turn - 1);
-    this.stakesText.setText(turn === 1 ? "The city is watching" : `STAKES RISING — every card +${bonus}`);
-    this.waitButton.setLabel(`WAIT  +${rules.energyPerTurn + rules.waitBonus}⬢`);
+    this.stakesText.setText(turn === 1 ? "The city is watching" : `Stakes rising: every card +${bonus}`);
+    this.waitButton.setLabel(`Wait  +${rules.energyPerTurn + rules.waitBonus} ⬢`);
     this.waitButton.setEnabled(true);
     this.playButton.setEnabled(false);
     this.updateHud();
@@ -555,10 +513,10 @@ export default class CaseBattleScene extends Phaser.Scene {
       first
         ? "Pick a card. They're picking too.\nBoth cards land together."
         : turn === rules.maxTurns
-          ? "FINAL TURN — the verdict follows the needle."
+          ? "Final turn: the verdict follows the needle."
           : "",
     );
-    if (!first) this.showBanner(`TURN ${turn}`);
+    if (!first) this.showBanner(`Turn ${roman(turn)}`);
 
     this.opponentLocked = false;
     if (this.online) {
@@ -652,12 +610,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const { x, y } = SLOT[who];
     if (!card) {
       const t = this.add
-        .text(x, y, "WAITED\n+⬢", {
-          fontFamily: FONT_TITLE,
-          fontSize: "30px",
-          color: COLORS.muted,
-          align: "center",
-        })
+        .text(x, y, "Waited", { fontFamily: FONT_DISPLAY, fontSize: "44px", color: hex(this.z(y).soft) })
         .setOrigin(0.5)
         .setAlpha(0);
       this.arenaObjects.push(t);
@@ -687,31 +640,32 @@ export default class CaseBattleScene extends Phaser.Scene {
     const who = event.side === this.playerSide ? "player" : "opponent";
     const face = faces[who];
     const { x, y } = SLOT[who];
+    const z = this.z(y);
+    const red = this.theme.red;
 
     if (event.type === "wait") {
-      this.floatText(x, y + 70, `+${this.state.rules.waitBonus}⬢ saved`, hex(COLORS.gold), 26);
+      this.floatText(x, y + 70, `+${this.state.rules.waitBonus} ⬢ saved`, hex(z.soft), 30);
       return;
     }
 
     if (event.type === "fizzle") {
-      face.iterate((o) => o.setTint && o.setTint(0x555555));
-      this.tweens.add({ targets: face, alpha: 0.45, angle: who === "player" ? 6 : -6, duration: 300 });
-      this.floatText(x, y, "FIZZLED", "#8a90a0", 30);
+      this.tweens.add({ targets: face, alpha: 0.35, angle: who === "player" ? 6 : -6, duration: 300 });
+      this.floatText(x, y, "Fizzled", hex(z.soft), 46);
       const target = this.turnPlayed[otherSide(event.side)];
       this.hintText.setText(
         target?.type === "BAIT"
-          ? "Baited! That looked like a POWER play."
-          : "A COUNTER only stops POWER cards.",
+          ? "Baited! That looked like a Power play."
+          : "A Counter only stops Power cards.",
       );
       await wait(this, 700);
       return;
     }
 
     if (event.type === "cancelled") {
-      this.cameras.main.flash(180, 224, 49, 95);
-      this.burst(x, y, "cb-shard", CARD_TYPES.COUNTER.color, 26, 500);
+      this.cameras.main.flash(180, ...rgb(red));
+      this.burst(x, y, "cb-shard", red, 26, 500);
       this.tweens.add({ targets: face, scale: 0.2, angle: 200, alpha: 0, duration: 380, ease: "Back.easeIn" });
-      this.floatText(x, y, "COUNTERED!", hex(CARD_TYPES.COUNTER.color), 38);
+      this.floatText(x, y, "Countered!", hex(red), 56);
       await wait(this, 800);
       return;
     }
@@ -720,11 +674,11 @@ export default class CaseBattleScene extends Phaser.Scene {
       // Lift, then slam.
       const big = event.card.type === "POWER" || event.type !== "push";
       if (event.type === "sprung") {
-        const label = event.card.type === "BAIT" ? "BAITED!" : "AMBUSHED!";
-        this.cameras.main.flash(160, 255, 180, 90);
-        this.floatText(x, y + 40, label, hex(CARD_TYPES[event.card.type].color), 40);
+        const label = event.card.type === "BAIT" ? "Baited!" : "Ambushed!";
+        this.cameras.main.flash(160, ...rgb(red));
+        this.floatText(x, y + 40, label, hex(red), 56);
       } else if (event.card.type === "BAIT" || event.card.type === "AMBUSH") {
-        this.floatText(x, y + 40, "no bite", COLORS.muted, 24);
+        this.floatText(x, y + 40, "no bite", hex(z.soft), 32);
       }
       await new Promise((resolve) =>
         this.tweens.add({
@@ -740,10 +694,11 @@ export default class CaseBattleScene extends Phaser.Scene {
         this.tweens.add({ targets: face, scale: 1, y, duration: 110, ease: "Quad.easeIn", onComplete: resolve }),
       );
       const delta = Math.abs(event.to - event.from);
+      const numberColor = event.side === "vigilante" ? red : z.ink;
       this.cameras.main.shake(big ? 260 : 140, Math.min(0.02, 0.002 + delta * 0.0004));
-      this.burst(x, y, "cb-spark", CARD_TYPES[event.card.type].color, big ? 30 : 14, big ? 600 : 400);
-      this.floatText(x, y - CARD_H / 2 - 10, `${SIDES[event.side].direction > 0 ? "▶" : "◀"} ${delta}`, hex(COLORS[event.side]), big ? 46 : 36);
-      this.sparkTrail(x, y, event.side);
+      this.burst(x, y, "cb-spark", z.ink, big ? 24 : 12, big ? 600 : 400);
+      this.floatText(x, y - CARD_H / 2 - 10, `${delta}`, hex(numberColor), big ? 64 : 50);
+      this.sparkTrail(x, y);
       await this.tweenMeter(event.to);
       this.updatePortraits();
       await wait(this, 250);
@@ -754,9 +709,9 @@ export default class CaseBattleScene extends Phaser.Scene {
       const winnerWho = event.winner === this.playerSide ? "player" : "opponent";
       if (event.winner !== "draw") {
         this.cameras.main.shake(400, 0.015);
-        this.burst(METER.x + (METER.w * this.state.caseValue) / 100, METER.y, "cb-spark", COLORS[event.winner], 50, 900);
+        this.burst(METER.x + (METER.w * this.state.caseValue) / 100, METER.y, "cb-spark", red, 40, 900);
       }
-      if (winnerWho === "player") this.cameras.main.flash(300, 255, 240, 200);
+      if (winnerWho === "player") this.cameras.main.flash(300, ...rgb(this.theme.paper));
     }
   }
 
@@ -784,26 +739,26 @@ export default class CaseBattleScene extends Phaser.Scene {
     const emitter = this.add.particles(x, y, texture, {
       speed: { min: 120, max: 420 },
       angle: { min: 0, max: 360 },
-      scale: { start: 0.9, end: 0 },
+      scale: { start: 0.8, end: 0 },
       rotate: { min: 0, max: 360 },
       lifespan,
       tint,
-      blendMode: "ADD",
       emitting: false,
     });
+    emitter.setDepth(45);
     emitter.explode(count);
     this.time.delayedCall(lifespan + 100, () => emitter.destroy());
   }
 
-  sparkTrail(x, y, side) {
+  sparkTrail(x, y) {
     const target = METER.x + (METER.w * this.meterValue) / 100;
     for (let i = 0; i < 6; i++) {
-      const s = this.add.image(x, y, "cb-spark").setTint(COLORS[side]).setBlendMode("ADD").setScale(1.2);
+      const s = this.add.image(x, y, "cb-spark").setTint(this.z(y).ink).setScale(0.9).setDepth(45);
       this.tweens.add({
         targets: s,
         x: target + Phaser.Math.Between(-20, 20),
         y: METER.y,
-        scale: 0.3,
+        scale: 0.2,
         duration: 320 + i * 40,
         ease: "Cubic.easeIn",
         onComplete: () => s.destroy(),
@@ -814,12 +769,11 @@ export default class CaseBattleScene extends Phaser.Scene {
   floatText(x, y, text, color, size) {
     const t = this.add
       .text(x, y, text, {
-        fontFamily: FONT_TITLE,
+        fontFamily: FONT_DISPLAY,
         fontSize: `${size}px`,
         color,
-        fontStyle: "bold",
-        stroke: "#000000",
-        strokeThickness: 6,
+        stroke: hex(this.z(y).paper),
+        strokeThickness: 8,
       })
       .setOrigin(0.5)
       .setScale(0.4)
@@ -836,9 +790,10 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   showBanner(text) {
-    const band = this.add.rectangle(W / 2, 615, W, 90, 0x000000, 0.75).setDepth(40);
+    const z = this.z(SLOT.player.y);
+    const band = this.add.rectangle(W / 2, SLOT.player.y, W, 110, z.paper, 0.94).setStrokeStyle(1, z.line).setDepth(40);
     const t = this.add
-      .text(W / 2, 615, text, { fontFamily: FONT_DISPLAY, fontSize: "60px", color: COLORS.ink })
+      .text(W / 2, SLOT.player.y, text, { fontFamily: FONT_DISPLAY, fontSize: "76px", color: hex(z.ink) })
       .setOrigin(0.5)
       .setDepth(41);
     band.scaleY = 0;
@@ -867,12 +822,13 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.setPips(this.playerEnergy, this.state.sides[this.playerSide].energy);
     this.setPips(this.opponentEnergy, this.state.sides[this.opponentSide].energy);
 
+    const z = this.z(240);
     const history = this.state.sides[this.opponentSide].history.slice(-5);
     this.historyDots.forEach((t, i) => {
       const entry = history[i];
       if (i >= history.length) return t.setText("");
-      t.setText(entry ? `■ ${CARD_TYPES[entry].label}` : "■ WAIT");
-      t.setColor(entry ? hex(CARD_TYPES[entry].color) : COLORS.muted);
+      t.setText(entry ? TYPE_NAMES[entry] : "Wait");
+      t.setColor(hex(entry ? z.ink : z.soft));
     });
 
     const opponentCards = this.state.sides[this.opponentSide].hand.length;
@@ -880,11 +836,10 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.updatePortraits();
   }
 
-  setPips({ pips, label }, energy) {
+  setPips({ pips, label, z }, energy) {
     pips.forEach((p, i) => {
       const lit = i < energy;
-      p.setFillStyle(lit ? COLORS.gold : 0x1f2533);
-      p.setStrokeStyle(2, lit ? 0xffe2a0 : 0x3a4256);
+      p.setFillStyle(z.ink, lit ? 1 : 0);
     });
     label.setText(`${energy}`);
   }
@@ -897,10 +852,18 @@ export default class CaseBattleScene extends Phaser.Scene {
       if (l <= -15) return "losing";
       return "neutral";
     };
-    this.playerPortrait.img.setTexture(`${SIDES[this.playerSide].portrait}-${mood(true)}`);
-    this.opponentPortrait.img.setTexture(`${SIDES[this.opponentSide].portrait}-${mood(false)}`);
-    this.playerPortrait.img.setDisplaySize(88, 88);
-    this.opponentPortrait.img.setDisplaySize(128, 128);
+    for (const [portrait, forPlayer] of [[this.playerPortrait, true], [this.opponentPortrait, false]]) {
+      portrait.img.setTexture(`${SIDES[portrait.side].portrait}-${mood(forPlayer)}`);
+      portrait.img.setDisplaySize(portrait.size, portrait.size);
+    }
+  }
+
+  /** A full-screen sheet in the base theme colours, used by overlays. */
+  overlay(depth) {
+    return this.add
+      .rectangle(W / 2, H / 2, W, H, this.theme.paper, 0)
+      .setDepth(depth)
+      .setInteractive();
   }
 
   toggleRules() {
@@ -910,81 +873,84 @@ export default class CaseBattleScene extends Phaser.Scene {
       return;
     }
     const r = this.state.rules;
+    const ink = hex(this.theme.ink);
     const panel = this.add.container(0, 0).setDepth(100);
-    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.85).setInteractive();
+    const shade = this.overlay(100).setFillStyle(this.theme.paper, 0.97);
     shade.on("pointerdown", () => this.toggleRules());
-    const text = this.add
-      .text(
-        60,
-        140,
-        [
-          "HOW IT WORKS",
-          "",
-          "• One shared meter. Detective wins at 100,",
-          "  Vigilante wins at 0.",
-          "",
-          "• Both players pick a card at the same time.",
-          "  Both cards land together and their",
-          "  pushes add up.",
-          "",
-          "• Every special card beats one thing:",
-          "  POWER   big push, unless COUNTERED",
-          "  COUNTER stops POWER, else fizzles",
-          "  BAIT    big push if they COUNTER",
-          "  AMBUSH  big push if they WAIT",
-          "",
-          `• You gain +${r.energyPerTurn}⬢ a turn (max ${r.maxEnergy}). WAIT`,
-          `  gives an extra +${r.waitBonus}⬢. Watch their energy:`,
-          "  6+ means a POWER card is possible.",
-          "",
-          "• Stakes rise every turn. After turn",
-          `  ${r.maxTurns}, the needle decides the verdict.`,
-          "",
-          "Tap anywhere to close.",
-        ].join("\n"),
-        { fontFamily: FONT_BODY, fontSize: "22px", color: COLORS.ink, lineSpacing: 6 },
-      );
-    panel.add([shade, text]);
+    const title = this.add
+      .text(W / 2, 150, "How it works", { fontFamily: FONT_DISPLAY, fontSize: "64px", color: ink })
+      .setOrigin(0.5);
+    const text = this.add.text(
+      70,
+      240,
+      [
+        "One shared meter. The Detective wins at 100,",
+        "the Vigilante wins at 0.",
+        "",
+        "Both players pick a card at the same time.",
+        "Both cards land together and their pushes add up.",
+        "",
+        "Every special card beats one thing:",
+        "   Power: a big push, unless countered",
+        "   Counter: stops Power, otherwise fizzles",
+        "   Bait: a big push if they Counter",
+        "   Ambush: a big push if they Wait",
+        "",
+        `You gain +${r.energyPerTurn} ⬢ a turn (max ${r.maxEnergy}). Waiting`,
+        `gives an extra +${r.waitBonus} ⬢. Watch their energy:`,
+        "6 or more means a Power card is possible.",
+        "",
+        "Stakes rise every turn. After turn",
+        `${r.maxTurns}, the needle decides the verdict.`,
+      ].join("\n"),
+      { fontFamily: FONT_BODY, fontSize: "26px", color: ink, lineSpacing: 8 },
+    );
+    const close = this.add
+      .text(W / 2, 1200, "Tap anywhere to close", {
+        fontFamily: FONT_BODY,
+        fontSize: "22px",
+        fontStyle: "italic",
+        color: hex(this.theme.soft),
+      })
+      .setOrigin(0.5);
+    panel.add([shade, title, text, close]);
     this.rulesPanel = panel;
   }
 
   showDisconnected() {
     this.busy = true;
-    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.85).setDepth(200).setInteractive();
+    const shade = this.overlay(200).setFillStyle(this.theme.paper, 0.94);
     this.add
-      .text(W / 2, 500, "YOUR OPPONENT\nLEFT THE CASE", {
+      .text(W / 2, 500, "Your opponent\nleft the case", {
         fontFamily: FONT_DISPLAY,
-        fontSize: "60px",
-        color: COLORS.ink,
+        fontSize: "72px",
+        color: hex(this.theme.ink),
         align: "center",
       })
       .setOrigin(0.5)
       .setDepth(201);
-    const again = this.createButton(W / 2, 700, 360, "NEW MATCH", COLORS.gold, () =>
-      this.scene.start("MultiplayerLobbyScene"),
-    );
-    const menu = this.createButton(W / 2, 800, 360, "MENU", 0x8a90a0, () => this.leaveToMenu());
-    [again, menu].forEach((b) => {
-      b.bg.setDepth(201);
-      b.text.setDepth(202);
-    });
+    button(this, this.theme, W / 2, 720, 400, "New match", () => this.scene.start("MultiplayerLobbyScene"), {
+      primary: true,
+    }).setDepth(201);
+    button(this, this.theme, W / 2, 830, 400, "Menu", () => this.leaveToMenu()).setDepth(201);
     return shade;
   }
 
   /** Dev-only test mode: nudge energy and the meter to reach situations fast. */
   createDebugControls() {
+    const z = this.z(820);
     const actions = [
-      ["+5⬢", () => (this.state.sides[this.playerSide].energy = Math.min(10, this.state.sides[this.playerSide].energy + 5))],
+      ["+5 energy", () => (this.state.sides[this.playerSide].energy = Math.min(10, this.state.sides[this.playerSide].energy + 5))],
       ["◀ 20", () => (this.state.caseValue = Math.max(1, this.state.caseValue - 20))],
       ["20 ▶", () => (this.state.caseValue = Math.min(99, this.state.caseValue + 20))],
     ];
     actions.forEach(([label, act], i) => {
       const t = this.add
-        .text(150 + i * 150, 806, label, {
+        .text(170 + i * 170, 820, label, {
           fontFamily: FONT_BODY,
           fontSize: "20px",
-          color: "#ffcc66",
-          backgroundColor: "#3a2a00",
+          fontStyle: "italic",
+          color: hex(z.soft),
           padding: { x: 10, y: 4 },
         })
         .setOrigin(0.5)
@@ -1005,9 +971,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     const { winner, endReason, turn } = this.state;
     const won = winner === this.playerSide;
     const titles = {
-      capture: "CASE CLOSED",
-      escape: "VANISHED",
-      verdict: winner === "draw" ? "HUNG JURY" : "THE VERDICT",
+      capture: "Case Closed",
+      escape: "Vanished",
+      verdict: winner === "draw" ? "Hung Jury" : "The Verdict",
     };
     const reasons = {
       capture: "The detective has the vigilante in cuffs.",
@@ -1018,19 +984,21 @@ export default class CaseBattleScene extends Phaser.Scene {
           : `After ${turn} turns, the city sides with the ${SIDES[winner].name.toLowerCase()}.`,
     };
 
-    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0).setDepth(200).setInteractive();
-    this.tweens.add({ targets: shade, fillAlpha: 0.82, duration: 400 });
+    const ink = hex(this.theme.ink);
+    const shade = this.overlay(200);
+    this.tweens.add({ targets: shade, fillAlpha: 0.94, duration: 400 });
     const items = [
-      this.add.text(W / 2, 430, titles[endReason], { fontFamily: FONT_DISPLAY, fontSize: "76px", color: COLORS.ink }),
-      this.add.text(W / 2, 520, winner === "draw" ? "DRAW" : won ? "YOU WIN" : "YOU LOSE", {
+      this.add.text(W / 2, 420, titles[endReason], { fontFamily: FONT_DISPLAY, fontSize: "100px", color: ink }),
+      this.add.text(W / 2, 530, winner === "draw" ? "Draw" : won ? "You win" : "You lose", {
         fontFamily: FONT_DISPLAY,
-        fontSize: "56px",
-        color: winner === "draw" ? COLORS.muted : won ? hex(COLORS.gold) : hex(COLORS.vigilante),
+        fontSize: "64px",
+        color: winner === "draw" || won ? ink : hex(this.theme.red),
       }),
-      this.add.text(W / 2, 600, reasons[endReason], {
+      this.add.text(W / 2, 610, reasons[endReason], {
         fontFamily: FONT_BODY,
-        fontSize: "22px",
-        color: COLORS.muted,
+        fontSize: "26px",
+        fontStyle: "italic",
+        color: hex(this.theme.soft),
         align: "center",
         wordWrap: { width: 600 },
       }),
@@ -1040,13 +1008,10 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.tweens.add({ targets: t, alpha: 1, y: t.y - 20, delay: 200 + i * 150, duration: 300 });
     });
 
-    const rematch = this.online
-      ? this.createButton(W / 2, 760, 360, "NEW MATCH", COLORS.gold, () => this.scene.start("MultiplayerLobbyScene"))
-      : this.createButton(W / 2, 760, 360, "REMATCH", COLORS.gold, () => this.scene.restart());
-    const menu = this.createButton(W / 2, 860, 360, "MENU", 0x8a90a0, () => this.leaveToMenu());
-    [rematch, menu].forEach((b) => {
-      b.bg.setDepth(201);
-      b.text.setDepth(202);
-    });
+    const again = this.online
+      ? button(this, this.theme, W / 2, 770, 400, "New match", () => this.scene.start("MultiplayerLobbyScene"), { primary: true })
+      : button(this, this.theme, W / 2, 770, 400, "Rematch", () => this.scene.restart(), { primary: true });
+    again.setDepth(201);
+    button(this, this.theme, W / 2, 880, 400, "Menu", () => this.leaveToMenu()).setDepth(201);
   }
 }

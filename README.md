@@ -63,7 +63,7 @@ Each special card beats exactly one thing:
 | Rules | Pure JS engine in `src/case/`, shared by client and server |
 | Multiplayer | Socket.IO (Node.js server) |
 | Hosting | Google Cloud Run |
-| Art Style | Pixel-art portraits, noir UI |
+| Art Style | Pixel-art portraits; black-and-white blackletter UI with a touch of red; selectable board themes |
 
 ---
 

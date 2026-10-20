@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import { FONTS } from "../theme.js";
+import { getTheme, hex, paintBackground, zone } from "../theme.js";
+import { backLink, bodyText, button, characterPicker, displayText } from "../ui/widgets.js";
 import NetworkManager from "../network/NetworkManager.js";
 
 export default class MultiplayerLobbyScene extends Phaser.Scene {
@@ -10,298 +11,78 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
   }
 
   create() {
-    const centerX = this.cameras.main.width / 2;
-    const centerY = this.cameras.main.height / 2;
+    this.theme = getTheme();
+    this.selectedCharacter = null;
+    this.isSearching = false;
+    const theme = this.theme;
+    paintBackground(this, theme);
+    backLink(this, theme, () => {
+      if (this.isSearching) return;
+      NetworkManager.disconnect();
+      this.scene.start("MenuScene");
+    });
 
-    // Title
-    this.add
-      .text(centerX, 150, "MULTIPLAYER", {
-        fontFamily: FONTS.display,
-        fontSize: "72px",
-        color: "#ffffff",
-        align: "center",
-      })
-      .setOrigin(0.5);
+    displayText(this, theme, 375, 190, "Multiplayer", 80);
+    this.statusText = bodyText(this, theme, 375, 280, "Connecting to the server...", 26, { italic: true, soft: true });
 
-    // Connection status
-    this.statusText = this.add
-      .text(centerX, 250, "Connecting to server...", {
-        fontFamily: FONTS.display,
-        fontSize: "28px",
-        color: "#ffaa00",
-      })
-      .setOrigin(0.5);
+    this.picker = characterPicker(this, theme, 600, (character) => this.selectCharacter(character));
+    this.findMatchButton = button(this, theme, 375, 1010, 520, "Find an opponent", () => this.startMatchmaking(), {
+      primary: true,
+    });
+    this.findMatchButton.setEnabled(false);
+    this.searchingText = bodyText(this, theme, 375, 1010, "Searching for an opponent...", 30, { italic: true }).setVisible(
+      false,
+    );
 
-    // Character selection title
-    this.add
-      .text(centerX, 310, "Choose Your Character", {
-        fontFamily: FONTS.display,
-        fontSize: "40px",
-        color: "#cccccc",
-      })
-      .setOrigin(0.5);
-
-    // === DETECTIVE OPTION ===
-    this.detectiveBg = this.add
-      .rectangle(centerX, 460, 600, 200, 0x333333, 1)
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .setStrokeStyle(3, 0x555555);
-
-    this.detectivePortrait = this.add
-      .image(centerX - 210, 460, "detective-neutral")
-      .setDisplaySize(140, 140)
-      .setOrigin(0.5);
-
-    this.detectiveLabel = this.add
-      .text(centerX + 30, 430, "Independent Detective", {
-        fontFamily: FONTS.display,
-        fontSize: "36px",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
-
-    this.detectiveDesc = this.add
-      .text(
-        centerX + 30,
-        475,
-        "Push the Case to 100\nto capture the Vigilante.",
-        {
-          fontFamily: "Arial, sans-serif",
-          fontSize: "18px",
-          color: "#aaaaaa",
-          align: "center",
-          lineSpacing: 2,
-        },
-      )
-      .setOrigin(0.5, 0);
-
-    // === VIGILANTE OPTION ===
-    this.vigilanteBg = this.add
-      .rectangle(centerX, 700, 600, 200, 0x333333, 1)
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .setStrokeStyle(3, 0x555555);
-
-    this.vigilantePortrait = this.add
-      .image(centerX - 210, 700, "killer-neutral")
-      .setDisplaySize(140, 140)
-      .setOrigin(0.5);
-
-    this.vigilanteLabel = this.add
-      .text(centerX + 30, 670, "Vigilante", {
-        fontFamily: FONTS.display,
-        fontSize: "44px",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
-
-    this.vigilanteDesc = this.add
-      .text(
-        centerX + 30,
-        715,
-        "Drag the Case down to 0\nto escape the Detective.",
-        {
-          fontFamily: "Arial, sans-serif",
-          fontSize: "18px",
-          color: "#aaaaaa",
-          align: "center",
-          lineSpacing: 2,
-        },
-      )
-      .setOrigin(0.5, 0);
-
-    // Find Match button (initially hidden)
-    this.findMatchButton = this.add
-      .text(centerX, 900, "FIND MATCH", {
-        fontFamily: FONTS.display,
-        fontSize: "56px",
-        color: "#ffffff",
-        padding: { x: 80, y: 30 },
-        backgroundColor: "#00aa00",
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .setVisible(false);
-
-    // Searching text (initially hidden)
-    this.searchingText = this.add
-      .text(centerX, 900, "SEARCHING FOR OPPONENT...", {
-        fontFamily: FONTS.display,
-        fontSize: "48px",
-        color: "#ffaa00",
-      })
-      .setOrigin(0.5)
-      .setVisible(false);
-
-    // Back button
-    this.backButton = this.add
-      .text(100, 80, "← BACK", {
-        fontFamily: FONTS.display,
-        fontSize: "36px",
-        color: "#ffffff",
-        padding: { x: 20, y: 10 },
-      })
-      .setOrigin(0, 0.5)
-      .setInteractive({ useHandCursor: true });
-
-    this.setupButtons();
+    this.events.once("shutdown", () => this.shutdown());
     this.connectToServer();
   }
 
-  setupButtons() {
-    // Detective card
-    this.detectiveBg.on("pointerover", () => {
-      if (
-        !this.isSearching &&
-        this.selectedCharacter !== "Independent Detective"
-      ) {
-        this.detectiveBg.setFillStyle(0x1a3a5c);
-        this.detectiveBg.setStrokeStyle(3, 0x00aaff);
-      }
-    });
-    this.detectiveBg.on("pointerout", () => {
-      if (this.selectedCharacter !== "Independent Detective") {
-        this.detectiveBg.setFillStyle(0x333333);
-        this.detectiveBg.setStrokeStyle(3, 0x555555);
-      }
-    });
-    this.detectiveBg.on("pointerdown", () => {
-      if (!this.isSearching) {
-        this.selectCharacter("Independent Detective");
-      }
-    });
-
-    // Vigilante card
-    this.vigilanteBg.on("pointerover", () => {
-      if (!this.isSearching && this.selectedCharacter !== "Vigilante") {
-        this.vigilanteBg.setFillStyle(0x5c1a1a);
-        this.vigilanteBg.setStrokeStyle(3, 0xff4444);
-      }
-    });
-    this.vigilanteBg.on("pointerout", () => {
-      if (this.selectedCharacter !== "Vigilante") {
-        this.vigilanteBg.setFillStyle(0x333333);
-        this.vigilanteBg.setStrokeStyle(3, 0x555555);
-      }
-    });
-    this.vigilanteBg.on("pointerdown", () => {
-      if (!this.isSearching) {
-        this.selectCharacter("Vigilante");
-      }
-    });
-
-    // Find Match button
-    this.findMatchButton.on("pointerover", () => {
-      this.findMatchButton.setBackgroundColor("#00dd00");
-    });
-    this.findMatchButton.on("pointerout", () => {
-      this.findMatchButton.setBackgroundColor("#00aa00");
-    });
-    this.findMatchButton.on("pointerdown", () => {
-      this.startMatchmaking();
-    });
-
-    // Back button
-    this.backButton.on("pointerover", () => {
-      this.backButton.setBackgroundColor("#333333");
-    });
-    this.backButton.on("pointerout", () => {
-      this.backButton.setBackgroundColor("transparent");
-    });
-    this.backButton.on("pointerdown", () => {
-      if (!this.isSearching) {
-        NetworkManager.disconnect();
-        this.scene.start("MenuScene");
-      }
-    });
+  setStatus(text, isError = false) {
+    if (!this.sys.isActive() || !this.statusText) return;
+    const z = zone(this.theme, 280);
+    this.statusText.setText(text);
+    this.statusText.setColor(hex(isError ? z.red : z.soft));
   }
 
   connectToServer() {
     NetworkManager.connect();
 
-    // Set up callbacks
     NetworkManager.onMatchFound = (data) => {
-      if (import.meta.env.DEV) {
-        console.log("Match found, starting battle...");
-      }
       this.isSearching = false;
-
       // The server may assign the other side if both players picked the same one.
-      this.registry.set(
-        "playerCharacter",
-        data.side === "vigilante" ? "Vigilante" : "Independent Detective",
-      );
+      this.registry.set("playerCharacter", data.side === "vigilante" ? "Vigilante" : "Independent Detective");
       this.scene.start("CaseBattleScene", { online: data });
     };
 
-    NetworkManager.onConnectionError = (error) => {
-      if (!this.scene || !this.scene.isActive() || !this.statusText) return;
-      this.statusText.setText("Connection failed! Check if server is running.");
-      this.statusText.setColor("#ff0000");
-    };
+    NetworkManager.onConnectionError = () => this.setStatus("Can't reach the server. Try again later.", true);
 
-    // Wait a bit then check connection
     this.time.delayedCall(1000, () => {
-      if (!this.scene || !this.scene.isActive() || !this.statusText) return;
-      if (NetworkManager.connected) {
-        this.statusText.setText("✅ Connected to server");
-        this.statusText.setColor("#00ff00");
-      } else {
-        this.statusText.setText("❌ Connection failed - Is server running?");
-        this.statusText.setColor("#ff0000");
-      }
+      if (NetworkManager.connected) this.setStatus("Connected. Choose your side.");
+      else this.setStatus("Can't reach the server. Try again later.", true);
+      this.updateFindButton();
     });
   }
 
   selectCharacter(character) {
+    if (this.isSearching) return;
     this.selectedCharacter = character;
+    this.picker.select(character);
+    this.updateFindButton();
+  }
 
-    // Reset both cards
-    this.detectiveBg.setFillStyle(0x333333);
-    this.detectiveBg.setStrokeStyle(3, 0x555555);
-    this.vigilanteBg.setFillStyle(0x333333);
-    this.vigilanteBg.setStrokeStyle(3, 0x555555);
-
-    // Highlight selected
-    if (character === "Independent Detective") {
-      this.detectiveBg.setFillStyle(0x0a3a6a);
-      this.detectiveBg.setStrokeStyle(3, 0x00aaff);
-    } else {
-      this.vigilanteBg.setFillStyle(0x6a0a0a);
-      this.vigilanteBg.setStrokeStyle(3, 0xff4444);
-    }
-
-    // Show find match button
-    this.findMatchButton.setVisible(true);
+  updateFindButton() {
+    this.findMatchButton.setEnabled(!!this.selectedCharacter && NetworkManager.connected);
   }
 
   startMatchmaking() {
-    if (!this.selectedCharacter || !NetworkManager.connected) {
-      return;
-    }
-
+    if (!this.selectedCharacter || !NetworkManager.connected) return;
     this.isSearching = true;
-
-    // Hide find match button, show searching text
     this.findMatchButton.setVisible(false);
     this.searchingText.setVisible(true);
-
-    // Disable character cards
-    this.detectiveBg.disableInteractive();
-    this.vigilanteBg.disableInteractive();
-
-    // Start searching
+    this.picker.setEnabled(false);
     NetworkManager.findMatch(this.selectedCharacter);
-
-    // Add pulsing animation to searching text
-    this.tweens.add({
-      targets: this.searchingText,
-      alpha: 0.3,
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-    });
+    this.tweens.add({ targets: this.searchingText, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
   }
 
   shutdown() {

@@ -57,7 +57,8 @@ The current rules already support this with little change:
   - packs bought only with **currency earned by playing**
   - **direct purchase** of a known card or character
   - a **crafting / dust** system so duplicates are never wasted
-  - cosmetic-only paid items (card backs, portraits, meter skins)
+  - cosmetic-only paid items (card backs, portraits, meter skins, and board
+    themes: the Appearance screen already lists every entry in `THEMES`)
 - **Fairness in multiplayer.** If paid cards are stronger, players who don't pay
   leave. Popular approaches: new cards are *sidegrades* (different, not
   stronger), or ranked modes use fixed starter decks.

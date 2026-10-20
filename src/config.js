@@ -5,6 +5,7 @@ import MultiplayerLobbyScene from "./scenes/MultiplayerLobbyScene.js";
 import CaseBattleScene from "./scenes/CaseBattleScene.js";
 import InstructionsScene from "./scenes/InstructionsScene.js";
 import SinglePlayerLobbyScene from "./scenes/SinglePlayerLobbyScene.js";
+import AppearanceScene from "./scenes/AppearanceScene.js";
 
 const config = {
   //type is the rendering context
@@ -34,6 +35,7 @@ const config = {
     CaseBattleScene,
     InstructionsScene,
     SinglePlayerLobbyScene,
+    AppearanceScene,
   ],
 };
 

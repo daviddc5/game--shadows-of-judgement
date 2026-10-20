@@ -42,6 +42,22 @@ by whether they give players more to read, not more to calculate.
 | AI reads public info only (energy, recent plays) | It should be beatable by reading it, and never cheat. |
 | New look for the battle screen (noir: rain, skyline, cyan vs crimson) | Built by Claude as part of the experiment. The owner "doesn't hate it, doesn't love it": the visual style is still open. |
 
+## Visual direction (chosen)
+
+After several rounds of look boards, the owner chose:
+
+- **UnifrakturMaguntia** blackletter for names, titles and numbers; EB Garamond
+  for everything else.
+- **Mostly black and white**, colour only in the character portraits, and **a
+  touch of red** (the needle, the Vigilante's numbers, your selected card, big
+  moments like "Countered!"). Plain and simple: no rain, glows or textures.
+- **No newspaper framing.** That look was liked for its font and restraint,
+  not for being a newspaper.
+- **Board themes are a personalisation option**, like card games such as
+  Yu-Gi-Oh: Light page, Dark page and Split, chosen on the Appearance screen.
+  Adding a theme is one entry in `THEMES` in `src/theme.js`. Themes are also a
+  natural cosmetic for the future collection and shop.
+
 ## Ideas considered and parked
 
 - **Pokémon-style teams of characters.** Wanted long term, not now: lots of art
@@ -72,8 +88,8 @@ by whether they give players more to read, not more to calculate.
 
 ## Known issues and housekeeping
 
-- ~~`Death Note.ttf` is copyrighted~~ Replaced with Grenze Gotisch (OFL,
-  bundled via `@fontsource/grenze-gotisch`) for titles and big moments, chosen
-  by the owner. Fonts live in `src/theme.js`.
+- ~~`Death Note.ttf` is copyrighted~~ Replaced with UnifrakturMaguntia (OFL,
+  bundled via `@fontsource`), the blackletter the owner picked for its Death
+  Note feel. Fonts and themes live in `src/theme.js`.
 - Card type names (QUICK / NORMAL) no longer describe anything since speed was
   removed. Consider MINOR / MAJOR.

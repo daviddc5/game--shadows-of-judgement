@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import { FONTS } from "../theme.js";
+import { getTheme, paintBackground } from "../theme.js";
+import { bodyText, displayText } from "../ui/widgets.js";
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -7,41 +8,16 @@ export default class TitleScene extends Phaser.Scene {
   }
 
   create() {
-    const centerX = this.cameras.main.width / 2;
-    const centerY = this.cameras.main.height / 2;
+    const theme = getTheme();
+    paintBackground(this, theme);
 
-    // Main title
-    this.add
-      .text(centerX, centerY, "SHADOWS OF\nJUDGMENT", {
-        fontFamily: FONTS.display,
-        fontSize: "80px",
-        color: "#ffffff",
-        align: "center",
-      })
-      .setOrigin(0.5);
+    displayText(this, theme, 375, 280, "Shadows of\nJudgment", 104);
+    bodyText(this, theme, 375, 428, "DETECTIVE · VS · VIGILANTE", 22, { soft: true });
+    this.add.rectangle(375, 560, 120, 3, theme.red);
 
-    // "Tap to start" text
-    const tapText = this.add
-      .text(centerX, centerY + 250, "TAP TO START", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "36px",
-        color: "#ffffff",
-        align: "center",
-      })
-      .setOrigin(0.5);
+    const tap = bodyText(this, theme, 375, 1000, "Tap to start", 30, { italic: true, soft: true });
+    this.tweens.add({ targets: tap, alpha: 0.3, duration: 900, yoyo: true, repeat: -1 });
 
-    // Blinking animation for tap text
-    this.tweens.add({
-      targets: tapText,
-      alpha: 0.3,
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-    });
-
-    // Make entire screen clickable to proceed
-    this.input.on("pointerdown", () => {
-      this.scene.start("MenuScene");
-    });
+    this.input.on("pointerdown", () => this.scene.start("MenuScene"));
   }
 }

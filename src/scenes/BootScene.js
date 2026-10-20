@@ -41,9 +41,13 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
-    // Canvas text can't swap fonts after drawing, so load the title font first.
-    document.fonts
-      .load(`700 40px ${FONTS.display}`)
+    // Canvas text can't swap fonts after drawing, so load every face first.
+    Promise.all([
+      document.fonts.load(`40px ${FONTS.display}`),
+      document.fonts.load(`20px ${FONTS.body}`),
+      document.fonts.load(`italic 20px ${FONTS.body}`),
+      document.fonts.load(`600 20px ${FONTS.body}`),
+    ])
       .catch(() => {})
       .then(() => this.scene.start("TitleScene"));
   }
