@@ -7,23 +7,23 @@ multiplayer server in `server/` and Cloud Run deploys via Harness.
 decisions, the reasons behind them, and the roadmap. Current rules are in
 [docs/CASE_METER_EXPERIMENT.md](docs/CASE_METER_EXPERIMENT.md).
 
-## Two rulesets live side by side
+## Layout
 
-- **New (single player):** `src/case/` (cards, rules engine, AI) and
-  `src/scenes/CaseBattleScene.js`. One shared Case meter, simultaneous picks,
-  POWER / COUNTER / BAIT / AMBUSH loop. All new work goes here.
-- **Old (multiplayer only):** `src/scenes/BattleScene.js`, `src/data/`,
-  `src/logic/`, `server/`. Eight-stat rules. Don't extend; it is replaced when
-  multiplayer is ported.
-
-`src/case/rules.js` is pure logic with no Phaser, so rules can be tested and
-simulated headlessly. Tunable numbers live in its `RULES` object and the card
-lists in `src/case/cards.js`.
+- `src/case/`: cards, pure rules engine (`rules.js`, tunable `RULES`), and AI.
+  No Phaser, so rules can be tested and simulated headlessly.
+- `src/scenes/CaseBattleScene.js`: the battle screen for both modes. Single
+  player runs the rules locally against the AI; online it sends choices to the
+  server and animates the events it gets back.
+- `server/caseRoom.js`: multiplayer rooms (matchmaking pairs, hidden-hand views,
+  turn submission) on the same rules engine; `socketHandlers.js` is the thin
+  Socket.IO layer. The server imports `../src/case/`, and the Dockerfile copies
+  those files to keep that path working, so update it if `src/case` gains files
+  the server needs.
 
 ## Commands
 
 - `npm run dev`: dev server on http://localhost:5173
-- `npm test`: Vitest unit tests (`src/**/*.test.js`)
+- `npm test`: Vitest unit tests (`src/` and `server/`)
 - `npm run simulate -- 10000 [rule=value ...]`: AI-vs-AI balance report (win
   rates, game length, play and payoff rates per card type). Use it before and
   after any rules or card-number change.

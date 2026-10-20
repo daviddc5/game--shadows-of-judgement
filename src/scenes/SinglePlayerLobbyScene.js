@@ -71,7 +71,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
       .text(
         centerX + 30,
         475,
-        "Max both GREEN stats to win.\nIf a RED stat hits 100, you lose.",
+        "Push the Case to 100\nto capture the Vigilante.",
         {
           fontFamily: "Arial, sans-serif",
           fontSize: "18px",
@@ -109,7 +109,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
       .text(
         centerX + 30,
         715,
-        "Max both GREEN stats to win.\nIf a RED stat hits 100, you lose.",
+        "Drag the Case down to 0\nto escape the Detective.",
         {
           fontFamily: "Arial, sans-serif",
           fontSize: "18px",
@@ -192,9 +192,6 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     this.startButton.on("pointerdown", () => {
       if (this.selectedCharacter) {
         this.registry.set("playerCharacter", this.selectedCharacter);
-        this.registry.set("isMultiplayer", false);
-        this.registry.set("debugMode", import.meta.env.DEV && this.debugMode);
-        // Single player uses the Case meter ruleset; multiplayer still uses BattleScene.
         this.scene.start("CaseBattleScene");
       }
     });

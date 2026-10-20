@@ -1,8 +1,8 @@
 # Case Meter experiment
 
-An experimental ruleset that replaces the eight stat bars with one shared meter.
-Single player uses it (`CaseBattleScene`); multiplayer still runs the original
-`BattleScene` and server rules.
+The current rules: one shared meter instead of the original eight stat bars.
+Both single player and multiplayer use them (`CaseBattleScene`, with the server
+running the same engine via `server/caseRoom.js`).
 
 ## Rules
 

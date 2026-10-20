@@ -73,98 +73,86 @@ export default class InstructionsScene extends Phaser.Scene {
         subtitle: "How to Play",
         sections: [
           {
-            heading: "THE GAME",
-            body: "A strategic card battle between a Detective trying to uncover the truth and a Vigilante seeking public support.\n\nBoth players play cards simultaneously each turn. Cards affect stats for both you and your opponent.",
+            heading: "THE CASE",
+            body: "One shared meter sits between you, starting at 50.\n\nThe Detective pushes it up to 100 to CAPTURE.\nThe Vigilante drags it down to 0 to ESCAPE.",
           },
           {
-            heading: "GOAL",
-            body: "Win by maxing both GREEN stats to 100.\nLose if any RED stat reaches 100.",
+            heading: "EACH TURN",
+            body: "1. Both players pick a card (or WAIT) in secret\n2. Both cards are revealed at the same time\n3. Their pushes add up and the needle moves",
           },
           {
-            heading: "TURNS",
-            body: "1. Both players pick a card\n2. Cards are revealed simultaneously\n3. Stats are updated\n4. Draw new cards\n5. Repeat!",
-          },
-        ],
-      },
-      // PAGE 2: Characters & Stats
-      {
-        title: "CHARACTERS",
-        subtitle: "Each character has 4 stats",
-        sections: [
-          {
-            heading: "🔍 DETECTIVE",
-            body: "GREEN stats (win condition):\n  • Evidence Chain\n  • Task Force Unity\n\nRED stats (lose condition):\n  • Public Panic\n  • Case Doubt\n\nYou win when both green stats hit 100. You lose if either red stat hits 100.",
-            color: "#44aaff",
-          },
-          {
-            heading: "⚖️ VIGILANTE",
-            body: "GREEN stats (win condition):\n  • Cult Resolve\n  • Public Support\n\nRED stats (lose condition):\n  • Evidence Against\n  • Manhunt Heat\n\nYou win when both green stats hit 100. You lose if either red stat hits 100.",
-            color: "#ff4444",
+            heading: "THE VERDICT",
+            body: "Stakes rise every turn: every card pushes harder. If nobody wins by turn 12, the needle decides.",
           },
         ],
       },
-      // PAGE 3: Win & Lose Conditions
+      // PAGE 2: Energy
       {
-        title: "WIN CONDITIONS",
-        subtitle: "Three ways the game ends",
+        title: "ENERGY",
+        subtitle: "Spend it or save it",
         sections: [
           {
-            heading: "🏆 STAT VICTORY",
-            body: "You win when both of your GREEN stats reach 100.",
-            color: "#00ff00",
+            heading: "⬢ GAIN",
+            body: "You gain +2 energy each turn (max 10). Every card shows its cost.",
+            color: "#f2b33d",
           },
           {
-            heading: "💀 STAT DEFEAT",
-            body: "You lose when any of your RED stats reaches 100.",
-            color: "#ff4444",
+            heading: "WAIT",
+            body: "Skip your turn to bank +1 extra energy and save up for something big.",
           },
           {
-            heading: "🃏 OUT OF CARDS",
-            body: "When both players run out of cards, a final score is calculated:\n\nScore = Green Stats − Red Stats\n\nHigher score wins! If tied, the player with higher combined GREEN progress takes it.",
-            color: "#ffd700",
+            heading: "👁 READ THEM",
+            body: "You can see your opponent's energy and what they played recently. 6 or more energy means a POWER card could be coming.",
           },
         ],
       },
-      // PAGE 4: Cards & Energy
+      // PAGE 3: The mind games
       {
-        title: "CARDS & ENERGY",
-        subtitle: "Playing your hand",
+        title: "MIND GAMES",
+        subtitle: "Every special card beats one thing",
         sections: [
           {
-            heading: "🎴 CARDS",
-            body: "Each card has:\n  • Energy cost — shown on the card\n  • Self effects — changes to YOUR stats\n  • Opponent effects — changes to THEIR stats\n\nGreen numbers help you, red numbers hurt.",
+            heading: "POWER",
+            body: "A huge push, but a COUNTER stops it cold.",
+            color: "#f2b33d",
           },
           {
-            heading: "⚡ ENERGY",
-            body: "You start with limited energy and gain +5 each turn. If you can't afford a card, you must pass.\n\nCheaper cards are weaker but let you save energy for powerful plays later!",
+            heading: "COUNTER",
+            body: "Cancels a POWER card and pushes for you. Against anything else, it fizzles.",
+            color: "#e5484d",
           },
           {
-            heading: "🛡️ COUNTER CARDS",
-            body: "Some cards are COUNTER type — they cancel the opponent's card effects if played on the same turn!",
-            color: "#ff8800",
+            heading: "BAIT",
+            body: "Looks like a threat. A big push if they COUNTER, small otherwise.",
+            color: "#b36bff",
+          },
+          {
+            heading: "AMBUSH",
+            body: "A big push if they WAIT, small otherwise.",
+            color: "#ff8a3d",
           },
         ],
       },
-      // PAGE 5: Tips
+      // PAGE 4: Tips
       {
-        title: "TIPS & STRATEGY",
-        subtitle: "Play smarter",
+        title: "TIPS",
+        subtitle: "Think one move ahead",
         sections: [
           {
-            heading: "📊 WATCH BOTH SIDES",
-            body: "Tap VIEW to see both your stats and your opponent's. Know when they're close to winning — or losing!",
+            heading: "WATCH THEIR ENERGY",
+            body: "Have they been saving? Ask yourself why before you pick.",
           },
           {
-            heading: "🎯 BALANCE OFFENSE & DEFENSE",
-            body: "Don't just push your green win path. Some cards raise the opponent's red danger stats to threaten defeat.",
+            heading: "DON'T BE PREDICTABLE",
+            body: "Waiting twice in a row invites an AMBUSH. Countering every time invites BAIT.",
           },
           {
-            heading: "🃏 MANAGE YOUR DECK",
-            body: "You draw 2 cards per turn (max 4 in hand). If the game goes to scoring, every stat matters — green helps, red hurts.",
+            heading: "QUICK & NORMAL CARDS",
+            body: "Plain pushes with no tricks. Reliable when you can't read them.",
           },
           {
-            heading: "⚡ ENERGY TIMING",
-            body: "Sometimes it's better to play a cheap card now and save energy for a big play next turn.",
+            heading: "IN BATTLE",
+            body: "Tap ? in the top-left corner to see the rules again.",
           },
         ],
       },

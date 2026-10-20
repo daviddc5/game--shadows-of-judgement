@@ -2,9 +2,7 @@ import BootScene from "./scenes/BootScene.js";
 import TitleScene from "./scenes/TitleScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import MultiplayerLobbyScene from "./scenes/MultiplayerLobbyScene.js";
-import BattleScene from "./scenes/BattleScene.js";
 import CaseBattleScene from "./scenes/CaseBattleScene.js";
-import GameOverScene from "./scenes/GameOverScene.js";
 import InstructionsScene from "./scenes/InstructionsScene.js";
 import SinglePlayerLobbyScene from "./scenes/SinglePlayerLobbyScene.js";
 
@@ -33,9 +31,7 @@ const config = {
     TitleScene,
     MenuScene,
     MultiplayerLobbyScene,
-    BattleScene,
     CaseBattleScene,
-    GameOverScene,
     InstructionsScene,
     SinglePlayerLobbyScene,
   ],

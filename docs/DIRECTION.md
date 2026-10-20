@@ -30,6 +30,7 @@ by whether they give players more to read, not more to calculate.
 
 | Decision | Why |
 | --- | --- |
+| Multiplayer runs the same rules engine on the server; old 8-stat code removed | One game, not two. Matchmaking pairs a Detective with a Vigilante (the later player is switched if both pick the same side). |
 | Keep the codebase and Phaser, rewrite the rules | The problem was design, not tech. Phaser covers the effects needed (particles, shake, shaders); infra, multiplayer server and tests are worth keeping. |
 | One shared Case meter (0–100) instead of eight stats | One rule everyone gets instantly; every card affects both players. |
 | Scarce, visible energy (+2/turn, max 10) | Banking energy becomes a readable signal ("they have 7, POWER is coming"). |
@@ -62,15 +63,12 @@ by whether they give players more to read, not more to calculate.
    escalating cases with card rewards between fights.
 4. **Visual pass.** Unify title, menu and lobby screens with the battle screen
    (they still use the old plain style), add sound, settle the art direction.
-5. **Port multiplayer** to the new rules once they settle. `server/` still runs
-   the old eight-stat rules and `BattleScene`.
+5. ~~Port multiplayer~~ Done: the server runs the same rules engine, and the
+   old eight-stat code has been removed.
 
 ## Known issues and housekeeping
 
 - `Death Note.ttf` and the `lCards` / `kiraCards` names are an IP risk; replace
   before promoting the game.
-- `src/scenes/BattleScene.js` (3,000 lines) is the old screen, still used by
-  multiplayer. Don't extend it; it goes away when multiplayer is ported.
-- `server/cards.js` is a separate copy of the old card data.
 - Card type names (QUICK / NORMAL) no longer describe anything since speed was
   removed. Consider MINOR / MAJOR.

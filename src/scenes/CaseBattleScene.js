@@ -9,6 +9,7 @@ import {
   startTurn,
 } from "../case/rules.js";
 import { chooseAiPlay } from "../case/ai.js";
+import NetworkManager from "../network/NetworkManager.js";
 
 const W = 750;
 const H = 1334;
@@ -39,20 +40,53 @@ const HAND_Y = 1075;
 const wait = (scene, ms) =>
   new Promise((resolve) => scene.time.delayedCall(ms, resolve));
 
+/** Builds a client-side match state from a server view (the opponent's hand stays hidden). */
+function stateFromView(view) {
+  const state = { sides: { detective: {}, vigilante: {} } };
+  applyView(state, view);
+  return state;
+}
+
+function applyView(state, view) {
+  const opponent = otherSide(view.side);
+  Object.assign(state, {
+    rules: view.rules,
+    turn: view.turn,
+    caseValue: view.caseValue,
+    winner: view.winner,
+    endReason: view.endReason,
+  });
+  state.sides[view.side] = { ...view.you };
+  state.sides[opponent] = {
+    energy: view.opponent.energy,
+    hand: new Array(view.opponent.handCount).fill(null),
+    history: view.opponent.history,
+  };
+}
+
 /**
- * Single-player battle using the Case meter ruleset (src/case).
- * One shared meter, scarce visible energy, COUNTER only stops POWER.
+ * Battle using the Case meter ruleset (src/case).
+ * Single player runs the rules locally against the AI. Online play
+ * (scene data `{ online: matchFoundData }`) sends choices to the server,
+ * which runs the same rules, and animates the events it sends back.
  */
 export default class CaseBattleScene extends Phaser.Scene {
   constructor() {
     super({ key: "CaseBattleScene" });
   }
 
-  create() {
-    const playerCharacter = this.registry.get("playerCharacter");
-    this.playerSide = playerCharacter === "Vigilante" ? "vigilante" : "detective";
+  create(data) {
+    this.online = data?.online ?? null;
+    if (this.online) {
+      this.playerSide = this.online.side;
+      this.state = stateFromView(this.online.view);
+      this.setupNetwork();
+    } else {
+      const playerCharacter = this.registry.get("playerCharacter");
+      this.playerSide = playerCharacter === "Vigilante" ? "vigilante" : "detective";
+      this.state = createMatch();
+    }
     this.opponentSide = otherSide(this.playerSide);
-    this.state = createMatch();
     this.selectedIndex = null;
     this.busy = false;
     this.handCards = [];
@@ -67,9 +101,40 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.createPlayerPanel();
     this.createButtons();
 
-    if (import.meta.env.DEV) window.__caseScene = this;
+    if (import.meta.env.DEV) {
+      window.__caseScene = this;
+      if (this.registry.get("debugMode") && !this.online) this.createDebugControls();
+    }
+    this.events.once("shutdown", () => NetworkManager.clearCallbacks());
 
     this.beginTurn(true);
+  }
+
+  setupNetwork() {
+    NetworkManager.clearCallbacks();
+    NetworkManager.onOpponentLocked = () => {
+      // During the previous turn's animation, hold it until the next turn begins.
+      if (this.animating) this.pendingLock = true;
+      else this.showOpponentLocked();
+    };
+    NetworkManager.onTurnResolved = (result) => {
+      this.animating = true;
+      this.resolveWaiter?.(result);
+    };
+    NetworkManager.onPlayRejected = ({ message }) => {
+      this.busy = false;
+      this.renderHand();
+      this.waitButton.setEnabled(true);
+      this.flashHint(message);
+    };
+    NetworkManager.onOpponentDisconnected = () => {
+      if (!this.state.winner) this.showDisconnected();
+    };
+  }
+
+  leaveToMenu() {
+    if (this.online) NetworkManager.disconnect();
+    this.scene.start("MenuScene");
   }
 
   // ---------------------------------------------------------------- setup
@@ -141,7 +206,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       .text(W - 34, 38, "✕", { fontFamily: FONT_BODY, fontSize: "34px", color: COLORS.muted })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    exit.on("pointerdown", () => this.scene.start("MenuScene"));
+    exit.on("pointerdown", () => this.leaveToMenu());
 
     const help = this.add
       .text(34, 38, "?", { fontFamily: FONT_TITLE, fontSize: "34px", color: COLORS.muted })
@@ -493,9 +558,15 @@ export default class CaseBattleScene extends Phaser.Scene {
     );
     if (!first) this.showBanner(`TURN ${turn}`);
 
-    // The opponent decides now, using only public information.
-    this.opponentChoice = chooseAiPlay(this.state, this.opponentSide);
     this.opponentLocked = false;
+    if (this.online) {
+      this.animating = false;
+      if (this.pendingLock) this.showOpponentLocked();
+      this.pendingLock = false;
+      return;
+    }
+    // The AI decides now, using only public information.
+    this.opponentChoice = chooseAiPlay(this.state, this.opponentSide);
     this.time.delayedCall(Phaser.Math.Between(500, 1600), () => this.showOpponentLocked());
   }
 
@@ -515,12 +586,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.waitButton.setEnabled(false);
     this.playButton.setEnabled(false);
     this.hintText.setText("");
-    this.showOpponentLocked();
+    if (!this.online) this.showOpponentLocked();
 
-    const plays = { [this.playerSide]: index, [this.opponentSide]: this.opponentChoice };
     const playerCard = index == null ? null : this.state.sides[this.playerSide].hand[index];
-    const opponentCard =
-      this.opponentChoice == null ? null : this.state.sides[this.opponentSide].hand[this.opponentChoice];
 
     // Move the chosen hand card into the arena as a face-down card.
     if (playerCard) {
@@ -534,10 +602,25 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.arenaObjects.push(back);
     }
     this.handCards.forEach((c) => this.tweens.add({ targets: c, alpha: 0.25, duration: 200 }));
-    await wait(this, 520);
 
-    const { events, played } = resolveTurn(this.state, plays);
+    let events, played, nextView;
+    if (this.online) {
+      const result = new Promise((resolve) => (this.resolveWaiter = resolve));
+      NetworkManager.playCard(index);
+      if (!this.opponentLocked) this.hintText.setText("Waiting for your opponent...");
+      const [data] = await Promise.all([result, wait(this, 520)]);
+      this.resolveWaiter = null;
+      this.hintText.setText("");
+      this.showOpponentLocked();
+      ({ events, played, nextView } = data);
+      applyView(this.state, data.view);
+    } else {
+      await wait(this, 520);
+      const plays = { [this.playerSide]: index, [this.opponentSide]: this.opponentChoice };
+      ({ events, played } = resolveTurn(this.state, plays));
+    }
     this.turnPlayed = played;
+    const opponentCard = played[this.opponentSide];
 
     // Reveal both at once.
     const faces = {};
@@ -558,7 +641,8 @@ export default class CaseBattleScene extends Phaser.Scene {
       return;
     }
     await wait(this, 700);
-    startTurn(this.state);
+    if (this.online) applyView(this.state, nextView);
+    else startTurn(this.state);
     this.beginTurn();
   }
 
@@ -862,6 +946,59 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.rulesPanel = panel;
   }
 
+  showDisconnected() {
+    this.busy = true;
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.85).setDepth(200).setInteractive();
+    this.add
+      .text(W / 2, 500, "YOUR OPPONENT\nLEFT THE CASE", {
+        fontFamily: FONT_TITLE,
+        fontSize: "52px",
+        color: COLORS.ink,
+        align: "center",
+      })
+      .setOrigin(0.5)
+      .setDepth(201);
+    const again = this.createButton(W / 2, 700, 360, "NEW MATCH", COLORS.gold, () =>
+      this.scene.start("MultiplayerLobbyScene"),
+    );
+    const menu = this.createButton(W / 2, 800, 360, "MENU", 0x8a90a0, () => this.leaveToMenu());
+    [again, menu].forEach((b) => {
+      b.bg.setDepth(201);
+      b.text.setDepth(202);
+    });
+    return shade;
+  }
+
+  /** Dev-only test mode: nudge energy and the meter to reach situations fast. */
+  createDebugControls() {
+    const actions = [
+      ["+5⬢", () => (this.state.sides[this.playerSide].energy = Math.min(10, this.state.sides[this.playerSide].energy + 5))],
+      ["◀ 20", () => (this.state.caseValue = Math.max(1, this.state.caseValue - 20))],
+      ["20 ▶", () => (this.state.caseValue = Math.min(99, this.state.caseValue + 20))],
+    ];
+    actions.forEach(([label, act], i) => {
+      const t = this.add
+        .text(150 + i * 150, 806, label, {
+          fontFamily: FONT_BODY,
+          fontSize: "20px",
+          color: "#ffcc66",
+          backgroundColor: "#3a2a00",
+          padding: { x: 10, y: 4 },
+        })
+        .setOrigin(0.5)
+        .setDepth(60)
+        .setInteractive({ useHandCursor: true });
+      t.on("pointerdown", () => {
+        if (this.busy) return;
+        act();
+        this.meterValue = this.state.caseValue;
+        this.drawMeter(this.meterValue);
+        this.updateHud();
+        this.renderHand();
+      });
+    });
+  }
+
   showResult() {
     const { winner, endReason, turn } = this.state;
     const won = winner === this.playerSide;
@@ -901,8 +1038,10 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.tweens.add({ targets: t, alpha: 1, y: t.y - 20, delay: 200 + i * 150, duration: 300 });
     });
 
-    const rematch = this.createButton(W / 2, 760, 360, "REMATCH", COLORS.gold, () => this.scene.restart());
-    const menu = this.createButton(W / 2, 860, 360, "MENU", 0x8a90a0, () => this.scene.start("MenuScene"));
+    const rematch = this.online
+      ? this.createButton(W / 2, 760, 360, "NEW MATCH", COLORS.gold, () => this.scene.start("MultiplayerLobbyScene"))
+      : this.createButton(W / 2, 760, 360, "REMATCH", COLORS.gold, () => this.scene.restart());
+    const menu = this.createButton(W / 2, 860, 360, "MENU", 0x8a90a0, () => this.leaveToMenu());
     [rematch, menu].forEach((b) => {
       b.bg.setDepth(201);
       b.text.setDepth(202);

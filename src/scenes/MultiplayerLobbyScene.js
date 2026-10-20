@@ -64,7 +64,7 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
       .text(
         centerX + 30,
         475,
-        "Max both GREEN stats to win.\nIf a RED stat hits 100, you lose.",
+        "Push the Case to 100\nto capture the Vigilante.",
         {
           fontFamily: "Arial, sans-serif",
           fontSize: "18px",
@@ -99,7 +99,7 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
       .text(
         centerX + 30,
         715,
-        "Max both GREEN stats to win.\nIf a RED stat hits 100, you lose.",
+        "Drag the Case down to 0\nto escape the Detective.",
         {
           fontFamily: "Arial, sans-serif",
           fontSize: "18px",
@@ -226,13 +226,12 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
       }
       this.isSearching = false;
 
-      // Store game data in registry for BattleScene
-      this.registry.set("isMultiplayer", true);
-      this.registry.set("playerCharacter", this.selectedCharacter);
-      this.registry.set("multiplayerData", data);
-
-      // Start battle scene
-      this.scene.start("BattleScene");
+      // The server may assign the other side if both players picked the same one.
+      this.registry.set(
+        "playerCharacter",
+        data.side === "vigilante" ? "Vigilante" : "Independent Detective",
+      );
+      this.scene.start("CaseBattleScene", { online: data });
     };
 
     NetworkManager.onConnectionError = (error) => {
@@ -305,12 +304,8 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
   }
 
   shutdown() {
-    // Clean up event listeners when scene shuts down
-    if (NetworkManager.onMatchFound) {
-      NetworkManager.onMatchFound = null;
-    }
-    if (NetworkManager.onConnectionError) {
-      NetworkManager.onConnectionError = null;
-    }
+    // The battle scene installs its own callbacks.
+    NetworkManager.onMatchFound = null;
+    NetworkManager.onConnectionError = null;
   }
 }
