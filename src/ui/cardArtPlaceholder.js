@@ -1,17 +1,13 @@
-// A drawn placeholder for card art: a small noir scene per card type, with the
-// type's symbol on a seal in the corner. Each type has its own scene so cards
+// A drawn placeholder for card art: a small noir scene per card type. Each type has its own scene so cards
 // tell apart at a glance; the details are seeded by the card id, so two cards
 // of the same type differ a little but always look the same.
 // Real art (a card's `art` image) replaces this; see CaseBattleScene.buildCardArt.
-import { iconKey } from "./cardIcons.js";
-
 const SKY_TOP = 0x4b505c;
 const SKY_HORIZON = 0xa8a397;
 const FAR_CITY = 0x5f626b;
 const NEAR_CITY = 0x202127;
 const WINDOW = 0xf6e7b4;
 const MOON = 0xe9e4d8;
-const SEAL = 0xf4f2ec;
 const RED = 0xc1121f;
 
 /** Small deterministic random generator seeded from a string. */
@@ -221,12 +217,6 @@ export function buildPlaceholderArt(scene, card, side, y, w, h, edgeColor) {
     default: rooftops(g, rng, box, moonColor);
   }
 
-  // The type symbol on a small seal in the corner, so the scene stays visible.
-  const sx = box.left + w - 13;
-  const sy = box.top + 13;
-  const seal = scene.add.circle(sx, sy, 10, SEAL, 0.95).setStrokeStyle(1.5, NEAR_CITY);
-  const icon = scene.add.image(sx, sy, iconKey(card.type)).setDisplaySize(12, 12).setTint(NEAR_CITY);
-
   const frame = scene.add.rectangle(0, y, w, h).setStrokeStyle(1, edgeColor, 0.6);
-  return [g, seal, icon, frame];
+  return [g, frame];
 }
