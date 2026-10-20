@@ -194,7 +194,8 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
         this.registry.set("playerCharacter", this.selectedCharacter);
         this.registry.set("isMultiplayer", false);
         this.registry.set("debugMode", import.meta.env.DEV && this.debugMode);
-        this.scene.start("BattleScene");
+        // Single player uses the Case meter ruleset; multiplayer still uses BattleScene.
+        this.scene.start("CaseBattleScene");
       }
     });
 
