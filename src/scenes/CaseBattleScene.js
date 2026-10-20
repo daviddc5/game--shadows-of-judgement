@@ -12,6 +12,7 @@ import { chooseAiPlay } from "../case/ai.js";
 import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button } from "../ui/widgets.js";
+import { ensureTypeIcons, iconKey } from "../ui/cardIcons.js";
 
 const W = 750;
 const H = 1334;
@@ -22,7 +23,11 @@ const FONT_BODY = FONTS.body;
 const METER = { x: 60, y: 372, w: 630, h: 18 };
 const SLOT = { opponent: { x: 230, y: 625 }, player: { x: 520, y: 625 } };
 const CARD_W = 168;
-const CARD_H = 228;
+const CARD_H = 260;
+// Art box on every card. Artists: draw at 16:9, at least 640×360 (shown at 148×84).
+const ART_W = 148;
+const ART_H = 84;
+const ART_Y = -12;
 const HAND_Y = 1075;
 
 const TYPE_NAMES = {
@@ -32,6 +37,64 @@ const TYPE_NAMES = {
   POWER: "Power",
   BAIT: "Bait",
   AMBUSH: "Ambush",
+};
+
+const dashedRect = (g, w, h, dash, gap) => {
+  const edges = [
+    [-w / 2, -h / 2, w / 2, -h / 2],
+    [w / 2, -h / 2, w / 2, h / 2],
+    [w / 2, h / 2, -w / 2, h / 2],
+    [-w / 2, h / 2, -w / 2, -h / 2],
+  ];
+  for (const [x1, y1, x2, y2] of edges) {
+    const len = Math.hypot(x2 - x1, y2 - y1);
+    for (let d = 0; d < len; d += dash + gap) {
+      const a = d / len;
+      const b = Math.min(d + dash, len) / len;
+      g.lineBetween(x1 + (x2 - x1) * a, y1 + (y2 - y1) * a, x1 + (x2 - x1) * b, y1 + (y2 - y1) * b);
+    }
+  }
+};
+
+/**
+ * Each card type has its own frame so cards read differently at a glance.
+ * `edgeWidth` is the main border; `draw` adds the type's detail on top
+ * (coordinates are relative to the card's centre). `paper` is the page colour.
+ */
+const CARD_FRAMES = {
+  NORMAL: { edgeWidth: 3, draw() {} },
+  QUICK: { edgeWidth: 1.5, draw() {} },
+  POWER: {
+    edgeWidth: 3,
+    draw(g, style) {
+      g.lineStyle(1.5, style.ink, 0.9).strokeRect(-CARD_W / 2 + 6, -CARD_H / 2 + 6, CARD_W - 12, CARD_H - 12);
+    },
+  },
+  COUNTER: {
+    edgeWidth: 0,
+    draw(g, style) {
+      g.lineStyle(3, style.edge, 1);
+      dashedRect(g, CARD_W, CARD_H, 12, 7);
+    },
+  },
+  BAIT: {
+    edgeWidth: 3,
+    draw(g, style, paper) {
+      // A clipped top-right corner.
+      const x = CARD_W / 2;
+      const y = -CARD_H / 2;
+      g.fillStyle(paper, 1).fillTriangle(x - 20, y - 5, x + 5, y - 5, x + 5, y + 20);
+      g.lineStyle(3, style.edge, 1).lineBetween(x - 20, y, x, y + 20);
+      if (style.outline != null) g.lineStyle(1.5, style.outline, 1).lineBetween(x - 22, y - 2, x + 2, y + 22);
+    },
+  },
+  AMBUSH: {
+    edgeWidth: 3,
+    draw(g, style) {
+      // An ink bar down the left side.
+      g.fillStyle(style.ink, 1).fillRect(-CARD_W / 2 + 4, -CARD_H / 2 + 30, 6, CARD_H - 60);
+    },
+  },
 };
 
 const wait = (scene, ms) =>
@@ -158,6 +221,7 @@ export default class CaseBattleScene extends Phaser.Scene {
   // ---------------------------------------------------------------- setup
 
   createTextures() {
+    ensureTypeIcons(this);
     if (this.textures.exists("cb-spark")) return;
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.fillStyle(0xffffff, 1).fillCircle(6, 6, 6);
@@ -361,18 +425,19 @@ export default class CaseBattleScene extends Phaser.Scene {
   buildCardFace(card, side) {
     const style = this.theme.cards[side];
     const ink = hex(style.ink);
+    const top = -CARD_H / 2;
+    const left = -CARD_W / 2;
     const c = this.add.container(0, 0);
     const outline = this.cardOutline(style);
-    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(3, style.edge);
+    const frame = CARD_FRAMES[card.type] ?? CARD_FRAMES.NORMAL;
+    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(frame.edgeWidth, style.edge);
+
+    const icon = this.add.image(left + 18, top + 16, iconKey(card.type)).setDisplaySize(20, 20).setTint(style.ink);
     const typeLabel = this.add
-      .text(-CARD_W / 2 + 10, -CARD_H / 2 + 16, TYPE_NAMES[card.type], {
-        fontFamily: FONT_BODY,
-        fontSize: "17px",
-        color: ink,
-      })
+      .text(left + 32, top + 16, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "17px", color: ink })
       .setOrigin(0, 0.5);
     const cost = this.add
-      .text(CARD_W / 2 - 10, -CARD_H / 2 + 16, `${card.cost} ⬢`, {
+      .text(-left - 10 - (card.type === "BAIT" ? 14 : 0), top + 16, `${card.cost} ⬢`, {
         fontFamily: FONT_BODY,
         fontSize: "18px",
         fontStyle: "600",
@@ -380,22 +445,25 @@ export default class CaseBattleScene extends Phaser.Scene {
       })
       .setOrigin(1, 0.5);
     const name = this.add
-      .text(0, -CARD_H / 2 + 58, card.name, {
+      .text(0, top + 50, card.name, {
         fontFamily: FONT_BODY,
-        fontSize: "22px",
+        fontSize: "19px",
         fontStyle: "600",
         color: ink,
         align: "center",
-        wordWrap: { width: CARD_W - 16 },
+        lineSpacing: -4,
+        wordWrap: { width: CARD_W - 14 },
       })
       .setOrigin(0.5);
+
+    const art = this.buildCardArt(card, style);
 
     // Traps show their sprung value; the rule line gives the fallback.
     const push = pushFor(this.state, card, card.bigPush ?? card.push);
     const big = this.add
-      .text(0, 24, `${push}`, {
+      .text(0, ART_Y + ART_H / 2 + 28, `${push}`, {
         fontFamily: FONT_BODY,
-        fontSize: "64px",
+        fontSize: "46px",
         fontStyle: "600",
         color: side === "vigilante" ? hex(this.theme.red) : ink,
       })
@@ -409,23 +477,46 @@ export default class CaseBattleScene extends Phaser.Scene {
         AMBUSH: `vs Wait, else ${small}`,
       }[card.type] ?? "";
     const rule = this.add
-      .text(0, 70, ruleText, { fontFamily: FONT_BODY, fontSize: "17px", color: ink })
+      .text(0, CARD_H / 2 - 18, ruleText, { fontFamily: FONT_BODY, fontSize: "16px", color: ink })
       .setOrigin(0.5);
-    const flavor = this.add
-      .text(0, CARD_H / 2 - 22, card.flavor, {
-        fontFamily: FONT_BODY,
-        fontSize: "13px",
-        color: ink,
-        align: "center",
-        wordWrap: { width: CARD_W - 18 },
-      })
-      .setOrigin(0.5)
-      .setAlpha(0.85);
-    c.add([outline, bg, typeLabel, cost, name, big, rule, flavor]);
+
+    const decor = this.add.graphics();
+    frame.draw(decor, style, this.z(SLOT.player.y).paper);
+
+    c.add([outline, bg, ...art, decor, icon, typeLabel, cost, name, big, rule]);
     c.setSize(CARD_W, CARD_H);
     c.bg = bg;
     c.edge = style.edge;
+    c.edgeWidth = frame.edgeWidth;
     return c;
+  }
+
+  /**
+   * The art box. A card with an `art` texture key (loaded in BootScene from
+   * public/assets/images/cards/) shows its picture; otherwise a placeholder
+   * with the card type's symbol.
+   */
+  buildCardArt(card, style) {
+    const box = this.add.rectangle(0, ART_Y, ART_W, ART_H, style.ink, 0.06).setStrokeStyle(1, style.ink, 0.45);
+    if (card.art && this.textures.exists(card.art)) {
+      const picture = this.add.image(0, ART_Y, card.art).setDisplaySize(ART_W, ART_H);
+      return [picture, box.setFillStyle(style.ink, 0)];
+    }
+    // Diagonal stripes, each clipped to the box.
+    const hatch = this.add.graphics();
+    hatch.lineStyle(1, style.ink, 0.1);
+    const bottom = ART_Y + ART_H / 2;
+    for (let start = -ART_W / 2 - ART_H; start < ART_W / 2; start += 10) {
+      const x1 = Math.max(start, -ART_W / 2);
+      const x2 = Math.min(start + ART_H, ART_W / 2);
+      if (x1 < x2) hatch.lineBetween(x1, bottom - (x1 - start), x2, bottom - (x2 - start));
+    }
+    const mark = this.add
+      .image(0, ART_Y, iconKey(card.type))
+      .setDisplaySize(ART_H * 0.62, ART_H * 0.62)
+      .setTint(style.ink)
+      .setAlpha(0.28);
+    return [box, hatch, mark];
   }
 
   /** A thin line just outside the card's border (invisible when the style has none). */
@@ -492,7 +583,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.handCards.forEach((c) => {
       const selected = c.index === index;
       this.tweens.add({ targets: c, y: selected ? HAND_Y - 40 : HAND_Y, scale: selected ? 1.06 : 1, duration: 140 });
-      c.bg.setStrokeStyle(selected ? 5 : 3, selected ? this.theme.red : c.edge);
+      c.bg.setStrokeStyle(selected ? 5 : c.edgeWidth, selected ? this.theme.red : c.edge);
     });
     this.playButton.setEnabled(index !== null);
   }

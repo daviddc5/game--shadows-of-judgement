@@ -72,6 +72,13 @@ The current rules already support this with little change:
 3. Collection + deck builder, cards unlocked by playing (no shop).
 4. Shop with earned currency; then decide on any paid options.
 
+## Card art
+
+Owning the art is a big part of the appeal, even digitally. Every card already
+has an art box (placeholder: the type symbol), so art can arrive one card at a
+time. Collections could later add alternate art or foil versions of the same
+card as cosmetic rewards. Art spec: `public/assets/images/cards/README.md`.
+
 ## Marketing angles this enables
 
 - "Pick your detective" / "pick your vigilante" as the hook in trailers and

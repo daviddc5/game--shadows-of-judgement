@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { FONTS } from "../theme.js";
+import { SIDES } from "../case/cards.js";
 
 //define the BootScene class that is the first scene to load
 
@@ -38,6 +39,17 @@ export default class BootScene extends Phaser.Scene {
       "killer-losing",
       "assets/images/KillerPortraits/killer-losing.png"
     );
+
+    this.loadCardArt();
+  }
+
+  /** Card art: any card with `art: "<name>"` loads public/assets/images/cards/<name>.png. */
+  loadCardArt() {
+    for (const side of Object.values(SIDES)) {
+      for (const card of side.cards) {
+        if (card.art) this.load.image(card.art, `assets/images/cards/${card.art}.png`);
+      }
+    }
   }
 
   create() {

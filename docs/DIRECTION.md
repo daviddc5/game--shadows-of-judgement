@@ -61,6 +61,19 @@ After several rounds of look boards, the owner chose:
   Adding a theme is one entry in `THEMES` in `src/theme.js`. Themes are also a
   natural cosmetic for the future collection and shop.
 
+### Telling cards apart, and card art
+
+Cards looked too alike, so each type has its own **symbol** (crown, shield,
+mask, dagger, bolt, ink drop: `src/ui/cardIcons.js`) and its own **frame**
+(Power double border, Counter dashed, Bait clipped corner, Ambush ink bar,
+Quick thin line: `CARD_FRAMES` in `CaseBattleScene.js`).
+
+Every card has an **art box**. Owning art is a big part of why people love
+card games, so art is a long-term goal; the owner may learn to draw or hire an
+artist. Until then the box shows the type symbol as a placeholder. Adding art
+for a card is one image plus `art: "<name>"` on the card: see
+`public/assets/images/cards/README.md` (16:9, at least 640×360).
+
 ## Ideas considered and parked
 
 - **Pokémon-style teams of characters.** Wanted long term, not now: lots of art
