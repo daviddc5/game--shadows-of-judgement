@@ -1,5 +1,6 @@
 // Small themed building blocks shared by the menu scenes.
 import { FONTS, hex, zone } from "../theme.js";
+import { CHARACTERS, portraitKey } from "../case/characters.js";
 
 /** Blackletter text in the theme's ink for its position on screen. */
 export function displayText(scene, theme, x, y, text, size = 48, { color, align = "center" } = {}) {
@@ -90,62 +91,59 @@ export function backLink(scene, theme, onClick, label = "← Back") {
 }
 
 const SIDES = [
-  {
-    character: "Independent Detective",
-    side: "detective",
-    name: "Detective",
-    portrait: "detective-neutral",
-    goal: "Push the Case to 100\nto capture the Vigilante.",
-  },
-  {
-    character: "Vigilante",
-    side: "vigilante",
-    name: "Vigilante",
-    portrait: "killer-neutral",
-    goal: "Drag the Case down to 0\nto escape the Detective.",
-  },
+  { character: "Independent Detective", side: "detective", name: "Detective", goal: "Push the Case to 100 to capture the Vigilante." },
+  { character: "Vigilante", side: "vigilante", name: "Vigilante", goal: "Drag the Case down to 0 to escape the Detective." },
 ];
 
+const TILE = 150;
+
 /**
- * Two side cards, styled like the battle cards: Detective on its card colour,
- * Vigilante on its own. Calls onSelect(character) and returns { select, setEnabled }.
+ * One panel per side, styled like that side's cards, with a row of its
+ * characters (from src/case/characters.js). Tapping a portrait picks the side
+ * and the character: onSelect(sideCharacterName, characterId).
+ * Returns { select(sideCharacterName, characterId), setEnabled }.
  */
 export function characterPicker(scene, theme, top, onSelect) {
-  const entries = SIDES.map((s, i) => {
-    const y = top + i * 230;
+  const tiles = [];
+  SIDES.forEach((s, i) => {
+    const y = top + i * 330;
     const card = theme.cards[s.side];
-    if (card.outline != null) scene.add.rectangle(375, y, 646, 206, card.outline);
-    const bg = scene.add
-      .rectangle(375, y, 640, 200, card.bg)
-      .setStrokeStyle(3, card.edge)
-      .setInteractive({ useHandCursor: true });
-    const portrait = scene.add.image(160, y, s.portrait).setDisplaySize(150, 150);
-    const frame = scene.add.rectangle(160, y, 154, 154).setStrokeStyle(2, card.ink);
-    const name = scene.add
-      .text(250, y - 40, s.name, { fontFamily: FONTS.body, fontSize: "44px", fontStyle: "600", color: hex(card.ink) })
+    if (card.outline != null) scene.add.rectangle(375, y, 666, 306, card.outline);
+    scene.add.rectangle(375, y, 660, 300, card.bg).setStrokeStyle(3, card.edge);
+    scene.add
+      .text(70, y - 118, s.name, { fontFamily: FONTS.body, fontSize: "36px", fontStyle: "600", color: hex(card.ink) })
       .setOrigin(0, 0.5);
-    const goal = scene.add
-      .text(252, y + 30, s.goal, {
-        fontFamily: FONTS.body,
-        fontSize: "22px",
-        color: hex(card.ink),
-        lineSpacing: 2,
-      })
+    scene.add
+      .text(70, y - 82, s.goal, { fontFamily: FONTS.body, fontSize: "20px", color: hex(card.ink) })
       .setOrigin(0, 0.5);
-    bg.on("pointerdown", () => bg.input.enabled && onSelect(s.character));
-    return { ...s, bg, card, parts: [portrait, frame, name, goal] };
+
+    const list = CHARACTERS[s.side];
+    list.forEach((c, j) => {
+      const x = 375 + (j - (list.length - 1) / 2) * (TILE + 50);
+      const ty = y + 14;
+      scene.add.image(x, ty, portraitKey(c)).setDisplaySize(TILE, TILE);
+      const frame = scene.add
+        .rectangle(x, ty, TILE + 6, TILE + 6)
+        .setStrokeStyle(2, card.ink)
+        .setInteractive({ useHandCursor: true });
+      scene.add
+        .text(x, ty + TILE / 2 + 22, c.name, { fontFamily: FONTS.body, fontSize: "22px", fontStyle: "600", color: hex(card.ink) })
+        .setOrigin(0.5);
+      frame.on("pointerdown", () => frame.input.enabled && onSelect(s.character, c.id));
+      tiles.push({ frame, card, character: s.character, id: c.id });
+    });
   });
 
   return {
-    select(character) {
-      entries.forEach((e) => {
-        const chosen = e.character === character;
-        e.bg.setStrokeStyle(chosen ? 6 : 3, chosen ? theme.red : e.card.edge);
+    select(character, id) {
+      tiles.forEach((t) => {
+        const chosen = t.character === character && t.id === id;
+        t.frame.setStrokeStyle(chosen ? 6 : 2, chosen ? theme.red : t.card.ink);
       });
     },
     setEnabled(enabled) {
-      entries.forEach((e) => {
-        e.bg.input.enabled = enabled;
+      tiles.forEach((t) => {
+        t.frame.input.enabled = enabled;
       });
     },
   };

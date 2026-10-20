@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { FONTS } from "../theme.js";
 import { SIDES } from "../case/cards.js";
+import { portraitFiles } from "../case/characters.js";
 
 //define the BootScene class that is the first scene to load
 
@@ -12,33 +13,10 @@ export default class BootScene extends Phaser.Scene {
 
   //preload method to load assets
   preload() {
-    // Load character portraits - Detective
-    this.load.image(
-      "detective-neutral",
-      "assets/images/DetectivePortraits/detective-neutral.png"
-    );
-    this.load.image(
-      "detective-winning",
-      "assets/images/DetectivePortraits/detective-winning.png"
-    );
-    this.load.image(
-      "detective-losing",
-      "assets/images/DetectivePortraits/detective-losing.png"
-    );
-
-    // Load character portraits - Killer
-    this.load.image(
-      "killer-neutral",
-      "assets/images/KillerPortraits/killer-neutral.png"
-    );
-    this.load.image(
-      "killer-winning",
-      "assets/images/KillerPortraits/killer-winning.png"
-    );
-    this.load.image(
-      "killer-losing",
-      "assets/images/KillerPortraits/killer-losing.png"
-    );
+    // Character portraits (every mood listed in src/case/characters.js).
+    for (const { key, path } of portraitFiles()) {
+      this.load.image(key, `assets/images/${path}`);
+    }
 
     this.loadCardArt();
   }

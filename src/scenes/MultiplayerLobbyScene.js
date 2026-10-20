@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { getTheme, hex, paintBackground, zone } from "../theme.js";
 import { backLink, bodyText, button, characterPicker, displayText } from "../ui/widgets.js";
 import NetworkManager from "../network/NetworkManager.js";
+import { getCharacter } from "../case/characters.js";
 
 export default class MultiplayerLobbyScene extends Phaser.Scene {
   constructor() {
@@ -25,12 +26,12 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
     displayText(this, theme, 375, 190, "Multiplayer", 80);
     this.statusText = bodyText(this, theme, 375, 280, "Connecting to the server...", 26, { soft: true });
 
-    this.picker = characterPicker(this, theme, 600, (character) => this.selectCharacter(character));
-    this.findMatchButton = button(this, theme, 375, 1010, 520, "Find an opponent", () => this.startMatchmaking(), {
+    this.picker = characterPicker(this, theme, 560, (character, id) => this.selectCharacter(character, id));
+    this.findMatchButton = button(this, theme, 375, 1195, 520, "Find an opponent", () => this.startMatchmaking(), {
       primary: true,
     });
     this.findMatchButton.setEnabled(false);
-    this.searchingText = bodyText(this, theme, 375, 1010, "Searching for an opponent...", 30, {}).setVisible(
+    this.searchingText = bodyText(this, theme, 375, 1195, "Searching for an opponent...", 30, {}).setVisible(
       false,
     );
 
@@ -51,23 +52,28 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
     NetworkManager.onMatchFound = (data) => {
       this.isSearching = false;
       // The server may assign the other side if both players picked the same one.
+      // If the server switched our side, the chosen character falls back to that side's default.
       this.registry.set("playerCharacter", data.side === "vigilante" ? "Vigilante" : "Independent Detective");
+      this.registry.set("playerCharacterId", this.selectedCharacterId);
       this.scene.start("CaseBattleScene", { online: data });
     };
 
     NetworkManager.onConnectionError = () => this.setStatus("Can't reach the server. Try again later.", true);
 
     this.time.delayedCall(1000, () => {
-      if (NetworkManager.connected) this.setStatus("Connected. Choose your side.");
+      if (NetworkManager.connected) this.setStatus("Connected. Choose your side and character.");
       else this.setStatus("Can't reach the server. Try again later.", true);
       this.updateFindButton();
     });
   }
 
-  selectCharacter(character) {
+  /** character is the side ("Independent Detective" / "Vigilante"); id picks who within it. */
+  selectCharacter(character, id) {
     if (this.isSearching) return;
+    const side = character === "Vigilante" ? "vigilante" : "detective";
     this.selectedCharacter = character;
-    this.picker.select(character);
+    this.selectedCharacterId = getCharacter(side, id).id;
+    this.picker.select(character, this.selectedCharacterId);
     this.updateFindButton();
   }
 
@@ -81,7 +87,7 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
     this.findMatchButton.setVisible(false);
     this.searchingText.setVisible(true);
     this.picker.setEnabled(false);
-    NetworkManager.findMatch(this.selectedCharacter);
+    NetworkManager.findMatch(this.selectedCharacter, this.selectedCharacterId);
     this.tweens.add({ targets: this.searchingText, alpha: 0.3, duration: 800, yoyo: true, repeat: -1 });
   }
 
