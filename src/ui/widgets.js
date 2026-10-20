@@ -111,16 +111,16 @@ export function characterPicker(scene, theme, top, onSelect) {
     if (card.outline != null) scene.add.rectangle(375, y, 666, 306, card.outline);
     scene.add.rectangle(375, y, 660, 300, card.bg).setStrokeStyle(3, card.edge);
     scene.add
-      .text(70, y - 118, s.name, { fontFamily: FONTS.body, fontSize: "36px", fontStyle: "600", color: hex(card.ink) })
+      .text(70, y - 124, s.name, { fontFamily: FONTS.body, fontSize: "36px", fontStyle: "600", color: hex(card.ink) })
       .setOrigin(0, 0.5);
     scene.add
-      .text(70, y - 82, s.goal, { fontFamily: FONTS.body, fontSize: "20px", color: hex(card.ink) })
+      .text(70, y - 90, s.goal, { fontFamily: FONTS.body, fontSize: "20px", color: hex(card.ink) })
       .setOrigin(0, 0.5);
 
     const list = CHARACTERS[s.side];
     list.forEach((c, j) => {
       const x = 375 + (j - (list.length - 1) / 2) * (TILE + 50);
-      const ty = y + 14;
+      const ty = y + 30;
       scene.add.image(x, ty, portraitKey(c)).setDisplaySize(TILE, TILE);
       const frame = scene.add
         .rectangle(x, ty, TILE + 6, TILE + 6)
