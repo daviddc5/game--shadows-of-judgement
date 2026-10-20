@@ -9,6 +9,7 @@ import {
   startTurn,
 } from "../case/rules.js";
 import { chooseAiPlay } from "../case/ai.js";
+import { getCharacter, portraitKey, randomCharacter } from "../case/characters.js";
 import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button } from "../ui/widgets.js";
@@ -104,6 +105,12 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.state = createMatch();
     }
     this.opponentSide = otherSide(this.playerSide);
+    // Who each side is played as. getCharacter falls back to the side's default,
+    // e.g. when the server switched our side or an id is unknown.
+    this.playerCharacter = getCharacter(this.playerSide, this.registry.get("playerCharacterId"));
+    this.opponentCharacter = this.online
+      ? getCharacter(this.opponentSide, this.online.opponent?.characterId)
+      : randomCharacter(this.opponentSide);
     this.theme = getTheme();
     this.selectedIndex = null;
     this.busy = false;
@@ -196,10 +203,10 @@ export default class CaseBattleScene extends Phaser.Scene {
     help.on("pointerdown", () => this.toggleRules());
   }
 
-  createPortrait(x, y, side, size) {
+  createPortrait(x, y, character, size) {
     const frame = this.add.rectangle(x, y, size + 6, size + 6).setStrokeStyle(2, this.z(y).line);
-    const img = this.add.image(x, y, `${SIDES[side].portrait}-neutral`).setDisplaySize(size, size);
-    return { frame, img, side, size };
+    const img = this.add.image(x, y, portraitKey(character)).setDisplaySize(size, size);
+    return { frame, img, character, size };
   }
 
   createEnergyPips(x, y) {
@@ -222,9 +229,9 @@ export default class CaseBattleScene extends Phaser.Scene {
   createOpponentPanel() {
     const side = this.opponentSide;
     const z = this.z(185);
-    this.opponentPortrait = this.createPortrait(100, 190, side, 124);
+    this.opponentPortrait = this.createPortrait(100, 190, this.opponentCharacter, 124);
     this.add
-      .text(184, 140, SIDES[side].name, { fontFamily: FONT_BODY, fontSize: "44px", fontStyle: "600", color: hex(z.ink) })
+      .text(184, 140, this.opponentCharacter.name, { fontFamily: FONT_BODY, fontSize: "44px", fontStyle: "600", color: hex(z.ink) })
       .setOrigin(0, 0.5);
     this.opponentEnergy = this.createEnergyPips(194, 198);
 
@@ -337,11 +344,10 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   createPlayerPanel() {
-    const side = this.playerSide;
     const z = this.z(880);
-    this.playerPortrait = this.createPortrait(80, 880, side, 88);
+    this.playerPortrait = this.createPortrait(80, 880, this.playerCharacter, 88);
     const name = this.add
-      .text(144, 856, SIDES[side].name, { fontFamily: FONT_BODY, fontSize: "36px", fontStyle: "600", color: hex(z.ink) })
+      .text(144, 856, this.playerCharacter.name, { fontFamily: FONT_BODY, fontSize: "36px", fontStyle: "600", color: hex(z.ink) })
       .setOrigin(0, 0.5);
     this.add
       .text(name.x + name.width + 14, 860, "you", {
@@ -886,7 +892,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       return "neutral";
     };
     for (const [portrait, forPlayer] of [[this.playerPortrait, true], [this.opponentPortrait, false]]) {
-      portrait.img.setTexture(`${SIDES[portrait.side].portrait}-${mood(forPlayer)}`);
+      portrait.img.setTexture(portraitKey(portrait.character, mood(forPlayer)));
       portrait.img.setDisplaySize(portrait.size, portrait.size);
     }
   }

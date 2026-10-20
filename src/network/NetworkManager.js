@@ -70,12 +70,13 @@ class NetworkManager {
     });
   }
 
-  findMatch(character) {
+  /** character is the side; characterId is who the player picked within it. */
+  findMatch(character, characterId) {
     if (!this.connected) {
       console.error("Not connected to server");
       return;
     }
-    this.socket.emit("findMatch", { character });
+    this.socket.emit("findMatch", { character, characterId });
   }
 
   /** handIndex null means WAIT. */

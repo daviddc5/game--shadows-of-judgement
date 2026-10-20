@@ -20,6 +20,7 @@ export function setupSocketHandlers(io, matchmakingQueue, gameRooms) {
         socketId: socket.id,
         username: playerData.username || "Anonymous",
         side: SIDE_BY_CHARACTER[playerData.character] || "detective",
+        characterId: typeof playerData.characterId === "string" ? playerData.characterId.slice(0, 40) : null,
         joinedAt: Date.now(),
       });
       console.log(`🔍 Queue length: ${matchmakingQueue.length}`);
@@ -89,7 +90,7 @@ function tryMatchmaking(io, matchmakingQueue, gameRooms) {
       io.to(pair[side].socketId).emit("matchFound", {
         roomId,
         side,
-        opponent: { username: opponent.username },
+        opponent: { username: opponent.username, characterId: opponent.characterId },
         view: playerView(room, side),
       });
     }
