@@ -14,25 +14,27 @@ describe("characters", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("falls back to the side's first character for an unknown or wrong-side id", () => {
-    expect(getCharacter("detective", "mara").id).toBe("mara");
-    expect(getCharacter("detective", "wren").id).toBe(CHARACTERS.detective[0].id);
-    expect(getCharacter("vigilante", undefined).id).toBe(CHARACTERS.vigilante[0].id);
+  it("finds a character by id and falls back to the side's first for an unknown or wrong-side id", () => {
+    const [firstDetective] = CHARACTERS.detective;
+    const [firstVigilante] = CHARACTERS.vigilante;
+    expect(getCharacter("detective", firstDetective.id)).toBe(firstDetective);
+    expect(getCharacter("detective", firstVigilante.id)).toBe(firstDetective);
+    expect(getCharacter("vigilante", undefined)).toBe(firstVigilante);
   });
 
   it("uses the neutral portrait when a mood variant is missing", () => {
-    const mara = getCharacter("detective", "mara");
-    expect(portraitKey(mara, "winning")).toBe("mara-neutral");
-    expect(portraitKey(getCharacter("detective", "detective"), "winning")).toBe("detective-winning");
+    const neutralOnly = { portrait: "draft", files: { neutral: "draft.png" } };
+    expect(portraitKey(neutralOnly, "winning")).toBe("draft-neutral");
+    expect(portraitKey(CHARACTERS.detective[0], "winning")).toBe("detective-winning");
   });
 
   it("lists every portrait file to load", () => {
     const keys = portraitFiles().map((f) => f.key);
-    expect(keys).toContain("wren-neutral");
+    expect(keys).toContain("detective-neutral");
     expect(keys).toContain("killer-losing");
   });
 
   it("random characters come from the requested side", () => {
-    expect(randomCharacter("vigilante", () => 0.99).id).toBe(CHARACTERS.vigilante.at(-1).id);
+    expect(CHARACTERS.vigilante).toContain(randomCharacter("vigilante", () => 0.99));
   });
 });

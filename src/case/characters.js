@@ -5,6 +5,9 @@
 // public/assets/images/. `files.neutral` is required; `winning` and `losing`
 // are optional mood variants (the neutral portrait is used when one is missing).
 // Portraits are square, 1024×1024.
+//
+// Draft portraits for Mara Vale (detective) and Wren (vigilante) are kept in
+// art/drafts/ but not used: the owner is holding off on more AI-made art.
 
 export const CHARACTERS = {
   detective: [
@@ -18,12 +21,6 @@ export const CHARACTERS = {
         losing: "DetectivePortraits/detective-losing.png",
       },
     },
-    {
-      id: "mara",
-      name: "Mara Vale",
-      portrait: "mara",
-      files: { neutral: "Characters/mara-neutral.jpg" },
-    },
   ],
   vigilante: [
     {
@@ -35,12 +32,6 @@ export const CHARACTERS = {
         winning: "KillerPortraits/killer-winning.png",
         losing: "KillerPortraits/killer-losing.png",
       },
-    },
-    {
-      id: "wren",
-      name: "Wren",
-      portrait: "wren",
-      files: { neutral: "Characters/wren-neutral.jpg" },
     },
   ],
 };

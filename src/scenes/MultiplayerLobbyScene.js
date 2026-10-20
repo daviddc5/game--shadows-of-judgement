@@ -61,7 +61,7 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
     NetworkManager.onConnectionError = () => this.setStatus("Can't reach the server. Try again later.", true);
 
     this.time.delayedCall(1000, () => {
-      if (NetworkManager.connected) this.setStatus("Connected. Choose your side and character.");
+      if (NetworkManager.connected) this.setStatus("Connected. Choose your side.");
       else this.setStatus("Can't reach the server. Try again later.", true);
       this.updateFindButton();
     });

@@ -81,9 +81,9 @@ picks side and character on the character-select screen, the AI picks a random
 character for its side, and online opponents see the character you chose.
 Characters are cosmetic for now (portrait and name); the long-term plan is a
 passive ability and signature cards each (see COLLECTION_AND_SHOP.md). Current
-roster: Eren Del Río and Mara Vale (Detective); Giovanni Santoro and Wren
-(Vigilante). Mara and Wren have
-a neutral portrait only (winning/losing moods fall back to it).
+roster: Eren Del Río (Detective) and Giovanni Santoro (Vigilante). Draft
+AI-made portraits for two more characters (Mara Vale, Wren) are kept in
+`art/drafts/` but not used: the owner is holding off on adding more AI art.
 
 Card art: the owner tried AI-generated card art and didn't like it (it looked
 "AI-ish"). Cards keep their placeholders until the owner learns to draw or works

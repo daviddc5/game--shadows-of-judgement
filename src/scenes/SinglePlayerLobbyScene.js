@@ -21,7 +21,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     backLink(this, theme, () => this.scene.start("MenuScene"));
 
     displayText(this, theme, 375, 190, "Single Player", 80);
-    bodyText(this, theme, 375, 280, this.debugMode ? "Test mode: extra controls in battle" : "Choose your side and character", 26, { soft: true });
+    bodyText(this, theme, 375, 280, this.debugMode ? "Test mode: extra controls in battle" : "Choose your side", 26, { soft: true });
 
     this.picker = characterPicker(this, theme, 560, (character, id) => this.selectCharacter(character, id));
     this.startButton = button(this, theme, 375, 1195, 520, "Take the case", () => {
