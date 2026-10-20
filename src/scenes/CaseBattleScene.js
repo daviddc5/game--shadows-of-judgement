@@ -14,6 +14,7 @@ import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button } from "../ui/widgets.js";
 import { ensureTypeIcons, iconKey } from "../ui/cardIcons.js";
+import { buildPlaceholderArt } from "../ui/cardArtPlaceholder.js";
 
 const W = 750;
 const H = 1334;
@@ -403,7 +404,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const art = this.buildCardArt(card, style);
+    const art = this.buildCardArt(card, side, style);
 
     // Traps show their sprung value; the rule line gives the fallback.
     const push = pushFor(this.state, card, card.bigPush ?? card.push);
@@ -436,30 +437,16 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   /**
    * The art box. A card with an `art` texture key (loaded in BootScene from
-   * public/assets/images/cards/) shows its picture; otherwise a placeholder
-   * with the card type's symbol.
+   * public/assets/images/cards/) shows its picture; otherwise a drawn night
+   * scene with the card type's symbol (src/ui/cardArtPlaceholder.js).
    */
-  buildCardArt(card, style) {
-    const box = this.add.rectangle(0, ART_Y, ART_W, ART_H, style.ink, 0.06).setStrokeStyle(1, style.ink, 0.45);
+  buildCardArt(card, side, style) {
     if (card.art && this.textures.exists(card.art)) {
       const picture = this.add.image(0, ART_Y, card.art).setDisplaySize(ART_W, ART_H);
-      return [picture, box.setFillStyle(style.ink, 0)];
+      const frame = this.add.rectangle(0, ART_Y, ART_W, ART_H).setStrokeStyle(1, style.ink, 0.45);
+      return [picture, frame];
     }
-    // Diagonal stripes, each clipped to the box.
-    const hatch = this.add.graphics();
-    hatch.lineStyle(1, style.ink, 0.1);
-    const bottom = ART_Y + ART_H / 2;
-    for (let start = -ART_W / 2 - ART_H; start < ART_W / 2; start += 10) {
-      const x1 = Math.max(start, -ART_W / 2);
-      const x2 = Math.min(start + ART_H, ART_W / 2);
-      if (x1 < x2) hatch.lineBetween(x1, bottom - (x1 - start), x2, bottom - (x2 - start));
-    }
-    const mark = this.add
-      .image(0, ART_Y, iconKey(card.type))
-      .setDisplaySize(ART_H * 0.62, ART_H * 0.62)
-      .setTint(style.ink)
-      .setAlpha(0.28);
-    return [box, hatch, mark];
+    return buildPlaceholderArt(this, card, side, ART_Y, ART_W, ART_H, style.ink);
   }
 
   /** A thin line just outside the card's border (invisible when the style has none). */
