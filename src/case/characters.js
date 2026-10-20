@@ -10,7 +10,7 @@ export const CHARACTERS = {
   detective: [
     {
       id: "detective",
-      name: "The Detective",
+      name: "Eren Vasquez",
       portrait: "detective",
       files: {
         neutral: "DetectivePortraits/detective-neutral.png",
@@ -28,7 +28,7 @@ export const CHARACTERS = {
   vigilante: [
     {
       id: "vigilante",
-      name: "The Vigilante",
+      name: "Giovanni Santoro",
       portrait: "killer",
       files: {
         neutral: "KillerPortraits/killer-neutral.png",
