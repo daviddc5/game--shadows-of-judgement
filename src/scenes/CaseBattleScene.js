@@ -29,7 +29,7 @@ const CARD_H = 260;
 // Art box on every card. Artists: draw at 16:9, at least 640×360 (shown at 148×84).
 const ART_W = 148;
 const ART_H = 84;
-const ART_Y = -12;
+const ART_Y = -6;
 const HAND_Y = 1075;
 
 const TYPE_NAMES = {
@@ -393,7 +393,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       })
       .setOrigin(1, 0.5);
     const name = this.add
-      .text(0, top + 50, card.name, {
+      .text(0, top + 58, card.name, {
         fontFamily: FONT_BODY,
         fontSize: "19px",
         fontStyle: "600",
