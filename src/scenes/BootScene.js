@@ -45,7 +45,6 @@ export default class BootScene extends Phaser.Scene {
     Promise.all([
       document.fonts.load(`40px ${FONTS.display}`),
       document.fonts.load(`20px ${FONTS.body}`),
-      document.fonts.load(`italic 20px ${FONTS.body}`),
       document.fonts.load(`600 20px ${FONTS.body}`),
     ])
       .catch(() => {})

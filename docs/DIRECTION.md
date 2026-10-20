@@ -48,8 +48,8 @@ After several rounds of look boards, the owner chose:
 
 - **UnifrakturMaguntia** blackletter for decoration only: the logo, screen
   titles and big moments. **Anything that has to be read** (card names and
-  numbers, buttons, character names, rules) uses EB Garamond, and muted text is
-  kept dark enough to read. The owner found blackletter and grey text hard to
+  numbers, buttons, character names, rules) uses upright EB Garamond (no
+  italics), and muted text is kept dark enough to read. The owner found blackletter and grey text hard to
   read in play.
 - **Mostly black and white**, colour only in the character portraits, and **a
   touch of red** (the needle, the Vigilante's numbers, your selected card, big

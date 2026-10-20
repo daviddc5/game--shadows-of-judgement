@@ -32,6 +32,6 @@ export default class MenuScene extends Phaser.Scene {
       }, { h: 64, size: 30 });
     }
 
-    bodyText(this, theme, 375, 1240, "Every case ends in a verdict.", 22, { italic: true, soft: true });
+    bodyText(this, theme, 375, 1240, "Every case ends in a verdict.", 22, { soft: true });
   }
 }

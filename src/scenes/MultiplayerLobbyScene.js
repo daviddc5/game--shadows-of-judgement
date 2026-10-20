@@ -23,14 +23,14 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
     });
 
     displayText(this, theme, 375, 190, "Multiplayer", 80);
-    this.statusText = bodyText(this, theme, 375, 280, "Connecting to the server...", 26, { italic: true, soft: true });
+    this.statusText = bodyText(this, theme, 375, 280, "Connecting to the server...", 26, { soft: true });
 
     this.picker = characterPicker(this, theme, 600, (character) => this.selectCharacter(character));
     this.findMatchButton = button(this, theme, 375, 1010, 520, "Find an opponent", () => this.startMatchmaking(), {
       primary: true,
     });
     this.findMatchButton.setEnabled(false);
-    this.searchingText = bodyText(this, theme, 375, 1010, "Searching for an opponent...", 30, { italic: true }).setVisible(
+    this.searchingText = bodyText(this, theme, 375, 1010, "Searching for an opponent...", 30, {}).setVisible(
       false,
     );
 

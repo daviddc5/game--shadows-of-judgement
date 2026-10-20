@@ -14,14 +14,13 @@ export function displayText(scene, theme, x, y, text, size = 48, { color, align 
     .setOrigin(0.5);
 }
 
-/** Serif body text; `soft` uses the muted ink. */
-export function bodyText(scene, theme, x, y, text, size = 22, { soft = false, italic = false, align = "center", wrap, color } = {}) {
+/** Upright serif body text; `soft` uses the muted ink. */
+export function bodyText(scene, theme, x, y, text, size = 22, { soft = false, align = "center", wrap, color } = {}) {
   const z = zone(theme, y);
   return scene.add
     .text(x, y, text, {
       fontFamily: FONTS.body,
       fontSize: `${size}px`,
-      fontStyle: italic ? "italic" : "normal",
       color: color ?? hex(soft ? z.soft : z.ink),
       align,
       wordWrap: wrap ? { width: wrap } : undefined,
@@ -115,9 +114,10 @@ export function characterPicker(scene, theme, top, onSelect) {
   const entries = SIDES.map((s, i) => {
     const y = top + i * 230;
     const card = theme.cards[s.side];
+    if (card.outline != null) scene.add.rectangle(375, y, 646, 206, card.outline);
     const bg = scene.add
       .rectangle(375, y, 640, 200, card.bg)
-      .setStrokeStyle(2, card.edge)
+      .setStrokeStyle(3, card.edge)
       .setInteractive({ useHandCursor: true });
     const portrait = scene.add.image(160, y, s.portrait).setDisplaySize(150, 150);
     const frame = scene.add.rectangle(160, y, 154, 154).setStrokeStyle(2, card.ink);
@@ -128,7 +128,6 @@ export function characterPicker(scene, theme, top, onSelect) {
       .text(252, y + 30, s.goal, {
         fontFamily: FONTS.body,
         fontSize: "22px",
-        fontStyle: "italic",
         color: hex(card.ink),
         lineSpacing: 2,
       })
@@ -141,7 +140,7 @@ export function characterPicker(scene, theme, top, onSelect) {
     select(character) {
       entries.forEach((e) => {
         const chosen = e.character === character;
-        e.bg.setStrokeStyle(chosen ? 6 : 2, chosen ? theme.red : e.card.edge);
+        e.bg.setStrokeStyle(chosen ? 6 : 3, chosen ? theme.red : e.card.edge);
       });
     },
     setEnabled(enabled) {

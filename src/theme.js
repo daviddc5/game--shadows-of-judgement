@@ -2,7 +2,6 @@
 // Fonts are bundled via @fontsource (SIL Open Font License).
 import "@fontsource/unifrakturmaguntia/400.css";
 import "@fontsource/eb-garamond/400.css";
-import "@fontsource/eb-garamond/400-italic.css";
 import "@fontsource/eb-garamond/600.css";
 
 // Blackletter is decoration only: the logo, screen titles, "The Case" and big
@@ -19,6 +18,8 @@ export const FONTS = {
  * for text. `split` (optional) gives the top part of the screen its own
  * paper/ink, down to `split.at` (fraction of the screen height).
  * Red is kept rare: the needle, the Vigilante's numbers and your selection.
+ * Card styles: `edge` is the card's border; `outline` (optional) is a thin
+ * line drawn just outside it, so a light border still shows on a light page.
  */
 export const THEMES = [
   {
@@ -32,7 +33,7 @@ export const THEMES = [
     red: 0xc1121f,
     cards: {
       detective: { bg: 0xfbfaf6, ink: 0x111111, edge: 0x111111 },
-      vigilante: { bg: 0x111111, ink: 0xf4f2ec, edge: 0x111111 },
+      vigilante: { bg: 0x111111, ink: 0xf4f2ec, edge: 0xf4f2ec, outline: 0x111111 },
     },
   },
   {
@@ -60,7 +61,7 @@ export const THEMES = [
     red: 0xc1121f,
     cards: {
       detective: { bg: 0xfbfaf6, ink: 0x111111, edge: 0x111111 },
-      vigilante: { bg: 0x111111, ink: 0xf4f2ec, edge: 0xf1efe9 },
+      vigilante: { bg: 0x111111, ink: 0xf4f2ec, edge: 0xf4f2ec, outline: 0x111111 },
     },
     split: { at: 0.355, paper: 0x0d0d0d, ink: 0xf1efe9, soft: 0xc9c4ba, line: 0xf1efe9 },
   },

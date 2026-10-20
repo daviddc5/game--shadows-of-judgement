@@ -18,7 +18,7 @@ export default class AppearanceScene extends Phaser.Scene {
     backLink(this, theme, () => this.scene.start("MenuScene"));
 
     displayText(this, theme, 375, 190, "Appearance", 80);
-    bodyText(this, theme, 375, 280, "Choose how the case looks", 26, { italic: true, soft: true });
+    bodyText(this, theme, 375, 280, "Choose how the case looks", 26, { soft: true });
 
     THEMES.forEach((t, i) => {
       const col = i % PER_ROW;
@@ -56,8 +56,9 @@ export default class AppearanceScene extends Phaser.Scene {
     const cy = top + 150;
     const vig = t.cards.vigilante;
     const det = t.cards.detective;
+    if (vig.outline != null) g.fillStyle(vig.outline, 1).fillRect(x - cardW - 9, cy - 3, cardW + 6, cardH + 6);
     g.fillStyle(vig.bg, 1).fillRect(x - cardW - 6, cy, cardW, cardH);
-    g.lineStyle(1, vig.edge, 1).strokeRect(x - cardW - 6, cy, cardW, cardH);
+    g.lineStyle(2, vig.edge, 1).strokeRect(x - cardW - 5, cy + 1, cardW - 2, cardH - 2);
     g.fillStyle(det.bg, 1).fillRect(x + 6, cy, cardW, cardH);
     g.lineStyle(1, det.edge, 1).strokeRect(x + 6, cy, cardW, cardH);
     this.add.text(x - cardW / 2 - 6, cy + cardH / 2, "33", { fontFamily: FONTS.body, fontSize: "30px", fontStyle: "600", color: hex(t.red) }).setOrigin(0.5);
@@ -81,6 +82,6 @@ export default class AppearanceScene extends Phaser.Scene {
 
     bodyText(this, current, x, y + PREVIEW_H / 2 + 46, t.name, 28, { color: hex(zone(current, y + PREVIEW_H / 2 + 46).ink) }).setFontStyle("600");
     bodyText(this, current, x, y + PREVIEW_H / 2 + 104, t.description, 19, { soft: true, wrap: PREVIEW_W + 20 });
-    if (selected) bodyText(this, current, x, y - PREVIEW_H / 2 - 30, "Selected", 20, { italic: true, color: hex(current.red) });
+    if (selected) bodyText(this, current, x, y - PREVIEW_H / 2 - 30, "Selected", 20, { color: hex(current.red) });
   }
 }

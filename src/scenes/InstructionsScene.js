@@ -128,7 +128,7 @@ export default class InstructionsScene extends Phaser.Scene {
 
     this.pageContainer.add(displayText(this, this.theme, 375, 150, page.title, 64));
     if (page.subtitle) {
-      this.pageContainer.add(bodyText(this, this.theme, 375, 222, page.subtitle, 26, { italic: true, soft: true }));
+      this.pageContainer.add(bodyText(this, this.theme, 375, 222, page.subtitle, 26, { soft: true }));
     }
 
     let y = 370;
