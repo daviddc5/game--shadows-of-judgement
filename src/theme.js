@@ -1,11 +1,13 @@
 // Fonts and board themes shared by every scene.
-// Fonts are bundled via @fontsource (SIL Open Font License): UnifrakturMaguntia
-// for names, titles and numbers, EB Garamond for everything else.
+// Fonts are bundled via @fontsource (SIL Open Font License).
 import "@fontsource/unifrakturmaguntia/400.css";
 import "@fontsource/eb-garamond/400.css";
 import "@fontsource/eb-garamond/400-italic.css";
 import "@fontsource/eb-garamond/600.css";
 
+// Blackletter is decoration only: the logo, screen titles, "The Case" and big
+// moments ("Countered!", "Case Closed"). Anything a player needs to read
+// (card names and numbers, buttons, character names, rules) uses EB Garamond.
 export const FONTS = {
   display: "UnifrakturMaguntia, 'Times New Roman', serif",
   body: "'EB Garamond', Georgia, serif",
@@ -25,7 +27,7 @@ export const THEMES = [
     description: "White paper, black ink. Calm and easy to read.",
     paper: 0xf4f2ec,
     ink: 0x111111,
-    soft: 0x6a665e,
+    soft: 0x47433c,
     line: 0x111111,
     red: 0xc1121f,
     cards: {
@@ -39,7 +41,7 @@ export const THEMES = [
     description: "Black page, white ink. The red stands out more.",
     paper: 0x0d0d0d,
     ink: 0xf1efe9,
-    soft: 0x9a968e,
+    soft: 0xc9c4ba,
     line: 0xf1efe9,
     red: 0xe0353f,
     cards: {
@@ -53,14 +55,14 @@ export const THEMES = [
     description: "Your opponent's half in ink, yours on paper.",
     paper: 0xf4f2ec,
     ink: 0x111111,
-    soft: 0x6a665e,
+    soft: 0x47433c,
     line: 0x111111,
     red: 0xc1121f,
     cards: {
       detective: { bg: 0xfbfaf6, ink: 0x111111, edge: 0x111111 },
       vigilante: { bg: 0x111111, ink: 0xf4f2ec, edge: 0xf1efe9 },
     },
-    split: { at: 0.355, paper: 0x0d0d0d, ink: 0xf1efe9, soft: 0x9a968e, line: 0xf1efe9 },
+    split: { at: 0.355, paper: 0x0d0d0d, ink: 0xf1efe9, soft: 0xc9c4ba, line: 0xf1efe9 },
   },
 ];
 

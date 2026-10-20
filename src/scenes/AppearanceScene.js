@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { FONTS, THEMES, getTheme, hex, paintBackground, setTheme } from "../theme.js";
+import { FONTS, THEMES, getTheme, hex, paintBackground, setTheme, zone } from "../theme.js";
 import { backLink, bodyText, displayText } from "../ui/widgets.js";
 
 const PREVIEW_W = 200;
@@ -60,8 +60,8 @@ export default class AppearanceScene extends Phaser.Scene {
     g.lineStyle(1, vig.edge, 1).strokeRect(x - cardW - 6, cy, cardW, cardH);
     g.fillStyle(det.bg, 1).fillRect(x + 6, cy, cardW, cardH);
     g.lineStyle(1, det.edge, 1).strokeRect(x + 6, cy, cardW, cardH);
-    this.add.text(x - cardW / 2 - 6, cy + cardH / 2, "33", { fontFamily: FONTS.display, fontSize: "30px", color: hex(t.red) }).setOrigin(0.5);
-    this.add.text(x + cardW / 2 + 6, cy + cardH / 2, "54", { fontFamily: FONTS.display, fontSize: "30px", color: hex(det.ink) }).setOrigin(0.5);
+    this.add.text(x - cardW / 2 - 6, cy + cardH / 2, "33", { fontFamily: FONTS.body, fontSize: "30px", fontStyle: "600", color: hex(t.red) }).setOrigin(0.5);
+    this.add.text(x + cardW / 2 + 6, cy + cardH / 2, "54", { fontFamily: FONTS.body, fontSize: "30px", fontStyle: "600", color: hex(det.ink) }).setOrigin(0.5);
 
     // Your hand.
     for (let i = 0; i < 4; i++) {
@@ -79,7 +79,7 @@ export default class AppearanceScene extends Phaser.Scene {
       this.scene.restart();
     });
 
-    displayText(this, current, x, y + PREVIEW_H / 2 + 46, t.name, 34);
+    bodyText(this, current, x, y + PREVIEW_H / 2 + 46, t.name, 28, { color: hex(zone(current, y + PREVIEW_H / 2 + 46).ink) }).setFontStyle("600");
     bodyText(this, current, x, y + PREVIEW_H / 2 + 104, t.description, 19, { soft: true, wrap: PREVIEW_W + 20 });
     if (selected) bodyText(this, current, x, y - PREVIEW_H / 2 - 30, "Selected", 20, { italic: true, color: hex(current.red) });
   }

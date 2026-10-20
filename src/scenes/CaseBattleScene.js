@@ -184,7 +184,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     exit.on("pointerdown", () => this.leaveToMenu());
 
     const help = this.add
-      .text(36, 38, "?", { fontFamily: FONT_DISPLAY, fontSize: "40px", color: hex(z.soft) })
+      .text(36, 38, "?", { fontFamily: FONT_BODY, fontSize: "40px", fontStyle: "600", color: hex(z.soft) })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     help.on("pointerdown", () => this.toggleRules());
@@ -218,7 +218,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const z = this.z(185);
     this.opponentPortrait = this.createPortrait(100, 190, side, 124);
     this.add
-      .text(184, 140, SIDES[side].name, { fontFamily: FONT_DISPLAY, fontSize: "52px", color: hex(z.ink) })
+      .text(184, 140, SIDES[side].name, { fontFamily: FONT_BODY, fontSize: "44px", fontStyle: "600", color: hex(z.ink) })
       .setOrigin(0, 0.5);
     this.opponentEnergy = this.createEnergyPips(194, 198);
 
@@ -338,7 +338,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const z = this.z(880);
     this.playerPortrait = this.createPortrait(80, 880, side, 88);
     const name = this.add
-      .text(144, 856, SIDES[side].name, { fontFamily: FONT_DISPLAY, fontSize: "40px", color: hex(z.ink) })
+      .text(144, 856, SIDES[side].name, { fontFamily: FONT_BODY, fontSize: "36px", fontStyle: "600", color: hex(z.ink) })
       .setOrigin(0, 0.5);
     this.add
       .text(name.x + name.width + 14, 860, "you", {
@@ -374,8 +374,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         fontStyle: "italic",
         color: ink,
       })
-      .setOrigin(0, 0.5)
-      .setAlpha(0.8);
+      .setOrigin(0, 0.5);
     const cost = this.add
       .text(CARD_W / 2 - 10, -CARD_H / 2 + 16, `${card.cost} ⬢`, {
         fontFamily: FONT_BODY,
@@ -386,8 +385,9 @@ export default class CaseBattleScene extends Phaser.Scene {
       .setOrigin(1, 0.5);
     const name = this.add
       .text(0, -CARD_H / 2 + 58, card.name, {
-        fontFamily: FONT_DISPLAY,
-        fontSize: "25px",
+        fontFamily: FONT_BODY,
+        fontSize: "22px",
+        fontStyle: "600",
         color: ink,
         align: "center",
         wordWrap: { width: CARD_W - 16 },
@@ -398,8 +398,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     const push = pushFor(this.state, card, card.bigPush ?? card.push);
     const big = this.add
       .text(0, 24, `${push}`, {
-        fontFamily: FONT_DISPLAY,
+        fontFamily: FONT_BODY,
         fontSize: "64px",
+        fontStyle: "600",
         color: side === "vigilante" ? hex(this.theme.red) : ink,
       })
       .setOrigin(0.5);
@@ -412,9 +413,8 @@ export default class CaseBattleScene extends Phaser.Scene {
         AMBUSH: `vs Wait, else ${small}`,
       }[card.type] ?? "";
     const rule = this.add
-      .text(0, 70, ruleText, { fontFamily: FONT_BODY, fontSize: "16px", fontStyle: "italic", color: ink })
-      .setOrigin(0.5)
-      .setAlpha(0.85);
+      .text(0, 70, ruleText, { fontFamily: FONT_BODY, fontSize: "17px", fontStyle: "italic", color: ink })
+      .setOrigin(0.5);
     const flavor = this.add
       .text(0, CARD_H / 2 - 22, card.flavor, {
         fontFamily: FONT_BODY,
@@ -425,7 +425,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         wordWrap: { width: CARD_W - 18 },
       })
       .setOrigin(0.5)
-      .setAlpha(0.6);
+      .setAlpha(0.85);
     c.add([bg, typeLabel, cost, name, big, rule, flavor]);
     c.setSize(CARD_W, CARD_H);
     c.bg = bg;
@@ -458,7 +458,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       c.homeY = HAND_Y;
       c.index = i;
       const affordable = canAfford(this.state, this.playerSide, card);
-      c.setAlpha(affordable ? 1 : 0.35);
+      c.setAlpha(affordable ? 1 : 0.5);
       c.bg.setInteractive({ useHandCursor: affordable });
       c.bg.on("pointerover", () => {
         if (!this.busy && affordable && this.selectedIndex !== i) {
@@ -561,7 +561,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.playerBack = back;
       this.arenaObjects.push(back);
     }
-    this.handCards.forEach((c) => this.tweens.add({ targets: c, alpha: 0.25, duration: 200 }));
+    this.handCards.forEach((c) => this.tweens.add({ targets: c, alpha: 0.4, duration: 200 }));
 
     let events, played, nextView;
     if (this.online) {
@@ -610,7 +610,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const { x, y } = SLOT[who];
     if (!card) {
       const t = this.add
-        .text(x, y, "Waited", { fontFamily: FONT_DISPLAY, fontSize: "44px", color: hex(this.z(y).soft) })
+        .text(x, y, "Waited", { fontFamily: FONT_BODY, fontSize: "36px", fontStyle: "italic", color: hex(this.z(y).soft) })
         .setOrigin(0.5)
         .setAlpha(0);
       this.arenaObjects.push(t);
@@ -644,7 +644,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const red = this.theme.red;
 
     if (event.type === "wait") {
-      this.floatText(x, y + 70, `+${this.state.rules.waitBonus} ⬢ saved`, hex(z.soft), 30);
+      this.floatText(x, y + 70, `+${this.state.rules.waitBonus} ⬢ saved`, hex(z.soft), 28, FONT_BODY);
       return;
     }
 
@@ -678,7 +678,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         this.cameras.main.flash(160, ...rgb(red));
         this.floatText(x, y + 40, label, hex(red), 56);
       } else if (event.card.type === "BAIT" || event.card.type === "AMBUSH") {
-        this.floatText(x, y + 40, "no bite", hex(z.soft), 32);
+        this.floatText(x, y + 40, "no bite", hex(z.soft), 28, FONT_BODY);
       }
       await new Promise((resolve) =>
         this.tweens.add({
@@ -697,7 +697,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       const numberColor = event.side === "vigilante" ? red : z.ink;
       this.cameras.main.shake(big ? 260 : 140, Math.min(0.02, 0.002 + delta * 0.0004));
       this.burst(x, y, "cb-spark", z.ink, big ? 24 : 12, big ? 600 : 400);
-      this.floatText(x, y - CARD_H / 2 - 10, `${delta}`, hex(numberColor), big ? 64 : 50);
+      this.floatText(x, y - CARD_H / 2 - 10, `${delta}`, hex(numberColor), big ? 64 : 50, FONT_BODY);
       this.sparkTrail(x, y);
       await this.tweenMeter(event.to);
       this.updatePortraits();
@@ -766,11 +766,13 @@ export default class CaseBattleScene extends Phaser.Scene {
     }
   }
 
-  floatText(x, y, text, color, size) {
+  /** Big moments ("Countered!") use blackletter; numbers pass the clear serif. */
+  floatText(x, y, text, color, size, fontFamily = FONT_DISPLAY) {
     const t = this.add
       .text(x, y, text, {
-        fontFamily: FONT_DISPLAY,
+        fontFamily,
         fontSize: `${size}px`,
+        fontStyle: fontFamily === FONT_BODY ? "600" : "normal",
         color,
         stroke: hex(this.z(y).paper),
         strokeThickness: 8,

@@ -34,7 +34,7 @@ export function bodyText(scene, theme, x, y, text, size = 22, { soft = false, it
  * A rectangular button. Primary buttons are filled with ink; others are outlined.
  * Returns { bg, text, setEnabled, setLabel, setVisible }.
  */
-export function button(scene, theme, x, y, w, label, onClick, { primary = false, h = 84, size = 40 } = {}) {
+export function button(scene, theme, x, y, w, label, onClick, { primary = false, h = 84, size = 36 } = {}) {
   const z = zone(theme, y);
   const bg = scene.add
     .rectangle(x, y, w, h, primary ? z.ink : z.paper, primary ? 1 : 0)
@@ -42,8 +42,9 @@ export function button(scene, theme, x, y, w, label, onClick, { primary = false,
     .setInteractive({ useHandCursor: true });
   const text = scene.add
     .text(x, y, label, {
-      fontFamily: FONTS.display,
+      fontFamily: FONTS.body,
       fontSize: `${size}px`,
+      fontStyle: "600",
       color: hex(primary ? z.paper : z.ink),
     })
     .setOrigin(0.5);
@@ -80,7 +81,7 @@ export function button(scene, theme, x, y, w, label, onClick, { primary = false,
 export function backLink(scene, theme, onClick, label = "← Back") {
   const z = zone(theme, 70);
   const t = scene.add
-    .text(40, 70, label, { fontFamily: FONTS.display, fontSize: "34px", color: hex(z.soft) })
+    .text(40, 70, label, { fontFamily: FONTS.body, fontSize: "28px", fontStyle: "600", color: hex(z.soft) })
     .setOrigin(0, 0.5)
     .setInteractive({ useHandCursor: true });
   t.on("pointerover", () => t.setColor(hex(z.ink)));
@@ -121,7 +122,7 @@ export function characterPicker(scene, theme, top, onSelect) {
     const portrait = scene.add.image(160, y, s.portrait).setDisplaySize(150, 150);
     const frame = scene.add.rectangle(160, y, 154, 154).setStrokeStyle(2, card.ink);
     const name = scene.add
-      .text(250, y - 40, s.name, { fontFamily: FONTS.display, fontSize: "52px", color: hex(card.ink) })
+      .text(250, y - 40, s.name, { fontFamily: FONTS.body, fontSize: "44px", fontStyle: "600", color: hex(card.ink) })
       .setOrigin(0, 0.5);
     const goal = scene.add
       .text(252, y + 30, s.goal, {
@@ -131,8 +132,7 @@ export function characterPicker(scene, theme, top, onSelect) {
         color: hex(card.ink),
         lineSpacing: 2,
       })
-      .setOrigin(0, 0.5)
-      .setAlpha(0.8);
+      .setOrigin(0, 0.5);
     bg.on("pointerdown", () => bg.input.enabled && onSelect(s.character));
     return { ...s, bg, card, parts: [portrait, frame, name, goal] };
   });

@@ -134,7 +134,7 @@ export default class InstructionsScene extends Phaser.Scene {
     let y = 370;
     for (const section of page.sections) {
       const heading = this.add
-        .text(80, y, section.heading, { fontFamily: FONTS.display, fontSize: "38px", color: hex(card.ink) })
+        .text(80, y, section.heading, { fontFamily: FONTS.body, fontSize: "32px", fontStyle: "600", color: hex(card.ink) })
         .setOrigin(0, 0.5);
       const body = this.add
         .text(80, y + 30, section.body, {
