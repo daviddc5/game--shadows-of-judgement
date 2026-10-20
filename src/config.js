@@ -2,10 +2,10 @@ import BootScene from "./scenes/BootScene.js";
 import TitleScene from "./scenes/TitleScene.js";
 import MenuScene from "./scenes/MenuScene.js";
 import MultiplayerLobbyScene from "./scenes/MultiplayerLobbyScene.js";
-import BattleScene from "./scenes/BattleScene.js";
-import GameOverScene from "./scenes/GameOverScene.js";
+import CaseBattleScene from "./scenes/CaseBattleScene.js";
 import InstructionsScene from "./scenes/InstructionsScene.js";
 import SinglePlayerLobbyScene from "./scenes/SinglePlayerLobbyScene.js";
+import AppearanceScene from "./scenes/AppearanceScene.js";
 
 const config = {
   //type is the rendering context
@@ -32,10 +32,10 @@ const config = {
     TitleScene,
     MenuScene,
     MultiplayerLobbyScene,
-    BattleScene,
-    GameOverScene,
+    CaseBattleScene,
     InstructionsScene,
     SinglePlayerLobbyScene,
+    AppearanceScene,
   ],
 };
 

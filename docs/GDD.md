@@ -1,3 +1,6 @@
+> **Historical.** This describes the original eight-stat design. The game now
+> uses one shared Case meter; see [DIRECTION.md](DIRECTION.md).
+
 # 🎮 **GAME DESIGN DOCUMENT (GDD)**
 
 ## **Title:** *Shadows of Judgment* (working title)

@@ -1,6 +1,6 @@
 # ⚖️ Shadows of Judgment
 
-> *A simultaneous turn-based card strategy game of deduction, deception, and prediction.*
+> *A simultaneous turn-based card duel of reading, bluffing, and prediction.*
 
 🎮 **[Play Now → shadows-of-judgment-517895523663.europe-west1.run.app](https://shadows-of-judgment-517895523663.europe-west1.run.app/)**
 
@@ -8,46 +8,40 @@
 
 ## 🕹️ What Is This?
 
-**Shadows of Judgment** is a 1v1 card battle game built in **Phaser 3** where both players select their cards **at the same time** — then reveal and resolve them based on speed and priority.
+**Shadows of Judgment** is a 1v1 card duel built in **Phaser 3**. A Detective and a Vigilante fight over a single shared meter: **the Case**. Both players pick their card **at the same time**, then both cards land together.
 
-It's less about luck and more about reading your opponent. Can you predict what they'll play and counter it?
+It's less about luck and more about reading your opponent. They've been saving energy: is a POWER card coming, or is it bait?
 
 ---
 
 ## ⚡ Core Gameplay
 
-- Both players pick a card **simultaneously** and hit **CONFIRM**
-- Cards resolve in **priority order** — faster cards go first
-- Manage your **energy** (starts at 1, gains +1 per turn, max 10) to afford bigger plays
-- First to hit their **win condition** wins the duel
+- **One shared meter, 0–100, starting at 50.** The Detective pushes it to 100 to **capture**; the Vigilante drags it to 0 to **escape**.
+- Both players pick a card (or **WAIT**) in secret, then both reveal. Their pushes add up and the needle moves.
+- **Energy is scarce and visible:** +2 per turn (max 10). WAIT banks +1 extra. You can always see your opponent's energy and what they played recently.
+- **Stakes rise every turn:** every card pushes harder. If nobody wins by turn 12, the needle decides the verdict.
 
-### 🃏 Card Types
+### 🃏 The mind-game loop
 
-| Type | Priority | Energy | Effect |
-|------|----------|--------|--------|
-| 🔴 **COUNTER** | 10 (fastest) | 2–3 | Cancels opponent's slow cards |
-| 🔵 **QUICK** | 7–9 | 3–4 | Fast but moderate stat gains |
-| 🟢 **NORMAL** | 4–6 | 4–5 | Balanced stats and effects |
-| 🟡 **POWER** | 1–3 (slowest) | 6–10 | Devastating but easy to counter |
+Each special card beats exactly one thing:
 
-**The Rock-Paper-Scissors dynamic:**
-- COUNTER beats POWER
-- QUICK beats COUNTER (resolves before it can be cancelled)
-- POWER beats QUICK (massive value vs. chip damage)
+| Card | What it does | Beats | Loses to |
+|------|--------------|-------|----------|
+| 🟡 **POWER** | Huge push | Ordinary cards | COUNTER |
+| 🔴 **COUNTER** | Cancels a POWER card and pushes; fizzles otherwise | POWER | BAIT |
+| 🟣 **BAIT** | Big push if they COUNTER, small otherwise | COUNTER | Ordinary cards |
+| 🟠 **AMBUSH** | Big push if they WAIT, small otherwise | WAIT | Ordinary cards |
+
+🔵 **QUICK** and 🟢 **NORMAL** cards are plain pushes: reliable when you can't read your opponent.
 
 ---
 
 ## 👥 Characters
 
-### 🔍 Independent Detective
-- **Win:** Reach 100 **Evidence**
-- **Lose:** **Morale** drops to 0
-- Playstyle: Methodical, evidence-building, disruption
-
-### ⚔️ Vigilante
-- **Win:** Reach 100 **Justice Influence**
-- **Lose:** **Suspicion** reaches 100
-- Playstyle: Aggressive influence, misdirection, public manipulation
+| | Wins at | Plays like |
+|---|---|---|
+| 🔍 **Independent Detective** | Case reaches **100** (capture) | Builds the case, sets stakeouts |
+| ⚔️ **Vigilante** | Case reaches **0** (escape) | Misdirection, rumours, public spectacle |
 
 ---
 
@@ -55,8 +49,8 @@ It's less about luck and more about reading your opponent. Can you predict what 
 
 | Mode | Description |
 |------|-------------|
-| 🎮 **Single Player** | Duel against the AI |
-| 🌐 **Multiplayer** | Real-time 1v1 online via WebSockets |
+| 🎮 **Single Player** | Duel an AI that reads your energy and recent plays |
+| 🌐 **Multiplayer** | Real-time 1v1 online via WebSockets; the server runs the rules |
 
 ---
 
@@ -66,9 +60,10 @@ It's less about luck and more about reading your opponent. Can you predict what 
 |-------|------|
 | Game Engine | [Phaser 3](https://phaser.io/) |
 | Frontend | JavaScript + Vite |
+| Rules | Pure JS engine in `src/case/`, shared by client and server |
 | Multiplayer | Socket.IO (Node.js server) |
 | Hosting | Google Cloud Run |
-| Art Style | Pixel art, dark minimal UI |
+| Art Style | Pixel-art portraits; black-and-white blackletter UI with a touch of red; selectable board themes |
 
 ---
 
@@ -81,10 +76,6 @@ It's less about luck and more about reading your opponent. Can you predict what 
 ### Install & Run
 
 ```bash
-# Clone the repo
-git clone <repo-url>
-cd Game2
-
 # Install frontend dependencies
 npm install
 
@@ -94,11 +85,18 @@ cd server && npm install && cd ..
 # Start the dev server (frontend)
 npm run dev
 
-# In a separate terminal — start the game server
+# In a separate terminal: start the game server (needed for multiplayer)
 npm run server:dev
 ```
 
-The game will be available at `http://localhost:5173`
+The game will be available at `http://localhost:5173`.
+
+### Tests and balance
+
+```bash
+npm test                      # rules engine + multiplayer room tests
+npm run simulate -- 10000     # AI-vs-AI balance report
+```
 
 ---
 
@@ -119,26 +117,29 @@ npm run deploy
 
 ```
 ├── src/
-│   ├── scenes/         # Phaser scenes (Title, Menu, Battle, etc.)
-│   ├── logic/          # Game logic (CardResolver, GameLogic, AIController)
-│   ├── ui/             # UI components (CardHand, StatBarGroup, BattleLog)
-│   ├── data/           # Card and character definitions
-│   └── network/        # Multiplayer networking (Socket.IO)
+│   ├── case/           # Rules engine, cards, AI (pure JS, also used by the server)
+│   ├── scenes/         # Phaser scenes (Title, Menu, Lobbies, CaseBattleScene, How to Play)
+│   └── network/        # Multiplayer networking (Socket.IO client)
 ├── server/
 │   ├── index.js        # Express + Socket.IO server
-│   └── socketHandlers.js
-├── assets/             # Fonts, portraits, images
-└── GDD.md              # Full Game Design Document
+│   ├── socketHandlers.js
+│   └── caseRoom.js     # Multiplayer rooms on top of the rules engine
+├── scripts/
+│   ├── simulate.mjs    # AI-vs-AI balance simulator
+│   └── playtest.mjs    # Headless playthrough with screenshots
+├── public/assets/      # Fonts and portraits
+└── docs/               # Design direction, rules, deployment
 ```
 
 ---
 
 ## 📖 Documentation
 
-- [GDD.md](docs/GDD.md) — Full Game Design Document (mechanics, cards, roadmap)
+- [DIRECTION.md](docs/DIRECTION.md) — Design decisions, why they were made, and the roadmap
+- [CASE_METER_EXPERIMENT.md](docs/CASE_METER_EXPERIMENT.md) — Current rules and balancing
 - [DEPLOYMENT.md](docs/DEPLOYMENT.md) — Google Cloud Run deployment guide
 - [OBJECTIVES.md](docs/OBJECTIVES.md) — Harness CI/CD and UX objectives
-- [UX_IMPROVEMENTS.md](docs/UX_IMPROVEMENTS.md) — Engagement diagnosis and plan
+- [GDD.md](docs/GDD.md) and [UX_IMPROVEMENTS.md](docs/UX_IMPROVEMENTS.md) — The original design and the feedback that led to the redesign (historical)
 - [design-notes/](docs/design-notes/) — Character art prompts and open design ideas
 
 ### Redesign Artifacts
@@ -153,41 +154,26 @@ npm run deploy
 
 ## 🗺️ Roadmap
 
+See [DIRECTION.md](docs/DIRECTION.md) for the reasoning behind each step.
+
 **Shipped**
-- [x] Core simultaneous card system
-- [x] Energy management + speed/priority resolution
-- [x] AI opponent
-- [x] Online multiplayer (WebSockets)
+- [x] Simultaneous card system with energy management
+- [x] One shared Case meter (replaced eight stat bars)
+- [x] POWER / COUNTER / BAIT / AMBUSH mind-game loop
+- [x] AI opponent that reads public information
+- [x] Online multiplayer on the same rules engine
+- [x] Card flips, screen shake, particles, reactive portraits
 - [x] Cloud Run deployment
-- [x] Instructions screen
 
-**Next — understandability** (see [docs/UX_IMPROVEMENTS.md](docs/UX_IMPROVEMENTS.md))
-- [ ] Turn-by-turn narration + card flavor text
-- [ ] Momentum bar (who's winning at a glance)
-- [ ] Simplified card effect display
-- [ ] Story-driven battle log
-- [ ] Interactive guided tutorial
+**Next**
+- [ ] Three districts mode (choose a card *and* where to play it)
+- [ ] Unified visual style across menus and battle, sound effects
+- [ ] Replace the bundled font and placeholder art
 
-**Next — delivery** (see [docs/OBJECTIVES.md](docs/OBJECTIVES.md))
-- [ ] Harness CI pipeline with test gate
-- [ ] Immutable image tags + approval gate + rollback
-
-**Later — content**
-- [ ] More characters (4–6 total), unlock system
-- [ ] More cards per character, combos, rarity
-- [ ] Deck building + deck/discard visualisation
-- [ ] Story mode with progression
-
-**Later — polish**
-- [ ] Sound effects, background music, music selection
-- [ ] Particle effects, screen shake, animated backgrounds
-- [ ] Character expression switching on winning/losing
-- [ ] Original sprite art (replace AI-generated placeholders)
-- [ ] Settings menu
-
-**Later — platform & accounts**
-- [ ] PWA (installable, offline, fullscreen)
-- [ ] Mobile app (Capacitor)
+**Later**
+- [ ] Selectable characters with one passive ability each, then full teams
+- [ ] Single-player campaign of escalating cases
+- [ ] PWA / mobile app (Capacitor)
 - [ ] Auth + database (match history, leaderboard, profiles)
 - [ ] Move multiplayer state out of process memory (unblocks max-instances>1)
 - [ ] Ranked mode, best-of-3, turn timer

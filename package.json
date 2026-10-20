@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "simulate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/simulate.mjs",
     "server": "cd server && npm start",
     "server:dev": "cd server && npm run dev",
     "deploy": "gcloud run deploy shadows-of-judgment --project shadowsofjudgement --source . --region europe-west1 --allow-unauthenticated --session-affinity --min-instances 0 --max-instances 1 --memory 256Mi --cpu 1 --port 8080",
@@ -25,6 +26,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@fontsource/eb-garamond": "^5.3.0",
+    "@fontsource/unifrakturmaguntia": "^5.3.0",
     "phaser": "^3.90.0",
     "socket.io-client": "^4.8.3"
   },

@@ -17,7 +17,7 @@ RUN npm run build
 # Stage 2: Production server
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/server
 
 # Copy server package files and install production deps only
 COPY server/package.json server/package-lock.json* ./
@@ -25,6 +25,9 @@ RUN npm ci --omit=dev
 
 # Copy server source
 COPY server/*.js ./
+
+# The server runs the same rules engine as the client (imported as ../src/case)
+COPY src/case/package.json src/case/cards.js src/case/rules.js /app/src/case/
 
 # Copy built client from Stage 1
 COPY --from=build /app/dist ./dist

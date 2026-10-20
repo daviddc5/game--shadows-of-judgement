@@ -1,4 +1,6 @@
 import Phaser from "phaser";
+import { FONTS } from "../theme.js";
+import { SIDES } from "../case/cards.js";
 
 //define the BootScene class that is the first scene to load
 
@@ -10,16 +12,6 @@ export default class BootScene extends Phaser.Scene {
 
   //preload method to load assets
   preload() {
-    //load Death Note font
-    const style = document.createElement("style");
-    style.innerHTML = `
-      @font-face {
-        font-family: 'DeathNote';
-        src: url('assets/fonts/Death Note.ttf') format('truetype');
-      }
-    `;
-    document.head.appendChild(style);
-
     // Load character portraits - Detective
     this.load.image(
       "detective-neutral",
@@ -47,12 +39,27 @@ export default class BootScene extends Phaser.Scene {
       "killer-losing",
       "assets/images/KillerPortraits/killer-losing.png"
     );
+
+    this.loadCardArt();
+  }
+
+  /** Card art: any card with `art: "<name>"` loads public/assets/images/cards/<name>.png. */
+  loadCardArt() {
+    for (const side of Object.values(SIDES)) {
+      for (const card of side.cards) {
+        if (card.art) this.load.image(card.art, `assets/images/cards/${card.art}.png`);
+      }
+    }
   }
 
   create() {
-    // Wait for font to load before starting TitleScene
-    document.fonts.ready.then(() => {
-      this.scene.start("TitleScene");
-    });
+    // Canvas text can't swap fonts after drawing, so load every face first.
+    Promise.all([
+      document.fonts.load(`40px ${FONTS.display}`),
+      document.fonts.load(`20px ${FONTS.body}`),
+      document.fonts.load(`600 20px ${FONTS.body}`),
+    ])
+      .catch(() => {})
+      .then(() => this.scene.start("TitleScene"));
   }
 }

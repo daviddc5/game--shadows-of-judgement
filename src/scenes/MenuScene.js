@@ -1,113 +1,37 @@
 import Phaser from "phaser";
+import { getTheme, paintBackground } from "../theme.js";
+import { bodyText, button, displayText } from "../ui/widgets.js";
+
 export default class MenuScene extends Phaser.Scene {
   constructor() {
     super({ key: "MenuScene" });
   }
 
   create() {
-    const centerX = this.cameras.main.width / 2;
+    const theme = getTheme();
+    paintBackground(this, theme);
 
-    // Title
-    this.add
-      .text(centerX, 200, "SHADOWS OF\nJUDGMENT", {
-        fontFamily: "DeathNote",
-        fontSize: "72px",
-        color: "#ffffff",
-        align: "center",
-      })
-      .setOrigin(0.5);
+    displayText(this, theme, 375, 230, "Shadows of\nJudgment", 88);
+    this.add.rectangle(375, 380, 120, 3, theme.red);
 
-    // Multiplayer button
-    const multiplayerButton = this.add
-      .text(centerX, 450, "🌐 MULTIPLAYER", {
-        fontFamily: "DeathNote",
-        fontSize: "48px",
-        color: "#ffffff",
-        padding: { x: 60, y: 20 },
-        backgroundColor: "#0066cc",
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    // Single Player button
-    const singlePlayerButton = this.add
-      .text(centerX, 580, "🎮 SINGLE PLAYER", {
-        fontFamily: "DeathNote",
-        fontSize: "48px",
-        color: "#ffffff",
-        padding: { x: 60, y: 20 },
-        backgroundColor: "#006600",
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    if (import.meta.env.DEV) {
-      // Test Mode button
-      const testModeButton = this.add
-        .text(centerX, 675, "🧪 TEST MODE", {
-          fontFamily: "DeathNote",
-          fontSize: "42px",
-          color: "#ffffff",
-          padding: { x: 55, y: 18 },
-          backgroundColor: "#7a3f00",
-        })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true });
-
-      testModeButton.on("pointerover", () =>
-        testModeButton.setBackgroundColor("#a95500"),
-      );
-      testModeButton.on("pointerout", () =>
-        testModeButton.setBackgroundColor("#7a3f00"),
-      );
-      testModeButton.on("pointerdown", () => {
-        this.registry.set("debugMode", true);
-        this.scene.start("SinglePlayerLobbyScene", { debugMode: true });
-      });
-    }
-
-    // How to Play button
-    const howToPlayButton = this.add
-      .text(centerX, 790, "❓ HOW TO PLAY", {
-        fontFamily: "DeathNote",
-        fontSize: "36px",
-        color: "#aaaaaa",
-        padding: { x: 40, y: 15 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    // Multiplayer hover
-    multiplayerButton.on("pointerover", () =>
-      multiplayerButton.setBackgroundColor("#0088ff"),
-    );
-    multiplayerButton.on("pointerout", () =>
-      multiplayerButton.setBackgroundColor("#0066cc"),
-    );
-    multiplayerButton.on("pointerdown", () => {
+    button(this, theme, 375, 560, 520, "Single player", () => {
+      this.registry.set("debugMode", false);
+      this.scene.start("SinglePlayerLobbyScene", { debugMode: false });
+    }, { primary: true });
+    button(this, theme, 375, 670, 520, "Multiplayer", () => {
       this.registry.set("debugMode", false);
       this.scene.start("MultiplayerLobbyScene");
     });
+    button(this, theme, 375, 780, 520, "Appearance", () => this.scene.start("AppearanceScene"));
+    button(this, theme, 375, 890, 520, "How to play", () => this.scene.start("InstructionsScene"));
 
-    // Single Player hover
-    singlePlayerButton.on("pointerover", () =>
-      singlePlayerButton.setBackgroundColor("#009900"),
-    );
-    singlePlayerButton.on("pointerout", () =>
-      singlePlayerButton.setBackgroundColor("#006600"),
-    );
-    singlePlayerButton.on("pointerdown", () => {
-      this.registry.set("debugMode", false);
-      this.scene.start("SinglePlayerLobbyScene", { debugMode: false });
-    });
+    if (import.meta.env.DEV) {
+      button(this, theme, 375, 1010, 360, "Test mode", () => {
+        this.registry.set("debugMode", true);
+        this.scene.start("SinglePlayerLobbyScene", { debugMode: true });
+      }, { h: 64, size: 30 });
+    }
 
-    // How to Play hover
-    howToPlayButton.on("pointerover", () =>
-      howToPlayButton.setColor("#ffffff"),
-    );
-    howToPlayButton.on("pointerout", () => howToPlayButton.setColor("#aaaaaa"));
-    howToPlayButton.on("pointerdown", () => {
-      this.scene.start("InstructionsScene");
-    });
+    bodyText(this, theme, 375, 1240, "Every case ends in a verdict.", 22, { soft: true });
   }
 }
