@@ -10,6 +10,7 @@ import {
 } from "../case/rules.js";
 import { chooseAiPlay } from "../case/ai.js";
 import NetworkManager from "../network/NetworkManager.js";
+import { FONTS } from "../theme.js";
 
 const W = 750;
 const H = 1334;
@@ -28,8 +29,9 @@ const COLORS = {
 
 const hex = (n) => `#${n.toString(16).padStart(6, "0")}`;
 
-const FONT_TITLE = "Georgia, 'Times New Roman', serif";
-const FONT_BODY = "'Courier New', Courier, monospace";
+const FONT_DISPLAY = FONTS.display;
+const FONT_TITLE = FONTS.title;
+const FONT_BODY = FONTS.body;
 
 const METER = { x: 60, y: 362, w: 630, h: 34 };
 const SLOT = { opponent: { x: 230, y: 615 }, player: { x: 520, y: 615 } };
@@ -277,7 +279,7 @@ export default class CaseBattleScene extends Phaser.Scene {
   createMeter() {
     const { x, y, w, h } = METER;
     this.add
-      .text(W / 2, y - 78, "THE CASE", { fontFamily: FONT_TITLE, fontSize: "24px", color: COLORS.ink })
+      .text(W / 2, y - 78, "THE CASE", { fontFamily: FONT_DISPLAY, fontSize: "30px", color: COLORS.ink })
       .setOrigin(0.5);
 
     this.add
@@ -836,7 +838,7 @@ export default class CaseBattleScene extends Phaser.Scene {
   showBanner(text) {
     const band = this.add.rectangle(W / 2, 615, W, 90, 0x000000, 0.75).setDepth(40);
     const t = this.add
-      .text(W / 2, 615, text, { fontFamily: FONT_TITLE, fontSize: "52px", color: COLORS.ink })
+      .text(W / 2, 615, text, { fontFamily: FONT_DISPLAY, fontSize: "60px", color: COLORS.ink })
       .setOrigin(0.5)
       .setDepth(41);
     band.scaleY = 0;
@@ -951,8 +953,8 @@ export default class CaseBattleScene extends Phaser.Scene {
     const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.85).setDepth(200).setInteractive();
     this.add
       .text(W / 2, 500, "YOUR OPPONENT\nLEFT THE CASE", {
-        fontFamily: FONT_TITLE,
-        fontSize: "52px",
+        fontFamily: FONT_DISPLAY,
+        fontSize: "60px",
         color: COLORS.ink,
         align: "center",
       })
@@ -1019,10 +1021,10 @@ export default class CaseBattleScene extends Phaser.Scene {
     const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0).setDepth(200).setInteractive();
     this.tweens.add({ targets: shade, fillAlpha: 0.82, duration: 400 });
     const items = [
-      this.add.text(W / 2, 430, titles[endReason], { fontFamily: FONT_TITLE, fontSize: "64px", color: COLORS.ink }),
+      this.add.text(W / 2, 430, titles[endReason], { fontFamily: FONT_DISPLAY, fontSize: "76px", color: COLORS.ink }),
       this.add.text(W / 2, 520, winner === "draw" ? "DRAW" : won ? "YOU WIN" : "YOU LOSE", {
-        fontFamily: FONT_TITLE,
-        fontSize: "48px",
+        fontFamily: FONT_DISPLAY,
+        fontSize: "56px",
         color: winner === "draw" ? COLORS.muted : won ? hex(COLORS.gold) : hex(COLORS.vigilante),
       }),
       this.add.text(W / 2, 600, reasons[endReason], {

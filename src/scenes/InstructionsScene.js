@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { FONTS } from "../theme.js";
 
 export default class InstructionsScene extends Phaser.Scene {
   constructor() {
@@ -22,7 +23,7 @@ export default class InstructionsScene extends Phaser.Scene {
     // Navigation
     this.prevBtn = this.add
       .text(80, H - 80, "◀ PREV", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "36px",
         color: "#888888",
         padding: { x: 15, y: 10 },
@@ -33,7 +34,7 @@ export default class InstructionsScene extends Phaser.Scene {
 
     this.nextBtn = this.add
       .text(W - 80, H - 80, "NEXT ▶", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "36px",
         color: "#00aaff",
         padding: { x: 15, y: 10 },
@@ -53,7 +54,7 @@ export default class InstructionsScene extends Phaser.Scene {
     // Back button (top left)
     this.add
       .text(20, 20, "✕ BACK", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "32px",
         color: "#ff4444",
         padding: { x: 10, y: 5 },
@@ -172,7 +173,7 @@ export default class InstructionsScene extends Phaser.Scene {
     // Title
     const title = this.add
       .text(cx, y, page.title, {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "52px",
         color: "#ffffff",
         align: "center",

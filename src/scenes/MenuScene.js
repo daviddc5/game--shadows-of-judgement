@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { FONTS } from "../theme.js";
 export default class MenuScene extends Phaser.Scene {
   constructor() {
     super({ key: "MenuScene" });
@@ -10,7 +11,7 @@ export default class MenuScene extends Phaser.Scene {
     // Title
     this.add
       .text(centerX, 200, "SHADOWS OF\nJUDGMENT", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "72px",
         color: "#ffffff",
         align: "center",
@@ -20,7 +21,7 @@ export default class MenuScene extends Phaser.Scene {
     // Multiplayer button
     const multiplayerButton = this.add
       .text(centerX, 450, "🌐 MULTIPLAYER", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "48px",
         color: "#ffffff",
         padding: { x: 60, y: 20 },
@@ -32,7 +33,7 @@ export default class MenuScene extends Phaser.Scene {
     // Single Player button
     const singlePlayerButton = this.add
       .text(centerX, 580, "🎮 SINGLE PLAYER", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "48px",
         color: "#ffffff",
         padding: { x: 60, y: 20 },
@@ -45,7 +46,7 @@ export default class MenuScene extends Phaser.Scene {
       // Test Mode button
       const testModeButton = this.add
         .text(centerX, 675, "🧪 TEST MODE", {
-          fontFamily: "DeathNote",
+          fontFamily: FONTS.display,
           fontSize: "42px",
           color: "#ffffff",
           padding: { x: 55, y: 18 },
@@ -69,7 +70,7 @@ export default class MenuScene extends Phaser.Scene {
     // How to Play button
     const howToPlayButton = this.add
       .text(centerX, 790, "❓ HOW TO PLAY", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "36px",
         color: "#aaaaaa",
         padding: { x: 40, y: 15 },

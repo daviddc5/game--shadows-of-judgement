@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { FONTS } from "../theme.js";
 
 //define the BootScene class that is the first scene to load
 
@@ -10,16 +11,6 @@ export default class BootScene extends Phaser.Scene {
 
   //preload method to load assets
   preload() {
-    //load Death Note font
-    const style = document.createElement("style");
-    style.innerHTML = `
-      @font-face {
-        font-family: 'DeathNote';
-        src: url('assets/fonts/Death Note.ttf') format('truetype');
-      }
-    `;
-    document.head.appendChild(style);
-
     // Load character portraits - Detective
     this.load.image(
       "detective-neutral",
@@ -50,9 +41,10 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
-    // Wait for font to load before starting TitleScene
-    document.fonts.ready.then(() => {
-      this.scene.start("TitleScene");
-    });
+    // Canvas text can't swap fonts after drawing, so load the title font first.
+    document.fonts
+      .load(`700 40px ${FONTS.display}`)
+      .catch(() => {})
+      .then(() => this.scene.start("TitleScene"));
   }
 }

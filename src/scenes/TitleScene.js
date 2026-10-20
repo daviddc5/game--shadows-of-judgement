@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { FONTS } from "../theme.js";
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -12,7 +13,7 @@ export default class TitleScene extends Phaser.Scene {
     // Main title
     this.add
       .text(centerX, centerY, "SHADOWS OF\nJUDGMENT", {
-        fontFamily: "DeathNote, Arial, sans-serif",
+        fontFamily: FONTS.display,
         fontSize: "80px",
         color: "#ffffff",
         align: "center",

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { FONTS } from "../theme.js";
 
 export default class SinglePlayerLobbyScene extends Phaser.Scene {
   constructor() {
@@ -17,7 +18,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     // Title
     this.add
       .text(centerX, 150, "SINGLE PLAYER", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "72px",
         color: "#ffffff",
         align: "center",
@@ -27,7 +28,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     if (import.meta.env.DEV && this.debugMode) {
       this.add
         .text(centerX, 210, "TEST MODE ENABLED", {
-          fontFamily: "DeathNote",
+          fontFamily: FONTS.display,
           fontSize: "28px",
           color: "#ffcc66",
           align: "center",
@@ -38,7 +39,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     // Character selection title
     this.add
       .text(centerX, 280, "Choose Your Character", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "40px",
         color: "#cccccc",
       })
@@ -61,7 +62,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     // Detective text
     this.detectiveLabel = this.add
       .text(centerX + 30, 430, "Independent Detective", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "36px",
         color: "#ffffff",
       })
@@ -99,7 +100,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     // Vigilante text
     this.vigilanteLabel = this.add
       .text(centerX + 30, 670, "Vigilante", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "44px",
         color: "#ffffff",
       })
@@ -123,7 +124,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     // Start Game button (hidden until character selected)
     this.startButton = this.add
       .text(centerX, 900, "START GAME", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "56px",
         color: "#ffffff",
         padding: { x: 80, y: 30 },
@@ -136,7 +137,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
     // Back button
     this.backButton = this.add
       .text(100, 80, "← BACK", {
-        fontFamily: "DeathNote",
+        fontFamily: FONTS.display,
         fontSize: "36px",
         color: "#ffffff",
         padding: { x: 20, y: 10 },
