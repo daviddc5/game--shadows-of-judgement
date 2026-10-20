@@ -102,5 +102,26 @@ export function paintBackground(scene, theme, width = 750, height = 1334) {
     g.fillStyle(theme.split.paper, 1).fillRect(0, 0, width, theme.split.at * height);
   }
   scene.cameras.main.setBackgroundColor(theme.paper);
+  paintPage(theme);
   return g;
+}
+
+/**
+ * Colours the web page around the game to match the board, so the space left
+ * above and below it on tall phone screens doesn't show as dark bars. Also
+ * tints the mobile browser's address bar.
+ */
+function paintPage(theme) {
+  if (typeof document === "undefined") return;
+  const top = hex(theme.split ? theme.split.paper : theme.paper);
+  const bottom = hex(theme.paper);
+  document.documentElement.style.background = `linear-gradient(${top} 50%, ${bottom} 50%)`;
+  document.body.style.background = "transparent";
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.name = "theme-color";
+    document.head.appendChild(meta);
+  }
+  meta.content = top;
 }

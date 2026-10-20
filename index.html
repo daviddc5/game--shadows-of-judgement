@@ -5,17 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shadows of Judgment</title>
     <style>
-        body {
+        /* Fill exactly the visible screen (dvh skips the hidden mobile address
+           bar); Phaser fits and centres the game inside #game-container. The
+           page colour is set to match the board theme in src/theme.js. */
+        html, body {
             margin: 0;
             padding: 0;
+            height: 100%;
+            overflow: hidden;
             background-color: #1a1a1a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        }
+        body {
+            height: 100vh;
+            height: 100dvh;
         }
         #game-container {
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
