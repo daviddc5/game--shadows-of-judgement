@@ -13,7 +13,7 @@ export const CHARACTERS = {
   detective: [
     {
       id: "detective",
-      name: "Eren Del Río",
+      name: "Deniz Kaya",
       portrait: "detective",
       files: {
         neutral: "DetectivePortraits/detective-neutral.png",

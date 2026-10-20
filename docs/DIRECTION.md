@@ -81,7 +81,7 @@ picks side and character on the character-select screen, the AI picks a random
 character for its side, and online opponents see the character you chose.
 Characters are cosmetic for now (portrait and name); the long-term plan is a
 passive ability and signature cards each (see COLLECTION_AND_SHOP.md). Current
-roster: Eren Del Río (Detective) and Giovanni Santoro (Vigilante). Draft
+roster: Deniz Kaya (Detective) and Giovanni Santoro (Vigilante). Draft
 AI-made portraits for two more characters (Mara Vale, Wren) are kept in
 `art/drafts/` but not used: the owner is holding off on adding more AI art.
 
