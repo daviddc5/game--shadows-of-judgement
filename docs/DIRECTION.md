@@ -19,6 +19,13 @@ not from more stats or rules.
 - Card games are not inherently unpopular. Ones with no feedback feel like
   spreadsheets. Motion, impact and sound matter more than illustration.
 
+## What the owner found fun (first playtest)
+
+After BAIT and AMBUSH were added, the game felt "so much more fun". The best
+part was **thinking about how much energy the opponent has and what they will
+decide**. That read is the heart of the game: protect it, and judge new ideas
+by whether they give players more to read, not more to calculate.
+
 ## Decisions so far
 
 | Decision | Why |
