@@ -70,7 +70,7 @@ prefers every card to share one plain border.
 
 Every card has an **art box**. Owning art is a big part of why people love
 card games, so art is a long-term goal; the owner may learn to draw or hire an
-artist. Until then the box shows a drawn dusk scene with the type symbol as a placeholder (`src/ui/cardArtPlaceholder.js`). Adding art
+artist. Until then the box shows a drawn placeholder scene, a different one per type (storm, rooftops, tower, streetlamp, harbour, alley) with the type symbol in the corner (`src/ui/cardArtPlaceholder.js`). Adding art
 for a card is one image plus `art: "<name>"` on the card: see
 `public/assets/images/cards/README.md` (16:9, at least 640×360).
 
