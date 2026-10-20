@@ -71,18 +71,20 @@ describe("Case meter rules", () => {
     expect(state.sides.vigilante.energy).toBe(3 + RULES.waitBonus);
   });
 
-  it("a faster card can finish the case before a slower one lands", () => {
+  it("both cards land together and net out before the meter is clamped", () => {
     const state = setup("QUICK", "POWER", 95);
+    const net = pushFor(state, state.sides.detective.hand[0]) - pushFor(state, state.sides.vigilante.hand[0]);
     const { events } = resolveTurn(state, play(true, true));
-    expect(state.winner).toBe("detective");
-    expect(events.some((e) => e.type === "push" && e.side === "vigilante")).toBe(false);
+    expect(events.filter((e) => e.type === "push")).toHaveLength(2);
+    expect(state.winner).toBeNull();
+    expect(state.caseValue).toBe(95 + net);
   });
 
-  it("equal-speed cards net out before the meter is clamped", () => {
-    const state = setup("NORMAL", "NORMAL", 95);
+  it("ends the case when the net push reaches an end", () => {
+    const state = setup("POWER", "QUICK", 90);
     resolveTurn(state, play(true, true));
-    expect(state.winner).toBeNull();
-    expect(state.caseValue).toBeLessThan(100);
+    expect(state.winner).toBe("detective");
+    expect(state.endReason).toBe("capture");
   });
 
   it("gives the verdict to whichever side the meter leans at the turn limit", () => {

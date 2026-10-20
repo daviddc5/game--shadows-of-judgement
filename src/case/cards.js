@@ -3,10 +3,10 @@
 // Detective pushes it up (toward 100), the Vigilante pushes it down (toward 0).
 
 export const CARD_TYPES = {
-  COUNTER: { speed: 10, color: 0xe5484d, label: "COUNTER" },
-  QUICK: { speed: 8, color: 0x3e9bff, label: "QUICK" },
-  NORMAL: { speed: 5, color: 0x46c47e, label: "NORMAL" },
-  POWER: { speed: 2, color: 0xf2b33d, label: "POWER" },
+  COUNTER: { color: 0xe5484d, label: "COUNTER" },
+  QUICK: { color: 0x3e9bff, label: "QUICK" },
+  NORMAL: { color: 0x46c47e, label: "NORMAL" },
+  POWER: { color: 0xf2b33d, label: "POWER" },
 };
 
 // A COUNTER only cancels POWER cards. Against anything else it fizzles.
@@ -50,10 +50,6 @@ export const SIDES = {
     cards: vigilanteCards,
   },
 };
-
-export function speedOf(card) {
-  return CARD_TYPES[card.type].speed;
-}
 
 /** Expands `copies` into a flat list of card instances. */
 export function buildDeck(sideId) {

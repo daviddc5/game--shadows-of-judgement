@@ -17,7 +17,7 @@ export function chooseAiPlay(state, side, { rng = Math.random, skill = 1 } = {})
 
   if (affordable.length === 0) return null;
 
-  // Finish the case if any card gets there (prefer the fastest one).
+  // Finish the case if any card gets there (avoid POWER, which can be countered).
   const distance =
     direction > 0
       ? state.rules.caseMax - state.caseValue

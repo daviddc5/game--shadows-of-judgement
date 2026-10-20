@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { CARD_TYPES, SIDES, speedOf } from "../case/cards.js";
+import { CARD_TYPES, SIDES } from "../case/cards.js";
 import {
   canAfford,
   createMatch,
@@ -377,11 +377,12 @@ export default class CaseBattleScene extends Phaser.Scene {
         fontStyle: "bold",
       })
       .setOrigin(0.5);
+    const ruleText = { COUNTER: "only vs POWER", POWER: "can be countered" }[card.type] ?? "";
     const rule = this.add
-      .text(0, 62, card.type === "COUNTER" ? "only vs POWER" : `speed ${speedOf(card)}`, {
+      .text(0, 62, ruleText, {
         fontFamily: FONT_BODY,
         fontSize: "14px",
-        color: card.type === "COUNTER" ? hex(type.color) : COLORS.muted,
+        color: hex(type.color),
       })
       .setOrigin(0.5);
     const flavor = this.add
@@ -477,7 +478,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.renderHand();
     this.hintText.setText(
       first
-        ? "Pick a card. They're picking too.\nCards reveal together, fastest first."
+        ? "Pick a card. They're picking too.\nBoth cards land together."
         : turn === rules.maxTurns
           ? "FINAL TURN — the verdict follows the needle."
           : "",
@@ -816,8 +817,8 @@ export default class CaseBattleScene extends Phaser.Scene {
           "  Vigilante wins at 0.",
           "",
           "• Both players pick a card at the same time.",
-          "  Faster cards land first:",
-          "  COUNTER 10 · QUICK 8 · NORMAL 5 · POWER 2",
+          "  Both cards land together and their",
+          "  pushes add up.",
           "",
           "• COUNTER only stops POWER cards. Guess",
           "  wrong and it fizzles.",

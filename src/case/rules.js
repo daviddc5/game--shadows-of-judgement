@@ -1,4 +1,4 @@
-import { SIDES, buildDeck, speedOf } from "./cards.js";
+import { SIDES, buildDeck } from "./cards.js";
 
 // Tunable rules for the Case meter prototype.
 export const RULES = {
@@ -11,9 +11,9 @@ export const RULES = {
   maxEnergy: 10,
   handSize: 4,
   maxTurns: 12, // after this the verdict goes to whichever side the meter leans
-  pushScale: 1.3, // multiplies every card's push
+  pushScale: 1.5, // multiplies every card's push
   escalation: 0, // extra push per turn: push * (1 + escalation * (turn - 1))
-  escalationFlat: 3, // flat push added per turn: push + escalationFlat * (turn - 1)
+  escalationFlat: 4, // flat push added per turn: push + escalationFlat * (turn - 1)
 };
 
 /** How far a card moves the meter this turn. */
@@ -146,49 +146,36 @@ export function resolveTurn(state, plays) {
     }
   });
 
-  // Resolve in speed order; equal speeds resolve together.
+  // Both cards land together: counters show first, then the pushes net out
+  // and the meter is only clamped once at the end.
   const order = SIDE_IDS.filter((side) => played[side]).sort(
-    (a, b) => speedOf(played[b]) - speedOf(played[a]),
+    (a, b) => (played[b].type === "COUNTER") - (played[a].type === "COUNTER"),
   );
 
-  const groups = [];
-  order.forEach((side) => {
-    const last = groups[groups.length - 1];
-    if (last && speedOf(played[last[0]]) === speedOf(played[side])) {
-      last.push(side);
-    } else {
-      groups.push([side]);
+  let running = state.caseValue;
+  for (const side of order) {
+    const card = played[side];
+    const direction = SIDES[side].direction;
+    if (cancelled[side]) {
+      events.push({ type: "cancelled", side, card });
+      continue;
     }
-  });
-
-  for (const group of groups) {
-    // Cards in the same speed group land together, so only clamp after the group.
-    let running = state.caseValue;
-    for (const side of group) {
-      const card = played[side];
-      const direction = SIDES[side].direction;
-      if (cancelled[side]) {
-        events.push({ type: "cancelled", side, card });
-        continue;
-      }
-      if (card.type === "COUNTER" && played[otherSide(side)]?.type !== "POWER") {
-        events.push({ type: "fizzle", side, card });
-        continue;
-      }
-      const from = clampCase(state, running);
-      running += direction * pushFor(state, card);
-      events.push({
-        type: card.type === "COUNTER" ? "counter" : "push",
-        side,
-        card,
-        from,
-        to: clampCase(state, running),
-      });
+    if (card.type === "COUNTER" && played[otherSide(side)]?.type !== "POWER") {
+      events.push({ type: "fizzle", side, card });
+      continue;
     }
-    state.caseValue = clampCase(state, running);
-    // Faster cards can finish the case before slower ones land.
-    if (checkEnd(state)) break;
+    const from = clampCase(state, running);
+    running += direction * pushFor(state, card);
+    events.push({
+      type: card.type === "COUNTER" ? "counter" : "push",
+      side,
+      card,
+      from,
+      to: clampCase(state, running),
+    });
   }
+  state.caseValue = clampCase(state, running);
+  checkEnd(state);
 
   if (!state.winner && state.turn >= rules.maxTurns) {
     if (state.caseValue > rules.caseStart) state.winner = "detective";
