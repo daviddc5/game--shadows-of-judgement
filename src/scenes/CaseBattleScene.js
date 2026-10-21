@@ -44,6 +44,17 @@ const TYPE_NAMES = {
 const wait = (scene, ms) =>
   new Promise((resolve) => scene.time.delayedCall(ms, resolve));
 
+const tween = (scene, config) =>
+  new Promise((resolve) => scene.tweens.add({ ...config, onComplete: resolve }));
+
+// Words on the cut-in band for each big play.
+const CUT_IN_KICKER = {
+  POWER: "Power Play",
+  COUNTER: "Counter",
+  BAIT: "Baited!",
+  AMBUSH: "Ambushed!",
+};
+
 function roman(n) {
   const table = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
   let out = "";
@@ -606,13 +617,18 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.turnPlayed = played;
     const opponentCard = played[this.opponentSide];
 
-    // Reveal both at once.
-    const faces = {};
-    faces.player = await this.flipToFace("player", this.playerBack, playerCard, this.playerSide);
-    faces.opponent = await this.flipToFace("opponent", this.opponentBack, opponentCard, this.opponentSide);
+    // A beat of tension, then both cards turn over together and clash.
+    await this.tension([this.playerBack, this.opponentBack]);
+    const [playerFace, opponentFace] = await Promise.all([
+      this.flipToFace("player", this.playerBack, playerCard, this.playerSide),
+      this.flipToFace("opponent", this.opponentBack, opponentCard, this.opponentSide),
+    ]);
+    const faces = { player: playerFace, opponent: opponentFace };
     this.playerBack = this.opponentBack = null;
     this.updateHud(); // costs are paid once both cards are revealed
-    await wait(this, 450);
+    await wait(this, 300);
+    await this.clash(faces, { player: playerCard, opponent: opponentCard }, events);
+    await wait(this, 200);
 
     for (const event of events) {
       await this.playEvent(event, faces);
@@ -630,6 +646,18 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.beginTurn();
   }
 
+  /** Both face-down cards tremble before the reveal. */
+  async tension(backs) {
+    const targets = backs.filter(Boolean);
+    if (!targets.length) return;
+    this.tweens.add({ targets, scale: 1.04, duration: 380, ease: "Sine.easeInOut" });
+    await tween(this, { targets, x: "+=3", duration: 32, yoyo: true, repeat: 5, ease: "Sine.easeInOut" });
+  }
+
+  /**
+   * Turns a face-down card over: it lifts and narrows to an edge, then the face
+   * swings round with a little overshoot. A Power card flips up glowing red.
+   */
   async flipToFace(who, back, card, side) {
     const { x, y } = SLOT[who];
     if (!card) {
@@ -643,21 +671,166 @@ export default class CaseBattleScene extends Phaser.Scene {
       return t;
     }
     const face = this.buildCardFace(card, side);
-    face.setPosition(x, y).setScale(0, 1);
+    face.setPosition(x, y - 26).setScale(0, 1.1).setVisible(false);
     this.arenaObjects.push(face);
-    await new Promise((resolve) => {
-      this.tweens.add({
-        targets: back,
-        scaleX: 0,
-        duration: 130,
-        ease: "Sine.easeIn",
-        onComplete: () => {
-          back.destroy();
-          this.tweens.add({ targets: face, scaleX: 1, duration: 150, ease: "Sine.easeOut", onComplete: resolve });
-        },
-      });
-    });
+    if (card.type === "POWER") {
+      const glow = this.add.rectangle(0, 0, CARD_W + 18, CARD_H + 18).setStrokeStyle(10, this.theme.red, 0.85);
+      face.addAt(glow, 0);
+      this.tweens.add({ targets: glow, alpha: 0.25, duration: 320, yoyo: true, repeat: 5, delay: 300 });
+    }
+    if (back) {
+      await tween(this, { targets: back, scaleX: 0, scaleY: 1.1, y: y - 26, duration: 170, ease: "Cubic.easeIn" });
+      back.destroy();
+    }
+    face.setVisible(true);
+    await tween(this, { targets: face, scaleX: 1, scaleY: 1, y, duration: 280, ease: "Back.easeOut" });
     return face;
+  }
+
+  /**
+   * The two revealed cards fly at each other. On impact the game freezes for a
+   * beat (hit stop) and ink flies; then the card pushing harder this turn holds
+   * its ground and knocks the other one back.
+   */
+  async clash(faces, cards, events) {
+    const fighters = ["player", "opponent"].filter((who) => cards[who]);
+    if (!fighters.length) return;
+    const cx = W / 2;
+    const cy = SLOT.player.y;
+    const z = this.z(cy);
+
+    if (fighters.length === 1) {
+      // Nobody to hit: the lone card lunges at the empty side.
+      const who = fighters[0];
+      const lunge = who === "player" ? -46 : 46;
+      await tween(this, { targets: faces[who], x: SLOT[who].x + lunge, duration: 170, ease: "Back.easeIn" });
+      this.cameras.main.shake(90, 0.004);
+      await tween(this, { targets: faces[who], x: SLOT[who].x, duration: 220, ease: "Quad.easeOut" });
+      return;
+    }
+
+    const strength = { player: 0, opponent: 0 };
+    for (const e of events) {
+      if (e.from === undefined) continue;
+      strength[e.side === this.playerSide ? "player" : "opponent"] += Math.abs(e.to - e.from);
+    }
+    const winner =
+      strength.player > strength.opponent ? "player" : strength.opponent > strength.player ? "opponent" : null;
+    const out = { player: 1, opponent: -1 }; // the direction away from the centre
+
+    fighters.forEach((who) => faces[who].setDepth(30));
+    await Promise.all(
+      fighters.map((who) =>
+        tween(this, {
+          targets: faces[who],
+          x: cx + out[who] * (CARD_W / 2 + 2),
+          angle: -out[who] * 4,
+          duration: 260,
+          ease: "Back.easeIn",
+        }),
+      ),
+    );
+
+    // Impact.
+    const ring = this.add.circle(cx, cy, 20).setStrokeStyle(6, z.ink).setDepth(44);
+    this.tweens.add({ targets: ring, scale: 7, alpha: 0, duration: 420, ease: "Cubic.easeOut", onComplete: () => ring.destroy() });
+    this.burst(cx, cy, "cb-shard", z.ink, 30, 560);
+    this.burst(cx, cy, "cb-spark", this.theme.red, 10, 420);
+    this.cameras.main.shake(200, 0.014);
+    await wait(this, 130); // hit stop
+
+    await Promise.all(
+      fighters.map((who) => {
+        const knocked = winner && who !== winner;
+        return tween(this, {
+          targets: faces[who],
+          x: SLOT[who].x + (knocked ? out[who] * 34 : 0),
+          angle: knocked ? out[who] * 9 : 0,
+          duration: knocked ? 340 : 260,
+          ease: knocked ? "Back.easeOut" : "Cubic.easeOut",
+        });
+      }),
+    );
+    if (winner) {
+      const loser = winner === "player" ? "opponent" : "player";
+      await tween(this, { targets: faces[loser], x: SLOT[loser].x, angle: 0, duration: 220, ease: "Sine.easeInOut" });
+    }
+    fighters.forEach((who) => faces[who].setDepth(0));
+  }
+
+  /**
+   * A diagonal band sweeps across the screen with the character's portrait and
+   * the card's name: used for big plays (Power, a Counter that lands, a trap
+   * that springs).
+   */
+  async cutIn(who, card) {
+    const character = who === "player" ? this.playerCharacter : this.opponentCharacter;
+    const fromLeft = who === "player";
+    const cy = SLOT.player.y;
+    const bandW = W * 1.5;
+    const bandH = 230;
+    const ink = 0x0d0d0d;
+    const white = 0xf4f2ec;
+    const red = this.theme.red;
+
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0).setDepth(60);
+    const band = this.add.container(fromLeft ? -bandW / 2 : W + bandW / 2, cy).setDepth(61).setAngle(-6);
+    band.add(this.add.rectangle(0, 0, bandW, bandH, ink));
+    band.add(this.add.rectangle(0, -bandH / 2 + 5, bandW, 8, red));
+    band.add(this.add.rectangle(0, bandH / 2 - 5, bandW, 8, red));
+    band.add(this.add.rectangle(0, -bandH / 2 - 3, bandW, 2, white));
+    band.add(this.add.rectangle(0, bandH / 2 + 3, bandW, 2, white));
+
+    const lines = [];
+    for (let i = 0; i < 12; i++) {
+      const line = this.add.rectangle(
+        Phaser.Math.Between(-W / 2, W / 2),
+        Phaser.Math.Between(-bandH / 2 + 20, bandH / 2 - 20),
+        Phaser.Math.Between(60, 180),
+        2,
+        white,
+        0.18,
+      );
+      band.add(line);
+      lines.push(line);
+    }
+
+    const side = fromLeft ? -1 : 1;
+    const px = side * (W / 2 - 130);
+    const portrait = this.add.image(px, 0, portraitKey(character, "winning")).setDisplaySize(176, 176);
+    const frame = this.add.rectangle(px, 0, 176, 176).setStrokeStyle(4, white);
+    const tx = px - side * 116;
+    const align = fromLeft ? 0 : 1;
+    const kicker = this.add
+      .text(tx, -50, CUT_IN_KICKER[card.type] ?? "", { fontFamily: FONT_DISPLAY, fontSize: "62px", color: hex(red) })
+      .setOrigin(align, 0.5);
+    const name = this.add
+      .text(tx, 22, card.name, {
+        fontFamily: FONT_BODY,
+        fontSize: "46px",
+        fontStyle: "600",
+        color: hex(white),
+        align: fromLeft ? "left" : "right",
+        wordWrap: { width: W - 330 },
+        lineSpacing: -8,
+      })
+      .setOrigin(align, 0.5);
+    const characterName = this.add
+      .text(tx, 84, character.name, { fontFamily: FONT_BODY, fontSize: "24px", color: "#bdb8ae" })
+      .setOrigin(align, 0.5);
+    band.add([portrait, frame, kicker, name, characterName]);
+
+    this.tweens.add({ targets: dim, fillAlpha: 0.45, duration: 200 });
+    this.tweens.add({ targets: lines, x: `${fromLeft ? "+" : "-"}=240`, duration: 1100 });
+    this.tweens.add({ targets: [portrait, frame], scale: "*=1.06", duration: 1000 });
+    await tween(this, { targets: band, x: W / 2, duration: 230, ease: "Cubic.easeOut" });
+    this.cameras.main.shake(120, 0.006);
+    await wait(this, 750);
+    this.tweens.add({ targets: dim, fillAlpha: 0, duration: 200 });
+    await tween(this, { targets: band, x: fromLeft ? W + bandW / 2 : -bandW / 2, duration: 210, ease: "Cubic.easeIn" });
+    this.tweens.killTweensOf([...lines, portrait, frame]);
+    band.destroy();
+    dim.destroy();
   }
 
   async playEvent(event, faces) {
@@ -697,10 +870,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (event.type === "push" || event.type === "counter" || event.type === "sprung") {
       // Lift, then slam.
       const big = event.card.type === "POWER" || event.type !== "push";
+      if (big) await this.cutIn(who, event.card);
       if (event.type === "sprung") {
-        const label = event.card.type === "BAIT" ? "Baited!" : "Ambushed!";
         this.cameras.main.flash(160, ...rgb(red));
-        this.floatText(x, y + 40, label, hex(red), 56);
       } else if (event.card.type === "BAIT" || event.card.type === "AMBUSH") {
         this.floatText(x, y + 40, "no bite", hex(z.soft), 28, FONT_BODY);
       }
@@ -837,7 +1009,11 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   clearArena() {
-    this.arenaObjects.forEach((o) => o.destroy());
+    this.arenaObjects.forEach((o) => {
+      this.tweens.killTweensOf(o);
+      if (o.list) this.tweens.killTweensOf(o.list);
+      o.destroy();
+    });
     this.arenaObjects = [];
     this.playerBack = this.opponentBack = null;
   }
