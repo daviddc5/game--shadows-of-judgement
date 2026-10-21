@@ -17,15 +17,14 @@ Agreed order, built one step at a time on a branch:
 Short lines pop up in a speech bubble from the portraits during battle, so the
 two leads feel like people with a rivalry. No rule changes.
 
-- Moments that trigger a line:
-  - the match starting
-  - a Power play
-  - a Counter that stops a Power card
-  - a Counter that fizzles
-  - a trap springing
-  - being close to winning or losing
-  - the final result
-- At most one line per moment, and not every turn, so it stays special.
+- Lines are written per card type (Quick, Normal, Power, Counter, Bait,
+  Ambush, Wait), not per card, so new cards need no new lines. They talk about
+  the case and the chase, not the duel: the meter is "how close is the
+  capture".
+- Other moments: the opening exchange, a Counter that fizzles, being close to
+  winning or losing (only when the chase just moved that way), and the result.
+- At most one line per turn, ordinary cards only sometimes, and no line
+  repeats in a match.
 - Each character has their own voice. Deniz is confident and playful and
   loves a good fight (the owner's reference: Jaden Yuki from Yu-Gi-Oh! GX).
   Giovanni is cool, composed and mysterious, a boss who says little (the

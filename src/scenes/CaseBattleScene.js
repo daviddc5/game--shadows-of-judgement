@@ -130,6 +130,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.handCards = [];
     this.arenaObjects = [];
     this.bubbles = {};
+    this.usedLines = new Set();
 
     this.createTextures();
     paintBackground(this, this.theme);
@@ -557,8 +558,8 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.spokeThisTurn = false;
     if (first) {
       // Opening banter: the opponent speaks first, then you answer.
-      this.time.delayedCall(600, () => this.say("opponent", "start"));
-      this.time.delayedCall(2600, () => this.say("player", "reply"));
+      this.time.delayedCall(600, () => this.say("opponent", "start", true));
+      this.time.delayedCall(2600, () => this.say("player", "reply", true));
     }
 
     this.opponentLocked = false;
@@ -592,6 +593,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (!this.online) this.showOpponentLocked();
 
     const playerCard = index == null ? null : this.state.sides[this.playerSide].hand[index];
+    const caseBefore = this.state.caseValue;
 
     // Move the chosen hand card into the arena as a face-down card.
     if (playerCard) {
@@ -647,13 +649,13 @@ export default class CaseBattleScene extends Phaser.Scene {
       await wait(this, 500);
       if (this.state.winner !== "draw") {
         const winnerWho = this.state.winner === this.playerSide ? "player" : "opponent";
-        await this.say(winnerWho, "win");
-        await this.say(winnerWho === "player" ? "opponent" : "player", "lose");
+        await this.say(winnerWho, "win", true);
+        await this.say(winnerWho === "player" ? "opponent" : "player", "lose", true);
       }
       this.showResult();
       return;
     }
-    this.sayMood();
+    this.sayAfterTurn(events, caseBefore);
     await wait(this, 700);
     if (this.online) applyView(this.state, nextView);
     else startTurn(this.state);
@@ -1002,7 +1004,6 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.burst(x, y, "cb-shard", red, 26, 500);
       this.tweens.add({ targets: face, scale: 0.2, angle: 200, alpha: 0, duration: 380, ease: "Back.easeIn" });
       this.floatText(x, y, "Countered!", hex(red), 56);
-      this.say(who === "player" ? "opponent" : "player", "countered");
       await wait(this, 800);
       return;
     }
@@ -1013,9 +1014,9 @@ export default class CaseBattleScene extends Phaser.Scene {
       if (big) await this.cutIn(who, event.card);
       if (event.type === "sprung") {
         this.cameras.main.flash(160, ...rgb(red));
-        this.say(who, "trap");
-      } else if (event.card.type === "POWER") {
-        this.say(who, "power");
+        this.say(who, event.card.type);
+      } else if (event.type === "counter" || event.card.type === "POWER") {
+        this.say(who, event.card.type);
       } else if (event.card.type === "BAIT" || event.card.type === "AMBUSH") {
         this.floatText(x, y + 40, "no bite", hex(z.soft), 28, FONT_BODY);
       }
@@ -1059,11 +1060,15 @@ export default class CaseBattleScene extends Phaser.Scene {
   /**
    * Shows a line from a character in a speech bubble beside their portrait.
    * Lines come from src/case/dialogue.js; resolves once the bubble has gone.
+   * Only one line per turn unless `always` (the opening and the result), and
+   * no line repeats in a match while the character has others.
    */
-  say(who, moment) {
+  say(who, moment, always = false) {
+    if (this.spokeThisTurn && !always) return Promise.resolve();
     const character = who === "player" ? this.playerCharacter : this.opponentCharacter;
-    const line = pickLine(character.id, moment);
+    const line = pickLine(character.id, moment, Math.random, this.usedLines);
     if (!line) return Promise.resolve();
+    this.usedLines.add(line);
     this.spokeThisTurn = true;
     this.bubbles[who]?.destroy();
 
@@ -1107,14 +1112,29 @@ export default class CaseBattleScene extends Phaser.Scene {
     });
   }
 
-  /** On a quiet turn, whoever the meter is closing in on may say something. */
-  sayMood() {
-    if (this.spokeThisTurn || Math.random() < 0.5) return;
-    const lean = (this.state.caseValue - 50) * SIDES[this.playerSide].direction; // + means the player leads
-    if (Math.abs(lean) < 25) return;
-    const leader = lean > 0 ? "player" : "opponent";
-    const speaker = Math.random() < 0.5 ? leader : leader === "player" ? "opponent" : "player";
-    this.say(speaker, speaker === leader ? "winning" : "losing");
+  /**
+   * If nobody spoke during the turn: someone the chase just moved towards (or
+   * away from) near an end may comment, or else sometimes the bigger ordinary
+   * push, or a lone Wait, gets a line.
+   */
+  sayAfterTurn(events, caseBefore) {
+    if (this.spokeThisTurn) return;
+    const whoOf = (side) => (side === this.playerSide ? "player" : "opponent");
+    const moved = this.state.caseValue - caseBefore;
+    for (const side of [this.playerSide, this.opponentSide]) {
+      const dir = SIDES[side].direction;
+      const lead = (this.state.caseValue - 50) * dir;
+      if (lead >= 25 && moved * dir > 0 && Math.random() < 0.6) return this.say(whoOf(side), "winning");
+      if (lead <= -25 && moved * dir < 0 && Math.random() < 0.6) return this.say(whoOf(side), "losing");
+    }
+    const pushes = events.filter((e) => e.type === "push" && (e.card.type === "QUICK" || e.card.type === "NORMAL"));
+    if (pushes.length && Math.random() < 0.35) {
+      const size = (e) => Math.abs(e.to - e.from);
+      const e = pushes.reduce((a, b) => (size(b) > size(a) ? b : a));
+      return this.say(whoOf(e.side), e.card.type);
+    }
+    const waits = events.filter((e) => e.type === "wait");
+    if (waits.length === 1 && Math.random() < 0.2) this.say(whoOf(waits[0].side), "WAIT");
   }
 
   tweenMeter(to) {
