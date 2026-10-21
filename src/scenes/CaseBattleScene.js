@@ -1089,7 +1089,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         fontFamily: FONT_BODY,
         fontSize: "22px",
         fontStyle: "600",
-        color: "#5e594f",
+        color: "#46423b",
       })
       .setOrigin(0.5);
     const text = this.add.text(0, 0, line, {

@@ -28,7 +28,7 @@ export const THEMES = [
     description: "White paper, black ink. Calm and easy to read.",
     paper: 0xf4f2ec,
     ink: 0x111111,
-    soft: 0x47433c,
+    soft: 0x2f2c27,
     line: 0x111111,
     red: 0xc1121f,
     cards: {
@@ -42,7 +42,7 @@ export const THEMES = [
     description: "Black page, white ink. The red stands out more.",
     paper: 0x0d0d0d,
     ink: 0xf1efe9,
-    soft: 0xc9c4ba,
+    soft: 0xe2ded6,
     line: 0xf1efe9,
     red: 0xe0353f,
     cards: {
@@ -56,14 +56,14 @@ export const THEMES = [
     description: "Your opponent's half in ink, yours on paper.",
     paper: 0xf4f2ec,
     ink: 0x111111,
-    soft: 0x47433c,
+    soft: 0x2f2c27,
     line: 0x111111,
     red: 0xc1121f,
     cards: {
       detective: { bg: 0xfbfaf6, ink: 0x111111, edge: 0x111111 },
       vigilante: { bg: 0x111111, ink: 0xf4f2ec, edge: 0xf4f2ec, outline: 0x111111 },
     },
-    split: { at: 0.355, paper: 0x0d0d0d, ink: 0xf1efe9, soft: 0xc9c4ba, line: 0xf1efe9 },
+    split: { at: 0.355, paper: 0x0d0d0d, ink: 0xf1efe9, soft: 0xe2ded6, line: 0xf1efe9 },
   },
 ];
 
