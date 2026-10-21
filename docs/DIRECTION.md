@@ -99,8 +99,9 @@ with an artist.
 
 ## Roadmap
 
-1. **Now: playtest the BAIT/AMBUSH loop.** Does each turn feel like a read?
-   Adjust numbers with `npm run simulate` rather than guessing.
+1. **Now: give the game characters.** In order: characters talk, cards with
+   status effects, then ally (character) cards. See
+   [CHARACTERS_PLAN.md](CHARACTERS_PLAN.md).
 2. **Next: three districts (Marvel Snap style).** Each district is its own small
    Case meter; win 2 of 3; choose a card *and* where to play it. The owner wanted
    something like this originally but earlier feedback called it confusing; the
