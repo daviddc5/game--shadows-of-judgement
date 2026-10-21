@@ -73,7 +73,8 @@ After several rounds of look boards, the owner chose:
   for the Detective, Escape for the Vigilante).
 - **Hand interaction.** Tap a card to lift and grow it in place; press and hold
   to inspect a big copy without selecting; drag a card up onto the board to
-  play it (Play card still works). A phone buzz on select, and desktop keys: 1
+  stage it in your slot (tap it again to take it back). Nothing is played
+  until Play card is pressed. A phone buzz on select, and desktop keys: 1
   to 4 pick a card, Enter plays it, W waits, Esc puts it back.
 - **No newspaper framing.** That look was liked for its font and restraint,
   not for being a newspaper.

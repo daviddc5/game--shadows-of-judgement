@@ -30,7 +30,8 @@ const METER = { x: 60, y: 372, w: 630, h: 18 };
 const SLOT = { opponent: { x: 230, y: 632 }, player: { x: 520, y: 632 } };
 const HAND_Y = 1100;
 // Hand interaction: a tap lifts and grows the card; holding inspects it; a drag
-// up past DROP_Y plays it.
+// up past DROP_Y stages it in your slot. Nothing is played until Play card is
+// pressed.
 const SELECT_LIFT = 34;
 const SELECT_SCALE = 1.25;
 const HOLD_MS = 380;
@@ -460,18 +461,23 @@ export default class CaseBattleScene extends Phaser.Scene {
     }
   }
 
-  /** Where every hand card rests: the selected one lifted and grown, the rest at home. */
+  /**
+   * Where every hand card rests: the selected one lifted and grown (or, if it
+   * was dragged onto the board, staged in your slot), the rest at home.
+   */
   layoutHand() {
     this.handCards.forEach((c) => {
       const selected = c.index === this.selectedIndex;
+      if (!selected) c.staged = false;
       this.tweens.killTweensOf(c);
       c.setDepth(selected ? 10 : 0);
       c.setSelected(selected);
+      const staged = selected && c.staged;
       this.tweens.add({
         targets: c,
-        x: c.homeX,
-        y: selected ? HAND_Y - SELECT_LIFT : HAND_Y,
-        scale: selected ? SELECT_SCALE : 1,
+        x: staged ? SLOT.player.x : c.homeX,
+        y: staged ? SLOT.player.y : selected ? HAND_Y - SELECT_LIFT : HAND_Y,
+        scale: staged ? 1 : selected ? SELECT_SCALE : 1,
         duration: 150,
         ease: "Cubic.easeOut",
       });
@@ -526,13 +532,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (p.held) return this.hideInspect();
     const card = p.card;
     if (p.dragging) {
-      if (pointer.y < DROP_Y && !this.busy) {
-        this.selectedIndex = card.index;
-        this.buzz(20);
-        this.confirmPlay(card.index);
-      } else {
-        this.layoutHand();
-      }
+      // Dropped on the board: stage it in your slot. Play card confirms.
+      card.staged = pointer.y < DROP_Y && !this.busy;
+      this.selectCard(card.staged ? card.index : this.selectedIndex);
       return;
     }
     if (!card.affordable) {
