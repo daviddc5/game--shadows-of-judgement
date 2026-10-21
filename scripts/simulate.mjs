@@ -15,6 +15,7 @@ const reasons = { capture: 0, escape: 0, verdict: 0 };
 const lengths = [];
 const played = {}; // card type (or WAIT) -> times played
 const paidOff = {}; // COUNTER hits, BAIT/AMBUSH springs
+const effects = {}; // status effects put on the opponent
 let plays = 0;
 
 for (let g = 0; g < games; g++) {
@@ -27,7 +28,8 @@ for (let g = 0; g < games; g++) {
     const { events } = resolveTurn(state, choice);
     events.forEach((e) => {
       if (e.type === "wait") played.WAIT = (played.WAIT || 0) + 1;
-      if (e.card) played[e.card.type] = (played[e.card.type] || 0) + 1;
+      if (e.card && e.type !== "effect") played[e.card.type] = (played[e.card.type] || 0) + 1;
+      if (e.type === "effect") effects[e.effect] = (effects[e.effect] || 0) + 1;
       if (e.type === "counter" || e.type === "sprung") {
         paidOff[e.card.type] = (paidOff[e.card.type] || 0) + 1;
       }
@@ -59,4 +61,8 @@ console.log(
     ["COUNTER", "BAIT", "AMBUSH"]
       .map((t) => `${t} ${(((paidOff[t] || 0) / (played[t] || 1)) * 100).toFixed(0)}%`)
       .join(", "),
+);
+console.log(
+  "effects landed: " +
+    ["shaken", "cornered", "heat"].map((k) => `${k} ${share(effects[k])}`).join(", "),
 );

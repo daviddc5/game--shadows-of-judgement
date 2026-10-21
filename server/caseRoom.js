@@ -3,6 +3,7 @@
 import {
   canAfford,
   createMatch,
+  mustPlay,
   otherSide,
   resolveTurn,
   startTurn,
@@ -57,8 +58,8 @@ export function playerView(room, side) {
     rules: state.rules,
     winner: state.winner,
     endReason: state.endReason,
-    you: { energy: me.energy, hand: me.hand, history: me.history },
-    opponent: { energy: foe.energy, handCount: foe.hand.length, history: foe.history },
+    you: { energy: me.energy, hand: me.hand, history: me.history, status: me.status },
+    opponent: { energy: foe.energy, handCount: foe.hand.length, history: foe.history, status: foe.status },
   };
 }
 
@@ -71,6 +72,8 @@ export function submitPlay(room, side, handIndex) {
     const card = Number.isInteger(handIndex) ? state.sides[side].hand[handIndex] : null;
     if (!card) return { ok: false, error: "Card not in your hand" };
     if (!canAfford(state, side, card)) return { ok: false, error: "Not enough energy" };
+  } else if (mustPlay(state, side)) {
+    return { ok: false, error: "You're Cornered: you have to play a card" };
   }
   room.choices[side] = handIndex ?? null;
   return { ok: true, bothReady: "detective" in room.choices && "vigilante" in room.choices };

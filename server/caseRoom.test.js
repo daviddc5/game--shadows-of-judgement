@@ -55,6 +55,14 @@ describe("submitPlay", () => {
     expect(submitPlay(room, "detective", null).ok).toBe(false);
     expect(submitPlay(room, "vigilante", null)).toEqual({ ok: true, bothReady: true });
   });
+
+  it("won't let a Cornered player wait while they can afford a card", () => {
+    const room = newRoom();
+    room.state.sides.vigilante.status.cornered = 1;
+    room.state.sides.vigilante.energy = 10;
+    expect(submitPlay(room, "vigilante", null).ok).toBe(false);
+    expect(playerView(room, "detective").opponent.status.cornered).toBe(1);
+  });
 });
 
 describe("resolveRoom", () => {

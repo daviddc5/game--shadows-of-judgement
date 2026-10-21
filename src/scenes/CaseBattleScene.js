@@ -1,8 +1,11 @@
 import Phaser from "phaser";
 import { SIDES } from "../case/cards.js";
 import {
+  EFFECTS,
   canAfford,
+  costFor,
   createMatch,
+  mustPlay,
   otherSide,
   pushFor,
   resolveTurn,
@@ -91,6 +94,7 @@ function applyView(state, view) {
     energy: view.opponent.energy,
     hand: new Array(view.opponent.handCount).fill(null),
     history: view.opponent.history,
+    status: view.opponent.status,
   };
 }
 
@@ -170,7 +174,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     NetworkManager.onPlayRejected = ({ message }) => {
       this.busy = false;
       this.renderHand();
-      this.waitButton.setEnabled(true);
+      this.updateWaitButton();
       this.flashHint(message);
     };
     NetworkManager.onOpponentDisconnected = () => {
@@ -401,12 +405,14 @@ export default class CaseBattleScene extends Phaser.Scene {
     const typeLabel = this.add
       .text(left + 37, top + 20, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "22px", color: ink })
       .setOrigin(0, 0.5);
+    // Shaken makes Power cost more: show what it costs now, in red.
+    const cardCost = this.state.sides[side].status ? costFor(this.state, side, card) : card.cost;
     const cost = this.add
-      .text(-left - 8, top + 20, `${card.cost} ⬢`, {
+      .text(-left - 8, top + 20, `${cardCost} ⬢`, {
         fontFamily: FONT_BODY,
         fontSize: "24px",
         fontStyle: "600",
-        color: ink,
+        color: cardCost > card.cost ? hex(this.theme.red) : ink,
       })
       .setOrigin(1, 0.5);
     const name = this.add
@@ -434,7 +440,25 @@ export default class CaseBattleScene extends Phaser.Scene {
         color: side === "vigilante" ? hex(this.theme.red) : ink,
       })
       .setOrigin(0.5);
-    c.add([outline, bg, ...art, icon, typeLabel, cost, name, big]);
+    // A status effect card names its effect on a red tag over the art.
+    const tag = [];
+    if (card.effect) {
+      const t = this.add
+        .text(0, ART_Y + ART_H / 2 - 4, EFFECTS[card.effect].name, {
+          fontFamily: FONT_BODY,
+          fontSize: "22px",
+          fontStyle: "600",
+          color: "#f4f2ec",
+        })
+        .setOrigin(0.5);
+      const pill = this.add
+        .graphics()
+        .fillStyle(this.theme.red, 1)
+        .fillRoundedRect(-t.width / 2 - 12, t.y - 16, t.width + 24, 32, 16);
+      tag.push(pill, t);
+    }
+
+    c.add([outline, bg, ...art, ...tag, icon, typeLabel, cost, name, big]);
     c.setSize(CARD_W, CARD_H);
     c.bg = bg;
     c.edge = style.edge;
@@ -530,6 +554,12 @@ export default class CaseBattleScene extends Phaser.Scene {
   cardHelp(card) {
     const push = pushFor(this.state, card);
     const big = card.bigPush && pushFor(this.state, card, card.bigPush);
+    const effectHelp = {
+      shaken: `${card.name}: pushes ${push}, and they're Shaken: their Power cards cost +${this.state.rules.shakenExtraCost} next turn.`,
+      cornered: `${card.name}: pushes ${push}, and they're Cornered: they can't Wait next turn.`,
+      heat: `${card.name}: pushes ${push}, and turns up the Heat: the meter drifts ${this.state.rules.heatDrift} your way for 2 turns.`,
+    }[card.effect];
+    if (effectHelp) return effectHelp;
     return {
       COUNTER: `Counter: if they play a Power card, it's cancelled and you push ${push}. Otherwise nothing happens.`,
       POWER: `Power: pushes ${push}, but a Counter cancels it.`,
@@ -548,8 +578,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.turnText.setText(`TURN ${roman(turn)} OF ${roman(rules.maxTurns)}`);
     const bonus = rules.escalationFlat * (turn - 1);
     this.stakesText.setText(turn === 1 ? "The city is watching" : `Stakes rising: every card +${bonus}`);
-    this.waitButton.setLabel(`Wait  +${rules.energyPerTurn + rules.waitBonus} ⬢`);
-    this.waitButton.setEnabled(true);
+    this.updateWaitButton();
     this.playButton.setEnabled(false);
     this.updateHud();
     this.renderHand();
@@ -1052,6 +1081,28 @@ export default class CaseBattleScene extends Phaser.Scene {
       return;
     }
 
+    if (event.type === "heat") {
+      const meterX = METER.x + (METER.w * event.to) / 100;
+      this.floatText(meterX, METER.y + 60, "Heat", hex(red), 46);
+      await this.tweenMeter(event.to);
+      this.updatePortraits();
+      await wait(this, 300);
+      return;
+    }
+
+    if (event.type === "effect") {
+      const target = event.target === this.playerSide ? "player" : "opponent";
+      const at = target === "player" ? { x: 80, y: 880 } : { x: 100, y: 190 };
+      this.floatText(at.x + 120, at.y, `${EFFECTS[event.effect].name}!`, hex(red), 52);
+      this.state.sides[event.target].status = {
+        ...this.state.sides[event.target].status,
+        [event.effect]: EFFECTS[event.effect].turns,
+      };
+      this.updateStatusTags();
+      await wait(this, 700);
+      return;
+    }
+
     if (event.type === "end") {
       const winnerWho = event.winner === this.playerSide ? "player" : "opponent";
       if (event.winner !== "draw") {
@@ -1278,6 +1329,39 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- HUD
 
+  /** Wait is off while you're Cornered and can afford a card. */
+  updateWaitButton() {
+    const { rules } = this.state;
+    const cornered = mustPlay(this.state, this.playerSide);
+    this.waitButton.setLabel(cornered ? "Cornered" : `Wait  +${rules.energyPerTurn + rules.waitBonus} ⬢`);
+    this.waitButton.setEnabled(!cornered);
+  }
+
+  /** Red tags beside each side's energy for the status effects on them. */
+  updateStatusTags() {
+    for (const [who, side, x, y] of [
+      ["player", this.playerSide, 470, 906],
+      ["opponent", this.opponentSide, 506, 198],
+    ]) {
+      this.statusTags?.[who]?.destroy();
+      const status = this.state.sides[side].status ?? {};
+      const tags = Object.keys(EFFECTS)
+        .filter((k) => status[k] > 0)
+        .map((k) => (k === "heat" ? `Heat ${status[k]}` : EFFECTS[k].name));
+      const c = this.add.container(x, y).setDepth(20);
+      let cx = 0;
+      for (const label of tags) {
+        const t = this.add
+          .text(cx + 12, 0, label, { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: "#f4f2ec" })
+          .setOrigin(0, 0.5);
+        const pill = this.add.graphics().fillStyle(this.theme.red, 1).fillRoundedRect(cx, -17, t.width + 24, 34, 17);
+        c.add([pill, t]);
+        cx += t.width + 32;
+      }
+      this.statusTags = { ...this.statusTags, [who]: c };
+    }
+  }
+
   updateHud() {
     this.setPips(this.playerEnergy, this.state.sides[this.playerSide].energy);
     this.setPips(this.opponentEnergy, this.state.sides[this.opponentSide].energy);
@@ -1294,6 +1378,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const opponentCards = this.state.sides[this.opponentSide].hand.length;
     this.opponentHand.forEach((c, i) => c.setVisible(i < opponentCards));
     this.updatePortraits();
+    this.updateStatusTags();
   }
 
   setPips({ pips, label, z }, energy) {
