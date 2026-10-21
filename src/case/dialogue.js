@@ -1,11 +1,12 @@
-// What characters say during a battle, by character id and moment. Lines are
-// written per card type, not per card, so new cards need no new lines. They
-// talk about the case and the chase (the meter is "how close is the capture"),
-// in each character's own voice, and name the other side by role
-// ("Detective"), so they still fit when a side has several characters.
+// What characters think during a battle, by character id and moment. These
+// are inner thoughts, Death Note style: the Detective doesn't know who the
+// Vigilante is, so they never talk to each other, they think about each
+// other. Lines are written per card type, not per card, so new cards need no
+// new lines. They name the other side by role ("the detective"), not by name
+// or pronoun, so they still fit when a side has several characters.
 //
 // Moments:
-//   start, reply  the match begins: the opponent speaks first, then you answer
+//   start         the match begins (the opponent thinks first, then you)
 //   QUICK, NORMAL, POWER
 //                 their card landed (QUICK and NORMAL only sometimes)
 //   COUNTER       their Counter stopped a Power card
@@ -19,37 +20,35 @@
 export const LINES = {
   // Deniz Kaya: confident, playful, loves the chase and never sounds worried.
   detective: {
-    start: ["Evening! I'm here about a few... incidents.", "Found you! That was the fun part.", "You're a hard guy to find. I like that."],
-    reply: ["Big talk for a guy with a case file this thick!", "Then let's see who blinks first.", "Nice speech. You're still under investigation."],
-    QUICK: ["Just asking around!", "Little lead, big trail.", "Every bit counts!"],
-    NORMAL: ["The evidence is piling up!", "Another piece of the puzzle!", "That's going in the file."],
-    POWER: ["Warrant's signed. Open up!", "Everything I've got, on the table!", "Here comes the whole department!"],
-    COUNTER: ["Knew you'd try that. Called it in first!", "Nope! Saw that one coming.", "Too flashy. I was ready."],
-    BAIT: ["Ha! That raid was a fake!", "Gotcha! Wrong door!"],
-    AMBUSH: ["Taking a break? I've been parked outside all night!", "Resting already? Hi there!"],
-    WAIT: ["Thinking time!", "Let's see what you do."],
-    fizzle: ["Nothing to block there! Jumpy?", "You braced for a raid that never came!"],
-    winning: ["I can hear your footsteps! Keep running!", "The net's closing!"],
-    losing: ["Okay, you're slippery. I like a challenge!", "The trail's cold, not gone!"],
-    win: ["Case closed! That was a blast.", "Gotcha for real this time. Good chase!"],
-    lose: ["Ha, you got away! Next time, for sure.", "Lost him... What a chase though!"],
+    start: ["A vigilante, huh? Let's go find them!", "New case! Somebody out there is having way too much fun.", "Tonight's the night. I can feel it."],
+    QUICK: ["Little leads add up!", "Someone always saw something.", "Ask around, follow the trail."],
+    NORMAL: ["The file's getting thicker!", "Another piece of the puzzle.", "Evidence doesn't lie."],
+    POWER: ["Got a warrant. Let's see who's home!", "Time to bring the whole department!", "All in. This is the big one!"],
+    COUNTER: ["Knew they'd go big. Called it!", "Ha! Saw that one coming."],
+    BAIT: ["Took the bait! Wrong rooftop, buddy.", "A fake raid, and they fell for it!"],
+    AMBUSH: ["Resting? Not me. Been parked outside all night!", "Caught napping. Worth the cold coffee!"],
+    WAIT: ["Patience. Let them make the next move.", "Save up, then hit hard."],
+    fizzle: ["Braced for a raid that never came!", "Jumpy! Somebody's feeling the heat."],
+    winning: ["I can almost hear the footsteps!", "Same streets, same hours. I know the pattern now."],
+    losing: ["Slippery one. I love a challenge!", "The trail's cold, not gone."],
+    win: ["Got 'em! Case closed.", "What a chase. Worth every sleepless night!"],
+    lose: ["Slipped away... Next time!", "Lost the trail. Okay, round two."],
   },
   // Giovanni Santoro: cool, composed, mysterious. Few words, total control.
   vigilante: {
-    start: ["So. You found me.", "Detective. You're persistent.", "Let's not waste each other's time."],
-    reply: ["Enthusiasm. How quaint.", "Talk is cheap, Detective."],
-    QUICK: ["A whisper here and there.", "Small moves. They add up."],
+    start: ["Another detective. They never learn.", "The city needs me tonight.", "Let them search. They'll find only shadows."],
+    QUICK: ["A whisper here, a rumour there.", "Small moves. They add up."],
     NORMAL: ["The city sees what I want it to see.", "Another night's work."],
-    POWER: ["Every screen in the city. Watch.", "Let the city decide.", "Witness true power."],
-    COUNTER: ["Did you think I wouldn't see that coming?", "Predictable."],
-    BAIT: ["Wrong rooftop, Detective.", "You guarded the wrong door."],
-    AMBUSH: ["Resting? I don't.", "While you slept, I moved."],
-    WAIT: ["Patience.", "I can wait."],
-    fizzle: ["You flinch at shadows.", "Fear makes you careless."],
-    winning: ["One more street, and I'm a rumour again.", "You're losing the trail, Detective."],
-    losing: ["The exits are closing. Interesting.", "Don't mistake patience for weakness."],
-    win: ["Gone. As if I was never here.", "The city has made its choice."],
-    lose: ["This changes nothing.", "Enjoy it, Detective. It won't last."],
+    POWER: ["Let the whole city watch.", "Now they'll remember who protects them.", "Let the detective answer that."],
+    COUNTER: ["Predictable. Chasing the noise.", "I saw that coming."],
+    BAIT: ["Guarding the wrong door.", "Exactly where I wanted them."],
+    AMBUSH: ["They rested. I don't.", "While they slept, I moved."],
+    WAIT: ["Patience.", "Let them come to me."],
+    fizzle: ["Flinching at shadows.", "Fear makes them careless."],
+    winning: ["One more street, and I'm a rumour again.", "They're losing the trail."],
+    losing: ["Closer than they should be.", "The exits are closing. Interesting."],
+    win: ["Gone. As if I was never here.", "The city keeps my secret."],
+    lose: ["Caught... for now.", "They earned it. This changes nothing."],
   },
 };
 

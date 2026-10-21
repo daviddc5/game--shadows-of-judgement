@@ -4,7 +4,7 @@ import { LINES, pickLine } from "./dialogue.js";
 
 describe("dialogue", () => {
   it("every character has lines for every moment", () => {
-    const moments = ["start", "reply", "QUICK", "NORMAL", "POWER", "COUNTER", "BAIT", "AMBUSH", "WAIT", "fizzle", "winning", "losing", "win", "lose"];
+    const moments = ["start", "QUICK", "NORMAL", "POWER", "COUNTER", "BAIT", "AMBUSH", "WAIT", "fizzle", "winning", "losing", "win", "lose"];
     for (const c of [...CHARACTERS.detective, ...CHARACTERS.vigilante]) {
       for (const moment of moments) expect(LINES[c.id]?.[moment]?.length, `${c.id} ${moment}`).toBeGreaterThan(0);
     }

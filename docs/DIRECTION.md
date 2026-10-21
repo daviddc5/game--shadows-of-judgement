@@ -99,7 +99,7 @@ with an artist.
 
 ## Roadmap
 
-1. **Now: give the game characters.** In order: characters talk, cards with
+1. **Now: give the game characters.** In order: characters think (inner thoughts), cards with
    status effects, then ally (character) cards. See
    [CHARACTERS_PLAN.md](CHARACTERS_PLAN.md).
 2. **Next: three districts (Marvel Snap style).** Each district is its own small

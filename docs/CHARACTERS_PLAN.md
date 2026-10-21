@@ -8,20 +8,24 @@ more to read, not more to calculate.
 
 Agreed order, built one step at a time on a branch:
 
-1. Characters talk
+1. Characters think (inner thoughts)
 2. Cards with status effects
 3. Ally cards (character cards)
 
-## 1. Characters talk
+## 1. Characters think (done)
 
-Short lines pop up in a speech bubble from the portraits during battle, so the
-two leads feel like people with a rivalry. No rule changes.
+Short inner thoughts appear in a thought cloud beside the portraits during
+battle, so the two leads feel like people with a rivalry. No rule changes.
+
+They think rather than talk, Death Note style: the Detective doesn't know who
+the Vigilante is, so direct banter didn't make sense (the owner's point: would
+Kira say these things to L?). They think about each other instead.
 
 - Lines are written per card type (Quick, Normal, Power, Counter, Bait,
   Ambush, Wait), not per card, so new cards need no new lines. They talk about
   the case and the chase, not the duel: the meter is "how close is the
   capture".
-- Other moments: the opening exchange, a Counter that fizzles, being close to
+- Other moments: an opening thought each, a Counter that fizzles, being close to
   winning or losing (only when the chase just moved that way), and the result.
 - At most one line per turn, ordinary cards only sometimes, and no line
   repeats in a match.

@@ -131,6 +131,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.arenaObjects = [];
     this.bubbles = {};
     this.usedLines = new Set();
+    this.thoughtCount = 0;
 
     this.createTextures();
     paintBackground(this, this.theme);
@@ -557,9 +558,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (!first) this.showBanner(`Turn ${roman(turn)}`);
     this.spokeThisTurn = false;
     if (first) {
-      // Opening banter: the opponent speaks first, then you answer.
-      this.time.delayedCall(600, () => this.say("opponent", "start", true));
-      this.time.delayedCall(2600, () => this.say("player", "reply", true));
+      // Opening thoughts: the opponent's first, then yours.
+      this.time.delayedCall(600, () => this.think("opponent", "start", true));
+      this.time.delayedCall(2800, () => this.think("player", "start", true));
     }
 
     this.opponentLocked = false;
@@ -649,8 +650,8 @@ export default class CaseBattleScene extends Phaser.Scene {
       await wait(this, 500);
       if (this.state.winner !== "draw") {
         const winnerWho = this.state.winner === this.playerSide ? "player" : "opponent";
-        await this.say(winnerWho, "win", true);
-        await this.say(winnerWho === "player" ? "opponent" : "player", "lose", true);
+        await this.think(winnerWho, "win", true);
+        await this.think(winnerWho === "player" ? "opponent" : "player", "lose", true);
       }
       this.showResult();
       return;
@@ -988,8 +989,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (event.type === "fizzle") {
       this.tweens.add({ targets: face, alpha: 0.35, angle: who === "player" ? 6 : -6, duration: 300 });
       this.floatText(x, y, "Fizzled", hex(z.soft), 46);
-      this.say(who === "player" ? "opponent" : "player", "fizzle");
       const target = this.turnPlayed[otherSide(event.side)];
+      // Against a Bait, the trap's thought says it better.
+      if (target?.type !== "BAIT") this.think(who === "player" ? "opponent" : "player", "fizzle");
       this.hintText.setText(
         target?.type === "BAIT"
           ? "Baited! That looked like a Power play."
@@ -1014,9 +1016,9 @@ export default class CaseBattleScene extends Phaser.Scene {
       if (big) await this.cutIn(who, event.card);
       if (event.type === "sprung") {
         this.cameras.main.flash(160, ...rgb(red));
-        this.say(who, event.card.type);
+        this.think(who, event.card.type);
       } else if (event.type === "counter" || event.card.type === "POWER") {
-        this.say(who, event.card.type);
+        this.think(who, event.card.type);
       } else if (event.card.type === "BAIT" || event.card.type === "AMBUSH") {
         this.floatText(x, y + 40, "no bite", hex(z.soft), 28, FONT_BODY);
       }
@@ -1058,57 +1060,76 @@ export default class CaseBattleScene extends Phaser.Scene {
   // ---------------------------------------------------------------- talk
 
   /**
-   * Shows a line from a character in a speech bubble beside their portrait.
-   * Lines come from src/case/dialogue.js; resolves once the bubble has gone.
+   * Shows a character's inner thought in a thought cloud beside their portrait
+   * (they never talk to each other: the Detective doesn't know who the
+   * Vigilante is). Lines come from src/case/dialogue.js; resolves once the
+   * cloud has gone.
    * Only one line per turn unless `always` (the opening and the result), and
    * no line repeats in a match while the character has others.
    */
-  say(who, moment, always = false) {
+  think(who, moment, always = false) {
     if (this.spokeThisTurn && !always) return Promise.resolve();
     const character = who === "player" ? this.playerCharacter : this.opponentCharacter;
     const line = pickLine(character.id, moment, Math.random, this.usedLines);
     if (!line) return Promise.resolve();
     this.usedLines.add(line);
-    this.spokeThisTurn = true;
-    this.bubbles[who]?.destroy();
+    if (!always) this.spokeThisTurn = true;
+    this.bubbles[who]?.finish();
 
-    const ink = 0x111111;
+    const ink = 0x2b2925;
     const paper = 0xf4f2ec;
     const { left, y } = who === "player" ? { left: 146, y: 880 } : { left: 180, y: 168 };
-    const text = this.add.text(30, 0, line, {
+    const text = this.add.text(44, 0, line, {
       fontFamily: FONT_BODY,
       fontSize: "28px",
-      fontStyle: "600",
       color: hex(ink),
-      wordWrap: { width: 460 },
+      wordWrap: { width: 440 },
       lineSpacing: -2,
     });
     text.setOrigin(0, 0.5);
-    const w = text.width + 46;
-    const h = Math.max(64, text.height + 26);
-    const g = this.add.graphics();
-    g.fillStyle(paper, 1).lineStyle(3, ink, 1);
-    g.fillRoundedRect(14, -h / 2, w, h, 14).strokeRoundedRect(14, -h / 2, w, h, 14);
-    // Tail pointing at the portrait.
-    g.fillTriangle(16, -10, 16, 10, -2, 0);
-    g.lineBetween(14, -10, -2, 0).lineBetween(-2, 0, 14, 10);
-    const bubble = this.add.container(left, y, [g, text]).setDepth(55).setScale(0.6).setAlpha(0);
+    const w = text.width + 40;
+    const h = Math.max(52, text.height + 14);
+
+    // A comic-style thought cloud: a scalloped edge of overlapping puffs, and
+    // little bubbles trailing down to the portrait, so it reads as thinking.
+    const x0 = 24;
+    const puffs = [[x0, 0, h * 0.45], [x0 + w, 0, h * 0.45]];
+    const n = Math.max(2, Math.round(w / 34));
+    for (let i = 0; i <= n; i++) {
+      const px = x0 + (w * i) / n;
+      puffs.push([px, -h / 2, 15], [px, h / 2, 15]);
+    }
+    const trail = [[14, h / 2 + 10, 7], [2, h / 2 + 24, 4.5]];
+    // Baked into a texture so it fades as one piece (overlapping shapes would
+    // show through each other at partial alpha).
+    const ox = 10;
+    const oy = h / 2 + 20;
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.fillStyle(ink, 1);
+    for (const [cx, cy, cr] of [...puffs, ...trail]) g.fillCircle(cx + ox, cy + oy, cr + 2.5);
+    g.fillStyle(paper, 1);
+    for (const [cx, cy, cr] of [...puffs, ...trail]) g.fillCircle(cx + ox, cy + oy, cr);
+    g.fillRect(x0 + ox, oy - h / 2, w, h);
+    const key = `thought-${++this.thoughtCount}`;
+    g.generateTexture(key, Math.ceil(x0 + w + h * 0.45 + 4 + ox), Math.ceil(h + 56));
+    g.destroy();
+    const cloud = this.add.image(-ox, -oy, key).setOrigin(0, 0);
+    const bubble = this.add.container(left, y, [cloud, text]).setDepth(55).setScale(0.6).setAlpha(0);
     this.bubbles[who] = bubble;
 
     const hold = Math.min(3200, 1300 + line.length * 32);
     return new Promise((resolve) => {
+      // Ends the thought: when it fades out, or early if a new one replaces it.
+      bubble.finish = () => {
+        if (!bubble.active) return;
+        this.tweens.killTweensOf(bubble);
+        if (this.bubbles[who] === bubble) this.bubbles[who] = null;
+        bubble.destroy();
+        this.textures.remove(key);
+        resolve();
+      };
       this.tweens.add({ targets: bubble, scale: 1, alpha: 1, duration: 170, ease: "Back.easeOut" });
-      this.tweens.add({
-        targets: bubble,
-        alpha: 0,
-        delay: hold,
-        duration: 220,
-        onComplete: () => {
-          if (this.bubbles[who] === bubble) this.bubbles[who] = null;
-          bubble.destroy();
-          resolve();
-        },
-      });
+      this.tweens.add({ targets: bubble, alpha: 0, delay: hold, duration: 220, onComplete: bubble.finish });
     });
   }
 
@@ -1124,17 +1145,17 @@ export default class CaseBattleScene extends Phaser.Scene {
     for (const side of [this.playerSide, this.opponentSide]) {
       const dir = SIDES[side].direction;
       const lead = (this.state.caseValue - 50) * dir;
-      if (lead >= 25 && moved * dir > 0 && Math.random() < 0.6) return this.say(whoOf(side), "winning");
-      if (lead <= -25 && moved * dir < 0 && Math.random() < 0.6) return this.say(whoOf(side), "losing");
+      if (lead >= 25 && moved * dir > 0 && Math.random() < 0.6) return this.think(whoOf(side), "winning");
+      if (lead <= -25 && moved * dir < 0 && Math.random() < 0.6) return this.think(whoOf(side), "losing");
     }
     const pushes = events.filter((e) => e.type === "push" && (e.card.type === "QUICK" || e.card.type === "NORMAL"));
     if (pushes.length && Math.random() < 0.35) {
       const size = (e) => Math.abs(e.to - e.from);
       const e = pushes.reduce((a, b) => (size(b) > size(a) ? b : a));
-      return this.say(whoOf(e.side), e.card.type);
+      return this.think(whoOf(e.side), e.card.type);
     }
     const waits = events.filter((e) => e.type === "wait");
-    if (waits.length === 1 && Math.random() < 0.2) this.say(whoOf(waits[0].side), "WAIT");
+    if (waits.length === 1 && Math.random() < 0.2) this.think(whoOf(waits[0].side), "WAIT");
   }
 
   tweenMeter(to) {
