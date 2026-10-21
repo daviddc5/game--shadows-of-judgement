@@ -11,9 +11,9 @@ export const RULES = {
   maxEnergy: 10,
   handSize: 4,
   maxTurns: 12, // after this the verdict goes to whichever side the meter leans
-  pushScale: 1.5, // multiplies every card's push
+  pushScale: 1, // multiplies every card's push (cards hold their real numbers, so 1)
   escalation: 0, // extra push per turn: push * (1 + escalation * (turn - 1))
-  escalationFlat: 4, // flat push added per turn: push + escalationFlat * (turn - 1)
+  escalationFlat: 5, // flat push added per turn: push + escalationFlat * (turn - 1)
 };
 
 /** How far a card moves the meter this turn (`amount` defaults to its normal push). */

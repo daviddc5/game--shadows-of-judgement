@@ -4,7 +4,8 @@
 // To add a character: add an entry below and put its portraits in
 // public/assets/images/. `files.neutral` is required; `winning` and `losing`
 // are optional mood variants (the neutral portrait is used when one is missing).
-// Portraits are square, 1024×1024.
+// Portraits are square, 1024×1024. The current characters use only their
+// neutral portrait (the owner dropped the happy and upset ones).
 //
 // Draft portraits for Mara Vale (detective) and Wren (vigilante) are kept in
 // art/drafts/ but not used: the owner is holding off on more AI-made art.
@@ -17,8 +18,6 @@ export const CHARACTERS = {
       portrait: "detective",
       files: {
         neutral: "DetectivePortraits/detective-neutral.png",
-        winning: "DetectivePortraits/detective-winning.png",
-        losing: "DetectivePortraits/detective-losing.png",
       },
     },
   ],
@@ -29,8 +28,6 @@ export const CHARACTERS = {
       portrait: "killer",
       files: {
         neutral: "KillerPortraits/killer-neutral.png",
-        winning: "KillerPortraits/killer-winning.png",
-        losing: "KillerPortraits/killer-losing.png",
       },
     },
   ],

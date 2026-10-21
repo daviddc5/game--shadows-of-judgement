@@ -37,7 +37,8 @@ by whether they give players more to read, not more to calculate.
 | WAIT banks +1 extra energy | Makes saving up a real, visible choice. The owner especially likes this. |
 | COUNTER only cancels POWER | Turns COUNTER into a gamble instead of an always-good card. |
 | Removed card speed | It only mattered on the final turn. Both cards now land together. |
-| Rising stakes (+4 push per turn), turn-12 verdict | Tug-of-war stalls otherwise; median game is ~7 turns. |
+| Rising stakes (+5 push per turn), turn-12 verdict | Tug-of-war stalls otherwise; median game is ~6 turns. |
+| Clean card numbers: multiples of 5, one push per type and cost | Playtesters found numbers like 19 and 7 hard to add up; same-cost cards differing by 1–2 added nothing to read. |
 | Added BAIT (beats COUNTER) and AMBUSH (beats WAIT) | Closes the mind-game loop so every turn is a read, not just "push hardest". |
 | AI reads public info only (energy, recent plays) | It should be beatable by reading it, and never cheat. |
 | New look for the battle screen (noir: rain, skyline, cyan vs crimson) | Built by Claude as part of the experiment. The owner "doesn't hate it, doesn't love it": the visual style is still open. |
@@ -54,6 +55,11 @@ After several rounds of look boards, the owner chose:
 - **Mostly black and white**, colour only in the character portraits, and **a
   touch of red** (the needle, the Vigilante's numbers, your selected card, big
   moments like "Countered!"). Plain and simple: no rain, glows or textures.
+- **Text big enough for a phone.** The game is drawn 750 px wide and shrunk to
+  about 55% on a phone, so a non-gamer playtester found the small text too
+  small to read. Keep body text at 24 px or more in game units (about 13 px on
+  a phone) and card names at 26 px. Card rules are explained in large text
+  when a card is selected instead of in a tiny line on the card.
 - **No newspaper framing.** That look was liked for its font and restraint,
   not for being a newspaper.
 - **Board themes are a personalisation option**, like card games such as
@@ -70,7 +76,7 @@ prefers every card to share one plain border.
 
 Every card has an **art box**. Owning art is a big part of why people love
 card games, so art is a long-term goal; the owner may learn to draw or hire an
-artist. Until then the box shows the type symbol as a placeholder. Adding art
+artist. Until then the box shows a drawn placeholder scene, a different one per type (storm, rooftops, tower, streetlamp, harbour, alley) (`src/ui/cardArtPlaceholder.js`). Adding art
 for a card is one image plus `art: "<name>"` on the card: see
 `public/assets/images/cards/README.md` (16:9, at least 640×360).
 
@@ -98,8 +104,9 @@ with an artist.
 
 ## Roadmap
 
-1. **Now: playtest the BAIT/AMBUSH loop.** Does each turn feel like a read?
-   Adjust numbers with `npm run simulate` rather than guessing.
+1. **Now: give the game characters.** In order: characters think (inner thoughts), cards with
+   status effects, then ally (character) cards. See
+   [CHARACTERS_PLAN.md](CHARACTERS_PLAN.md).
 2. **Next: three districts (Marvel Snap style).** Each district is its own small
    Case meter; win 2 of 3; choose a card *and* where to play it. The owner wanted
    something like this originally but earlier feedback called it confusing; the

@@ -25,13 +25,13 @@ describe("characters", () => {
   it("uses the neutral portrait when a mood variant is missing", () => {
     const neutralOnly = { portrait: "draft", files: { neutral: "draft.png" } };
     expect(portraitKey(neutralOnly, "winning")).toBe("draft-neutral");
-    expect(portraitKey(CHARACTERS.detective[0], "winning")).toBe("detective-winning");
+    expect(portraitKey(CHARACTERS.detective[0], "winning")).toBe("detective-neutral");
   });
 
   it("lists every portrait file to load", () => {
     const keys = portraitFiles().map((f) => f.key);
     expect(keys).toContain("detective-neutral");
-    expect(keys).toContain("killer-losing");
+    expect(keys).toContain("killer-neutral");
   });
 
   it("random characters come from the requested side", () => {

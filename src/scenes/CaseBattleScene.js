@@ -10,10 +10,12 @@ import {
 } from "../case/rules.js";
 import { chooseAiPlay } from "../case/ai.js";
 import { getCharacter, portraitKey, randomCharacter } from "../case/characters.js";
+import { pickLine } from "../case/dialogue.js";
 import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button } from "../ui/widgets.js";
 import { ensureTypeIcons, iconKey } from "../ui/cardIcons.js";
+import { buildPlaceholderArt } from "../ui/cardArtPlaceholder.js";
 
 const W = 750;
 const H = 1334;
@@ -28,7 +30,7 @@ const CARD_H = 260;
 // Art box on every card. Artists: draw at 16:9, at least 640×360 (shown at 148×84).
 const ART_W = 148;
 const ART_H = 84;
-const ART_Y = -12;
+const ART_Y = 4;
 const HAND_Y = 1075;
 
 const TYPE_NAMES = {
@@ -42,6 +44,17 @@ const TYPE_NAMES = {
 
 const wait = (scene, ms) =>
   new Promise((resolve) => scene.time.delayedCall(ms, resolve));
+
+const tween = (scene, config) =>
+  new Promise((resolve) => scene.tweens.add({ ...config, onComplete: resolve }));
+
+// Words on the cut-in band for each big play.
+const CUT_IN_KICKER = {
+  POWER: "Power Play",
+  COUNTER: "Counter",
+  BAIT: "Baited!",
+  AMBUSH: "Ambushed!",
+};
 
 function roman(n) {
   const table = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
@@ -116,6 +129,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.busy = false;
     this.handCards = [];
     this.arenaObjects = [];
+    this.bubbles = {};
+    this.usedLines = new Set();
+    this.thoughtCount = 0;
 
     this.createTextures();
     paintBackground(this, this.theme);
@@ -184,10 +200,10 @@ export default class CaseBattleScene extends Phaser.Scene {
   createTopBar() {
     const z = this.z(38);
     this.turnText = this.add
-      .text(W / 2, 38, "", { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: hex(z.soft) })
+      .text(W / 2, 36, "", { fontFamily: FONT_BODY, fontSize: "26px", fontStyle: "600", color: hex(z.soft) })
       .setOrigin(0.5);
     this.stakesText = this.add
-      .text(W / 2, 70, "", { fontFamily: FONT_BODY, fontSize: "20px", color: hex(z.soft) })
+      .text(W / 2, 70, "", { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.soft) })
       .setOrigin(0.5);
 
     const exit = this.add
@@ -218,7 +234,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const label = this.add
       .text(x + this.state.rules.maxEnergy * 26 + 4, y, "", {
         fontFamily: FONT_BODY,
-        fontSize: "24px",
+        fontSize: "28px",
         fontStyle: "600",
         color: hex(z.ink),
       })
@@ -236,13 +252,13 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.opponentEnergy = this.createEnergyPips(194, 198);
 
     this.add
-      .text(184, 240, "Recent", { fontFamily: FONT_BODY, fontSize: "20px", color: hex(z.soft) })
+      .text(184, 240, "Recent", { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.soft) })
       .setOrigin(0, 0.5);
     this.historyDots = [];
     for (let i = 0; i < 5; i++) {
       this.historyDots.push(
         this.add
-          .text(262 + i * 86, 240, "", { fontFamily: FONT_BODY, fontSize: "20px", color: hex(z.ink) })
+          .text(274 + i * 90, 240, "", { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.ink) })
           .setOrigin(0, 0.5),
       );
     }
@@ -268,7 +284,7 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     const label = (lx, text, origin) =>
       this.add
-        .text(lx, y - 30, text, { fontFamily: FONT_BODY, fontSize: "22px", color: hex(z.soft) })
+        .text(lx, y - 30, text, { fontFamily: FONT_BODY, fontSize: "26px", color: hex(z.soft) })
         .setOrigin(origin, 0.5);
     label(x, "Escape", 0);
     label(x + w, "Capture", 1);
@@ -285,7 +301,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.add.triangle(0, -h / 2 - 20, -9, -7, 9, -7, 0, 5, this.theme.red),
     ]);
     this.needleValue = this.add
-      .text(0, y + h / 2 + 26, "", { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: hex(z.ink) })
+      .text(0, y + h / 2 + 24, "", { fontFamily: FONT_BODY, fontSize: "26px", fontStyle: "600", color: hex(z.ink) })
       .setOrigin(0.5);
 
     const dirText =
@@ -293,7 +309,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         ? "You push the needle toward Capture ▶"
         : "◀ You push the needle toward Escape";
     this.add
-      .text(W / 2, y + h / 2 + 58, dirText, { fontFamily: FONT_BODY, fontSize: "20px", color: hex(z.soft) })
+      .text(W / 2, y + h / 2 + 56, dirText, { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.soft) })
       .setOrigin(0.5);
 
     this.meterValue = this.state.caseValue;
@@ -320,7 +336,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.add
         .text(x, y - CARD_H / 2 - 20, who === "player" ? "You" : "Them", {
           fontFamily: FONT_BODY,
-          fontSize: "20px",
+          fontSize: "24px",
           color: hex(z.soft),
         })
         .setOrigin(0.5);
@@ -334,11 +350,13 @@ export default class CaseBattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.hintText = this.add
-      .text(W / 2, 782, "", {
+      .text(W / 2, 790, "", {
         fontFamily: FONT_BODY,
-        fontSize: "22px",
-        color: hex(this.z(782).ink),
+        fontSize: "26px",
+        color: hex(this.z(790).ink),
         align: "center",
+        wordWrap: { width: 680 },
+        lineSpacing: -2,
       })
       .setOrigin(0.5);
   }
@@ -352,7 +370,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.add
       .text(name.x + name.width + 14, 860, "you", {
         fontFamily: FONT_BODY,
-        fontSize: "20px",
+        fontSize: "24px",
         color: hex(z.soft),
       })
       .setOrigin(0, 0.5);
@@ -379,55 +397,44 @@ export default class CaseBattleScene extends Phaser.Scene {
     const outline = this.cardOutline(style);
     const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(3, style.edge);
 
-    const icon = this.add.image(left + 18, top + 16, iconKey(card.type)).setDisplaySize(20, 20).setTint(style.ink);
+    const icon = this.add.image(left + 20, top + 20, iconKey(card.type)).setDisplaySize(28, 28).setTint(style.ink);
     const typeLabel = this.add
-      .text(left + 32, top + 16, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "17px", color: ink })
+      .text(left + 37, top + 20, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "22px", color: ink })
       .setOrigin(0, 0.5);
     const cost = this.add
-      .text(-left - 10, top + 16, `${card.cost} ⬢`, {
+      .text(-left - 8, top + 20, `${card.cost} ⬢`, {
         fontFamily: FONT_BODY,
-        fontSize: "18px",
+        fontSize: "24px",
         fontStyle: "600",
         color: ink,
       })
       .setOrigin(1, 0.5);
     const name = this.add
-      .text(0, top + 50, card.name, {
+      .text(0, top + 64, card.name, {
         fontFamily: FONT_BODY,
-        fontSize: "19px",
+        fontSize: "26px",
         fontStyle: "600",
         color: ink,
         align: "center",
-        lineSpacing: -4,
-        wordWrap: { width: CARD_W - 14 },
+        lineSpacing: -8,
+        wordWrap: { width: CARD_W - 12 },
       })
       .setOrigin(0.5);
 
-    const art = this.buildCardArt(card, style);
+    const art = this.buildCardArt(card, side, style);
 
-    // Traps show their sprung value; the rule line gives the fallback.
+    // Traps show their sprung value; selecting the card explains the rest
+    // (cardHelp), since a rule line on the card was too small to read on a phone.
     const push = pushFor(this.state, card, card.bigPush ?? card.push);
     const big = this.add
-      .text(0, ART_Y + ART_H / 2 + 28, `${push}`, {
+      .text(0, ART_Y + ART_H / 2 + 40, `${push}`, {
         fontFamily: FONT_BODY,
-        fontSize: "46px",
+        fontSize: "52px",
         fontStyle: "600",
         color: side === "vigilante" ? hex(this.theme.red) : ink,
       })
       .setOrigin(0.5);
-    const small = pushFor(this.state, card);
-    const ruleText =
-      {
-        COUNTER: "only vs Power",
-        POWER: "can be countered",
-        BAIT: `vs Counter, else ${small}`,
-        AMBUSH: `vs Wait, else ${small}`,
-      }[card.type] ?? "";
-    const rule = this.add
-      .text(0, CARD_H / 2 - 18, ruleText, { fontFamily: FONT_BODY, fontSize: "16px", color: ink })
-      .setOrigin(0.5);
-
-    c.add([outline, bg, ...art, icon, typeLabel, cost, name, big, rule]);
+    c.add([outline, bg, ...art, icon, typeLabel, cost, name, big]);
     c.setSize(CARD_W, CARD_H);
     c.bg = bg;
     c.edge = style.edge;
@@ -436,30 +443,16 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   /**
    * The art box. A card with an `art` texture key (loaded in BootScene from
-   * public/assets/images/cards/) shows its picture; otherwise a placeholder
-   * with the card type's symbol.
+   * public/assets/images/cards/) shows its picture; otherwise a drawn scene
+   * for the card type (src/ui/cardArtPlaceholder.js).
    */
-  buildCardArt(card, style) {
-    const box = this.add.rectangle(0, ART_Y, ART_W, ART_H, style.ink, 0.06).setStrokeStyle(1, style.ink, 0.45);
+  buildCardArt(card, side, style) {
     if (card.art && this.textures.exists(card.art)) {
       const picture = this.add.image(0, ART_Y, card.art).setDisplaySize(ART_W, ART_H);
-      return [picture, box.setFillStyle(style.ink, 0)];
+      const frame = this.add.rectangle(0, ART_Y, ART_W, ART_H).setStrokeStyle(1, style.ink, 0.45);
+      return [picture, frame];
     }
-    // Diagonal stripes, each clipped to the box.
-    const hatch = this.add.graphics();
-    hatch.lineStyle(1, style.ink, 0.1);
-    const bottom = ART_Y + ART_H / 2;
-    for (let start = -ART_W / 2 - ART_H; start < ART_W / 2; start += 10) {
-      const x1 = Math.max(start, -ART_W / 2);
-      const x2 = Math.min(start + ART_H, ART_W / 2);
-      if (x1 < x2) hatch.lineBetween(x1, bottom - (x1 - start), x2, bottom - (x2 - start));
-    }
-    const mark = this.add
-      .image(0, ART_Y, iconKey(card.type))
-      .setDisplaySize(ART_H * 0.62, ART_H * 0.62)
-      .setTint(style.ink)
-      .setAlpha(0.28);
-    return [box, hatch, mark];
+    return buildPlaceholderArt(this, card, side, ART_Y, ART_W, ART_H, style.ink);
   }
 
   /** A thin line just outside the card's border (invisible when the style has none). */
@@ -529,6 +522,20 @@ export default class CaseBattleScene extends Phaser.Scene {
       c.bg.setStrokeStyle(selected ? 5 : 3, selected ? this.theme.red : c.edge);
     });
     this.playButton.setEnabled(index !== null);
+    const card = index === null ? null : this.state.sides[this.playerSide].hand[index];
+    this.hintText.setText(card ? this.cardHelp(card) : "");
+  }
+
+  /** A plain-English line explaining a card, shown when it is selected. */
+  cardHelp(card) {
+    const push = pushFor(this.state, card);
+    const big = card.bigPush && pushFor(this.state, card, card.bigPush);
+    return {
+      COUNTER: `Counter: if they play a Power card, it's cancelled and you push ${push}. Otherwise nothing happens.`,
+      POWER: `Power: pushes ${push}, but a Counter cancels it.`,
+      BAIT: `Bait: pushes ${big} if they play a Counter, otherwise ${push}.`,
+      AMBUSH: `Ambush: pushes ${big} if they Wait, otherwise ${push}.`,
+    }[card.type] ?? `${TYPE_NAMES[card.type]}: pushes the needle ${push} your way.`;
   }
 
   // ---------------------------------------------------------------- turn flow
@@ -554,6 +561,12 @@ export default class CaseBattleScene extends Phaser.Scene {
           : "",
     );
     if (!first) this.showBanner(`Turn ${roman(turn)}`);
+    this.spokeThisTurn = false;
+    if (first) {
+      // Opening thoughts: the opponent's first, then yours.
+      this.time.delayedCall(600, () => this.think("opponent", "start", true));
+      this.time.delayedCall(2800, () => this.think("player", "start", true));
+    }
 
     this.opponentLocked = false;
     if (this.online) {
@@ -586,6 +599,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (!this.online) this.showOpponentLocked();
 
     const playerCard = index == null ? null : this.state.sides[this.playerSide].hand[index];
+    const caseBefore = this.state.caseValue;
 
     // Move the chosen hand card into the arena as a face-down card.
     if (playerCard) {
@@ -619,13 +633,18 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.turnPlayed = played;
     const opponentCard = played[this.opponentSide];
 
-    // Reveal both at once.
-    const faces = {};
-    faces.player = await this.flipToFace("player", this.playerBack, playerCard, this.playerSide);
-    faces.opponent = await this.flipToFace("opponent", this.opponentBack, opponentCard, this.opponentSide);
+    // A beat of tension, then both cards turn over together and clash.
+    await this.tension([this.playerBack, this.opponentBack]);
+    const [playerFace, opponentFace] = await Promise.all([
+      this.flipToFace("player", this.playerBack, playerCard, this.playerSide),
+      this.flipToFace("opponent", this.opponentBack, opponentCard, this.opponentSide),
+    ]);
+    const faces = { player: playerFace, opponent: opponentFace };
     this.playerBack = this.opponentBack = null;
     this.updateHud(); // costs are paid once both cards are revealed
-    await wait(this, 450);
+    await wait(this, 300);
+    await this.clash(faces, { player: playerCard, opponent: opponentCard }, events);
+    await wait(this, 200);
 
     for (const event of events) {
       await this.playEvent(event, faces);
@@ -634,15 +653,33 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     if (this.state.winner) {
       await wait(this, 500);
+      if (this.state.winner !== "draw") {
+        const winnerWho = this.state.winner === this.playerSide ? "player" : "opponent";
+        await this.think(winnerWho, "win", true);
+        await this.think(winnerWho === "player" ? "opponent" : "player", "lose", true);
+      }
       this.showResult();
       return;
     }
+    this.sayAfterTurn(events, caseBefore);
     await wait(this, 700);
     if (this.online) applyView(this.state, nextView);
     else startTurn(this.state);
     this.beginTurn();
   }
 
+  /** Both face-down cards tremble before the reveal. */
+  async tension(backs) {
+    const targets = backs.filter(Boolean);
+    if (!targets.length) return;
+    this.tweens.add({ targets, scale: 1.04, duration: 380, ease: "Sine.easeInOut" });
+    await tween(this, { targets, x: "+=3", duration: 32, yoyo: true, repeat: 5, ease: "Sine.easeInOut" });
+  }
+
+  /**
+   * Turns a face-down card over: it lifts and narrows to an edge, then the face
+   * swings round with a little overshoot. A Power card flips up glowing red.
+   */
   async flipToFace(who, back, card, side) {
     const { x, y } = SLOT[who];
     if (!card) {
@@ -656,21 +693,290 @@ export default class CaseBattleScene extends Phaser.Scene {
       return t;
     }
     const face = this.buildCardFace(card, side);
-    face.setPosition(x, y).setScale(0, 1);
+    face.setPosition(x, y - 26).setScale(0, 1.1).setVisible(false);
     this.arenaObjects.push(face);
-    await new Promise((resolve) => {
-      this.tweens.add({
-        targets: back,
-        scaleX: 0,
-        duration: 130,
-        ease: "Sine.easeIn",
-        onComplete: () => {
-          back.destroy();
-          this.tweens.add({ targets: face, scaleX: 1, duration: 150, ease: "Sine.easeOut", onComplete: resolve });
-        },
-      });
-    });
+    if (card.type === "POWER") {
+      const glow = this.add.rectangle(0, 0, CARD_W + 18, CARD_H + 18).setStrokeStyle(10, this.theme.red, 0.85);
+      face.addAt(glow, 0);
+      this.tweens.add({ targets: glow, alpha: 0.25, duration: 320, yoyo: true, repeat: 5, delay: 300 });
+    }
+    if (back) {
+      await tween(this, { targets: back, scaleX: 0, scaleY: 1.1, y: y - 26, duration: 170, ease: "Cubic.easeIn" });
+      back.destroy();
+    }
+    face.setVisible(true);
+    await tween(this, { targets: face, scaleX: 1, scaleY: 1, y, duration: 280, ease: "Back.easeOut" });
     return face;
+  }
+
+  /**
+   * The two revealed cards fly at each other: they wind up, dash in leaving
+   * afterimages, and on impact the game freezes for a beat (hit stop) with
+   * speed lines and a zoom punch. Then they lock and grind, sparks along the
+   * seam, while the card pushing harder this turn slowly gains ground (a close
+   * turn grinds longer). Finally it breaks through: the other card cracks and
+   * is knocked back.
+   */
+  async clash(faces, cards, events) {
+    const fighters = ["player", "opponent"].filter((who) => cards[who]);
+    if (!fighters.length) return;
+    const cx = W / 2;
+    const cy = SLOT.player.y;
+    const z = this.z(cy);
+    const red = this.theme.red;
+    const camera = this.cameras.main;
+
+    if (fighters.length === 1) {
+      // Nobody to hit: the lone card lunges at the empty side.
+      const who = fighters[0];
+      const lunge = who === "player" ? -46 : 46;
+      await tween(this, { targets: faces[who], x: SLOT[who].x + lunge, duration: 170, ease: "Back.easeIn" });
+      camera.shake(90, 0.004);
+      await tween(this, { targets: faces[who], x: SLOT[who].x, duration: 220, ease: "Quad.easeOut" });
+      return;
+    }
+
+    // Each side's push this turn, as printed on the cards (a cancelled or fizzled card pushes 0).
+    const strength = { player: 0, opponent: 0 };
+    for (const e of events) {
+      if (!["push", "counter", "sprung"].includes(e.type)) continue;
+      const amount = pushFor(this.state, e.card, e.type === "sprung" ? e.card.bigPush : e.card.push);
+      strength[e.side === this.playerSide ? "player" : "opponent"] += amount;
+    }
+    const winner =
+      strength.player > strength.opponent ? "player" : strength.opponent > strength.player ? "opponent" : null;
+    const loser = winner && (winner === "player" ? "opponent" : "player");
+    const out = { player: 1, opponent: -1 }; // the direction away from the centre
+    const sideOf = { player: this.playerSide, opponent: this.opponentSide };
+    const meetX = (who, seam = cx) => seam + out[who] * (CARD_W / 2 + 2);
+    fighters.forEach((who) => faces[who].setDepth(30));
+
+    // Wind up.
+    await Promise.all(
+      fighters.map((who) =>
+        tween(this, {
+          targets: faces[who],
+          x: SLOT[who].x + out[who] * 22,
+          angle: out[who] * 6,
+          scale: 0.96,
+          duration: 200,
+          ease: "Sine.easeOut",
+        }),
+      ),
+    );
+
+    // Dash, leaving afterimages.
+    let frame = 0;
+    const ghosts = () => {
+      if (frame++ % 2) return;
+      fighters.forEach((who) => {
+        const f = faces[who];
+        const ghost = this.add
+          .rectangle(f.x, f.y, CARD_W, CARD_H, this.theme.cards[sideOf[who]].bg, 0.35)
+          .setStrokeStyle(2, this.theme.cards[sideOf[who]].edge, 0.35)
+          .setAngle(f.angle)
+          .setDepth(29);
+        this.tweens.add({ targets: ghost, alpha: 0, duration: 200, onComplete: () => ghost.destroy() });
+      });
+    };
+    await Promise.all(
+      fighters.map((who, i) =>
+        tween(this, {
+          targets: faces[who],
+          x: meetX(who),
+          angle: -out[who] * 3,
+          scale: 1,
+          duration: 170,
+          ease: "Expo.easeIn",
+          onUpdate: i === 0 ? ghosts : undefined,
+        }),
+      ),
+    );
+
+    // Impact: speed lines, zoom punch, hit stop.
+    const lines = this.add.graphics({ x: cx, y: cy }).setDepth(44);
+    lines.fillStyle(z.ink, 1);
+    for (let i = 0; i < 28; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const w = 0.015 + Math.random() * 0.025;
+      const inner = 70 + Math.random() * 40;
+      const outer = 330 + Math.random() * 200;
+      lines.fillTriangle(
+        Math.cos(a - w) * inner, Math.sin(a - w) * inner,
+        Math.cos(a) * outer, Math.sin(a) * outer,
+        Math.cos(a + w) * inner, Math.sin(a + w) * inner,
+      );
+    }
+    lines.setScale(0.8);
+    this.tweens.add({ targets: lines, scale: 1.15, duration: 140, ease: "Cubic.easeOut" });
+    this.tweens.add({ targets: lines, alpha: 0, delay: 140, duration: 260, onComplete: () => lines.destroy() });
+    camera.flash(80, 255, 255, 255);
+    camera.zoomTo(1.08, 60);
+    camera.shake(160, 0.012);
+    this.burst(cx, cy, "cb-shard", z.ink, 18, 450);
+    await wait(this, 140);
+    camera.zoomTo(1, 260, "Cubic.easeOut");
+
+    // Grind: locked together, the stronger card gains ground. Closer turns grind longer.
+    const total = strength.player + strength.opponent;
+    const closeness = total ? 1 - Math.abs(strength.player - strength.opponent) / total : 1;
+    const grindMs = 380 + closeness * 520;
+    const gain = winner ? -out[winner] * 28 : 0; // the seam moves towards the loser
+    const sparks = this.add
+      .particles(cx, cy, "cb-spark", {
+        y: { min: -CARD_H * 0.42, max: CARD_H * 0.42 },
+        speedX: { min: -170, max: 170 },
+        speedY: { min: -280, max: -60 },
+        gravityY: 900,
+        scale: { start: 0.55, end: 0 },
+        lifespan: 380,
+        frequency: 16,
+        tint: [z.ink, red],
+      })
+      .setDepth(45);
+    const score = this.add
+      .text(cx, cy + CARD_H / 2 + 28, `${strength.opponent}  vs  ${strength.player}`, {
+        fontFamily: FONT_BODY,
+        fontSize: "26px",
+        fontStyle: "600",
+        color: hex(z.ink),
+      })
+      .setOrigin(0.5)
+      .setDepth(45);
+    camera.shake(grindMs, 0.0025);
+    await new Promise((resolve) =>
+      this.tweens.addCounter({
+        from: 0,
+        to: 1,
+        duration: grindMs,
+        ease: "Sine.easeInOut",
+        onUpdate: (tw) => {
+          const seam = cx + gain * tw.getValue();
+          const jitter = Math.sin(this.time.now * 0.09) * 2;
+          fighters.forEach((who) => (faces[who].x = meetX(who, seam) + jitter * out[who]));
+          sparks.setX(seam);
+          score.setX(seam);
+        },
+        onComplete: resolve,
+      }),
+    );
+    sparks.stop();
+    this.time.delayedCall(450, () => sparks.destroy());
+    score.destroy();
+
+    // Break through.
+    const seam = cx + gain;
+    this.burst(seam, cy, "cb-shard", z.ink, 26, 520);
+    this.burst(seam, cy, "cb-spark", red, 12, 420);
+    camera.shake(220, 0.016);
+    if (loser) {
+      const style = this.theme.cards[sideOf[loser]];
+      const crack = this.add.graphics().lineStyle(3, style.ink, 0.9);
+      const edge = -out[loser] * (CARD_W / 2);
+      for (let k = 0; k < 3; k++) {
+        let x = edge;
+        let y = (Math.random() - 0.5) * 60;
+        const points = [{ x, y }];
+        for (let i = 0; i < 5; i++) {
+          x += out[loser] * (14 + Math.random() * 14);
+          y += (Math.random() - 0.5) * 52;
+          points.push({ x, y });
+        }
+        crack.strokePoints(points);
+      }
+      faces[loser].add(crack);
+    }
+    await Promise.all(
+      fighters.map((who) => {
+        const knocked = who === loser;
+        return tween(this, {
+          targets: faces[who],
+          x: SLOT[who].x + (knocked ? out[who] * 44 : 0),
+          angle: knocked ? out[who] * 16 : 0,
+          duration: knocked ? 360 : 280,
+          ease: knocked ? "Back.easeOut" : "Cubic.easeOut",
+        });
+      }),
+    );
+    if (loser) {
+      await tween(this, { targets: faces[loser], x: SLOT[loser].x, angle: 0, duration: 240, ease: "Sine.easeInOut" });
+    }
+    fighters.forEach((who) => faces[who].setDepth(0));
+  }
+
+  /**
+   * A diagonal band sweeps across the screen with the character's portrait and
+   * the card's name: used for big plays (Power, a Counter that lands, a trap
+   * that springs).
+   */
+  async cutIn(who, card) {
+    const character = who === "player" ? this.playerCharacter : this.opponentCharacter;
+    const fromLeft = who === "player";
+    const cy = SLOT.player.y;
+    const bandW = W * 1.5;
+    const bandH = 230;
+    const ink = 0x0d0d0d;
+    const white = 0xf4f2ec;
+    const red = this.theme.red;
+
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0).setDepth(60);
+    const band = this.add.container(fromLeft ? -bandW / 2 : W + bandW / 2, cy).setDepth(61).setAngle(-6);
+    band.add(this.add.rectangle(0, 0, bandW, bandH, ink));
+    band.add(this.add.rectangle(0, -bandH / 2 + 5, bandW, 8, red));
+    band.add(this.add.rectangle(0, bandH / 2 - 5, bandW, 8, red));
+    band.add(this.add.rectangle(0, -bandH / 2 - 3, bandW, 2, white));
+    band.add(this.add.rectangle(0, bandH / 2 + 3, bandW, 2, white));
+
+    const lines = [];
+    for (let i = 0; i < 12; i++) {
+      const line = this.add.rectangle(
+        Phaser.Math.Between(-W / 2, W / 2),
+        Phaser.Math.Between(-bandH / 2 + 20, bandH / 2 - 20),
+        Phaser.Math.Between(60, 180),
+        2,
+        white,
+        0.18,
+      );
+      band.add(line);
+      lines.push(line);
+    }
+
+    const side = fromLeft ? -1 : 1;
+    const px = side * (W / 2 - 130);
+    const portrait = this.add.image(px, 0, portraitKey(character, "winning")).setDisplaySize(176, 176);
+    const frame = this.add.rectangle(px, 0, 176, 176).setStrokeStyle(4, white);
+    const tx = px - side * 116;
+    const align = fromLeft ? 0 : 1;
+    const kicker = this.add
+      .text(tx, -50, CUT_IN_KICKER[card.type] ?? "", { fontFamily: FONT_DISPLAY, fontSize: "62px", color: hex(red) })
+      .setOrigin(align, 0.5);
+    const name = this.add
+      .text(tx, 22, card.name, {
+        fontFamily: FONT_BODY,
+        fontSize: "46px",
+        fontStyle: "600",
+        color: hex(white),
+        align: fromLeft ? "left" : "right",
+        wordWrap: { width: W - 330 },
+        lineSpacing: -8,
+      })
+      .setOrigin(align, 0.5);
+    const characterName = this.add
+      .text(tx, 84, character.name, { fontFamily: FONT_BODY, fontSize: "24px", color: "#bdb8ae" })
+      .setOrigin(align, 0.5);
+    band.add([portrait, frame, kicker, name, characterName]);
+
+    this.tweens.add({ targets: dim, fillAlpha: 0.45, duration: 200 });
+    this.tweens.add({ targets: lines, x: `${fromLeft ? "+" : "-"}=240`, duration: 1100 });
+    this.tweens.add({ targets: [portrait, frame], scale: "*=1.06", duration: 1000 });
+    await tween(this, { targets: band, x: W / 2, duration: 230, ease: "Cubic.easeOut" });
+    this.cameras.main.shake(120, 0.006);
+    await wait(this, 750);
+    this.tweens.add({ targets: dim, fillAlpha: 0, duration: 200 });
+    await tween(this, { targets: band, x: fromLeft ? W + bandW / 2 : -bandW / 2, duration: 210, ease: "Cubic.easeIn" });
+    this.tweens.killTweensOf([...lines, portrait, frame]);
+    band.destroy();
+    dim.destroy();
   }
 
   async playEvent(event, faces) {
@@ -689,6 +995,8 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.tweens.add({ targets: face, alpha: 0.35, angle: who === "player" ? 6 : -6, duration: 300 });
       this.floatText(x, y, "Fizzled", hex(z.soft), 46);
       const target = this.turnPlayed[otherSide(event.side)];
+      // Against a Bait, the trap's thought says it better.
+      if (target?.type !== "BAIT") this.think(who === "player" ? "opponent" : "player", "fizzle");
       this.hintText.setText(
         target?.type === "BAIT"
           ? "Baited! That looked like a Power play."
@@ -710,10 +1018,12 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (event.type === "push" || event.type === "counter" || event.type === "sprung") {
       // Lift, then slam.
       const big = event.card.type === "POWER" || event.type !== "push";
+      if (big) await this.cutIn(who, event.card);
       if (event.type === "sprung") {
-        const label = event.card.type === "BAIT" ? "Baited!" : "Ambushed!";
         this.cameras.main.flash(160, ...rgb(red));
-        this.floatText(x, y + 40, label, hex(red), 56);
+        this.think(who, event.card.type);
+      } else if (event.type === "counter" || event.card.type === "POWER") {
+        this.think(who, event.card.type);
       } else if (event.card.type === "BAIT" || event.card.type === "AMBUSH") {
         this.floatText(x, y + 40, "no bite", hex(z.soft), 28, FONT_BODY);
       }
@@ -750,6 +1060,113 @@ export default class CaseBattleScene extends Phaser.Scene {
       }
       if (winnerWho === "player") this.cameras.main.flash(300, ...rgb(this.theme.paper));
     }
+  }
+
+  // ---------------------------------------------------------------- talk
+
+  /**
+   * Shows a character's inner thought in a manga balloon beside their portrait
+   * (they never talk to each other: the Detective doesn't know who the
+   * Vigilante is). Lines come from src/case/dialogue.js; resolves once the
+   * balloon has gone.
+   * Only one line per turn unless `always` (the opening and the result), and
+   * no line repeats in a match while the character has others.
+   */
+  think(who, moment, always = false) {
+    if (this.spokeThisTurn && !always) return Promise.resolve();
+    const character = who === "player" ? this.playerCharacter : this.opponentCharacter;
+    const line = pickLine(character.id, moment, Math.random, this.usedLines);
+    if (!line) return Promise.resolve();
+    this.usedLines.add(line);
+    if (!always) this.spokeThisTurn = true;
+    this.bubbles[who]?.finish();
+
+    const ink = 0x111111;
+    const paper = 0xf4f2ec;
+    const { left, y } = who === "player" ? { left: 146, y: 880 } : { left: 180, y: 168 };
+    const label = this.add
+      .text(0, 0, `${character.name.split(" ")[0]}, thinking…`, {
+        fontFamily: FONT_BODY,
+        fontSize: "22px",
+        fontStyle: "600",
+        color: "#46423b",
+      })
+      .setOrigin(0.5);
+    const text = this.add.text(0, 0, line, {
+      fontFamily: FONT_BODY,
+      fontSize: "28px",
+      fontStyle: "600",
+      color: hex(ink),
+      align: "center",
+      wordWrap: { width: 380 },
+      lineSpacing: -4,
+    });
+    text.setOrigin(0.5);
+
+    // A manga thought balloon: an oval with a "Name, thinking…" label, and small
+    // bubbles trailing to the portrait instead of a pointed tail. Baked into
+    // a texture so it fades as one piece (the outline and fill would
+    // otherwise show through each other at partial alpha).
+    const blockW = Math.max(label.width, text.width);
+    const blockH = label.height + text.height;
+    const rx = blockW * 0.62 + 22;
+    const ry = blockH * 0.72 + 12;
+    const cx = 26 + rx; // balloon centre, relative to the anchor beside the portrait
+    label.setPosition(cx, -blockH / 2 + label.height / 2 + 2);
+    text.setPosition(cx, blockH / 2 - text.height / 2 + 2);
+    const trail = [[13, ry * 0.12, 9], [-5, ry * 0.32, 5.5]];
+    const ox = 12;
+    const oy = ry + 6;
+    const g = this.make.graphics({ x: 0, y: 0 }, false);
+    g.fillStyle(paper, 1).lineStyle(3, ink, 1);
+    g.fillEllipse(cx + ox, oy, rx * 2, ry * 2, 96).strokeEllipse(cx + ox, oy, rx * 2, ry * 2, 96);
+    for (const [tx, ty, tr] of trail) g.fillCircle(tx + ox, ty + oy, tr).strokeCircle(tx + ox, ty + oy, tr);
+    const key = `thought-${++this.thoughtCount}`;
+    g.generateTexture(key, Math.ceil(cx + rx + 4 + ox), Math.ceil(ry * 2 + 12));
+    g.destroy();
+    const cloud = this.add.image(-ox, -oy, key).setOrigin(0, 0);
+    const bubble = this.add.container(left, y, [cloud, label, text]).setDepth(55).setScale(0.6).setAlpha(0);
+    this.bubbles[who] = bubble;
+
+    const hold = Math.min(3200, 1300 + line.length * 32);
+    return new Promise((resolve) => {
+      // Ends the thought: when it fades out, or early if a new one replaces it.
+      bubble.finish = () => {
+        if (!bubble.active) return;
+        this.tweens.killTweensOf(bubble);
+        if (this.bubbles[who] === bubble) this.bubbles[who] = null;
+        bubble.destroy();
+        this.textures.remove(key);
+        resolve();
+      };
+      this.tweens.add({ targets: bubble, scale: 1, alpha: 1, duration: 170, ease: "Back.easeOut" });
+      this.tweens.add({ targets: bubble, alpha: 0, delay: hold, duration: 220, onComplete: bubble.finish });
+    });
+  }
+
+  /**
+   * If nobody spoke during the turn: someone the chase just moved towards (or
+   * away from) near an end may comment, or else sometimes the bigger ordinary
+   * push, or a lone Wait, gets a line.
+   */
+  sayAfterTurn(events, caseBefore) {
+    if (this.spokeThisTurn) return;
+    const whoOf = (side) => (side === this.playerSide ? "player" : "opponent");
+    const moved = this.state.caseValue - caseBefore;
+    for (const side of [this.playerSide, this.opponentSide]) {
+      const dir = SIDES[side].direction;
+      const lead = (this.state.caseValue - 50) * dir;
+      if (lead >= 25 && moved * dir > 0 && Math.random() < 0.6) return this.think(whoOf(side), "winning");
+      if (lead <= -25 && moved * dir < 0 && Math.random() < 0.6) return this.think(whoOf(side), "losing");
+    }
+    const pushes = events.filter((e) => e.type === "push" && (e.card.type === "QUICK" || e.card.type === "NORMAL"));
+    if (pushes.length && Math.random() < 0.35) {
+      const size = (e) => Math.abs(e.to - e.from);
+      const e = pushes.reduce((a, b) => (size(b) > size(a) ? b : a));
+      return this.think(whoOf(e.side), e.card.type);
+    }
+    const waits = events.filter((e) => e.type === "wait");
+    if (waits.length === 1 && Math.random() < 0.2) this.think(whoOf(waits[0].side), "WAIT");
   }
 
   tweenMeter(to) {
@@ -850,7 +1267,11 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   clearArena() {
-    this.arenaObjects.forEach((o) => o.destroy());
+    this.arenaObjects.forEach((o) => {
+      this.tweens.killTweensOf(o);
+      if (o.list) this.tweens.killTweensOf(o.list);
+      o.destroy();
+    });
     this.arenaObjects = [];
     this.playerBack = this.opponentBack = null;
   }
@@ -947,7 +1368,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const close = this.add
       .text(W / 2, 1200, "Tap anywhere to close", {
         fontFamily: FONT_BODY,
-        fontSize: "22px",
+        fontSize: "26px",
         color: hex(this.theme.soft),
       })
       .setOrigin(0.5);

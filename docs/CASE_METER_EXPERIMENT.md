@@ -23,8 +23,13 @@ running the same engine via `server/caseRoom.js`).
 - **Scarce, visible energy.** +2 per turn, max 10. WAIT gives +1 extra. Both
   players see each other's energy and recent card types, so 6+ banked energy
   signals a possible POWER card.
-- **Rising stakes.** Every card gains +4 push per turn, so games end in about
-  8 turns. After turn 12, whichever side the needle leans wins.
+- **Clean card numbers.** Every push is a multiple of 5, and cards of the same
+  type and cost push the same: Quick 10 (cost 1) and 15 (cost 2), Normal 20
+  (cost 3) and 25 (cost 4), Power 55 (cost 6) and 75 (cost 8), Counter 20, Bait
+  5 or 35 when it springs, Ambush 5 or 30. Playtesters found odd numbers like
+  19 and 7 hard to add up.
+- **Rising stakes.** Every card gains +5 push per turn, so games end in about
+  6 turns. After turn 12, whichever side the needle leans wins.
 
 ## Files
 

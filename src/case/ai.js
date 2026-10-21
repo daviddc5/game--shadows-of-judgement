@@ -2,9 +2,9 @@ import { SIDES } from "./cards.js";
 import { otherSide, publicView, pushFor } from "./rules.js";
 
 const POWER_THREAT_ENERGY = 6; // cheapest POWER card cost
-const TYPICAL_POWER = 40; // average base push of a POWER card
-const TYPICAL_COUNTER = 12;
-const TYPICAL_TRAP_BONUS = 17; // bigPush - push for BAIT/AMBUSH
+const TYPICAL_POWER = 60; // average push of a POWER card
+const TYPICAL_COUNTER = 20;
+const TYPICAL_TRAP_BONUS = 28; // bigPush - push for BAIT/AMBUSH
 
 /**
  * Guesses what the opponent will do this turn from public information only:
