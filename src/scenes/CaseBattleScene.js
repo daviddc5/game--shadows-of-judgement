@@ -14,6 +14,7 @@ import {
 import { chooseAiPlay } from "../case/ai.js";
 import { getCharacter, portraitKey, randomCharacter } from "../case/characters.js";
 import { pickLine } from "../case/dialogue.js";
+import { isMuted, playDuelMusic, setMuted, stopMusic } from "../audio.js";
 import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button } from "../ui/widgets.js";
@@ -150,7 +151,12 @@ export default class CaseBattleScene extends Phaser.Scene {
       window.__caseScene = this;
       if (this.registry.get("debugMode") && !this.online) this.createDebugControls();
     }
-    this.events.once("shutdown", () => NetworkManager.clearCallbacks());
+    this.keepMusic = false; // a rematch keeps the music going
+    this.events.once("shutdown", () => {
+      NetworkManager.clearCallbacks();
+      if (!this.keepMusic) stopMusic(this);
+    });
+    playDuelMusic(this);
 
     this.beginTurn(true);
   }
@@ -183,6 +189,7 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   leaveToMenu() {
+    stopMusic(this);
     if (this.online) NetworkManager.disconnect();
     this.scene.start("MenuScene");
   }
@@ -221,6 +228,23 @@ export default class CaseBattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     help.on("pointerdown", () => this.toggleRules());
+
+    // Music on/off, saved on the device.
+    const music = this.add
+      .text(100, 38, isMuted() ? "♪̸" : "♪", {
+        fontFamily: FONT_BODY,
+        fontSize: "40px",
+        fontStyle: "600",
+        color: hex(z.soft),
+        padding: { x: 22, y: 14 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    music.on("pointerdown", () => {
+      const muted = setMuted(this, !isMuted());
+      music.setText(muted ? "♪̸" : "♪").setAlpha(muted ? 0.6 : 1);
+    });
+    music.setAlpha(isMuted() ? 0.6 : 1);
   }
 
   createPortrait(x, y, character, size) {
@@ -1574,7 +1598,10 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     const again = this.online
       ? button(this, this.theme, W / 2, 770, 400, "New match", () => this.scene.start("MultiplayerLobbyScene"), { primary: true })
-      : button(this, this.theme, W / 2, 770, 400, "Rematch", () => this.scene.restart(), { primary: true });
+      : button(this, this.theme, W / 2, 770, 400, "Rematch", () => {
+          this.keepMusic = true;
+          this.scene.restart();
+        }, { primary: true });
     again.setDepth(201);
     button(this, this.theme, W / 2, 880, 400, "Menu", () => this.leaveToMenu()).setDepth(201);
   }

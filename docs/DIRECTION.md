@@ -83,6 +83,16 @@ artist. Until then the box shows a drawn placeholder scene, a different one per 
 for a card is one image plus `art: "<name>"` on the card: see
 `public/assets/images/cards/README.md` (16:9, at least 640×360).
 
+### Music
+
+The battle screen plays the owner's own duel theme in a loop
+(`public/assets/audio/`, see its README), with a ♪ mute button that is saved on
+the device. Browsers only allow sound after a tap, so it starts on the first
+tap. Code-made music was tried (synthesised and sample-based, in
+`scratchpad` experiments) and dropped: it sounded goofy next to a real
+composition. Sound effects (card flip, clash, grind, crack, cut-in sting) are
+still to do.
+
 ### Characters
 
 Each side can have several characters (`src/case/characters.js`); the player
