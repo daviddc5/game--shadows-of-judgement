@@ -1,8 +1,8 @@
 // How a card looks: the "case file" design. A rounded card with a double
 // border, a type stamp and cost along the top, an evidence photo (the art) with
-// photo corners, a typed name label, one line of rule text, and the push shown
-// as a number plus a mini Case meter. A status effect is a red rubber stamp
-// over the photo. Everything is drawn from the player's board theme.
+// photo corners, a typed name label, one line of rule text, and the push as a
+// number. A status effect is a red rubber stamp over the photo. Everything is
+// drawn from the player's board theme.
 import { FONTS, hex } from "../theme.js";
 import { EFFECTS, costFor, pushFor } from "../case/rules.js";
 import { iconKey } from "./cardIcons.js";
@@ -180,38 +180,28 @@ export function buildCardFace(scene, card, side) {
     .setAlpha(0.85);
   fit(rule, 150, 36, 14);
 
-  // Bottom row: the push, as a number and as a mini Case meter. The needle
-  // shows how far the card moves the real meter (toward Capture for the
-  // Detective, Escape for the Vigilante).
+  // Bottom row: "Pushes" and how far the card moves the Case meter. Traps show
+  // their sprung value.
   const push = pushFor(state, card, card.bigPush ?? card.push);
   const numberColor = side === "vigilante" ? hex(red) : ink;
-  const rowY = top + 222;
+  const rowY = top + 223;
   const divider = scene.add.graphics();
   divider.lineStyle(1, style.edge, 1).lineBetween(-77, top + 204, 77, top + 204);
+  const pushLabel = scene.add
+    .text(left + 13, rowY, "Pushes", { fontFamily: BODY, fontSize: "20px", color: ink })
+    .setOrigin(0, 0.5)
+    .setAlpha(0.8);
   const number = scene.add
-    .text(left + 13, rowY - 1, `${push}`, {
+    .text(-left - 13, rowY - 1, `${push}`, {
       fontFamily: BODY,
-      fontSize: push >= 100 ? "30px" : "34px",
+      fontSize: push >= 100 ? "36px" : "42px",
       fontStyle: "600",
       color: numberColor,
     })
-    .setOrigin(0, 0.5);
-
-  const dir = side === "detective" ? 1 : -1;
-  const barW = 86;
-  const barX = -CARD_W / 2 + CARD_W - 11 - barW;
-  const half = barW / 2;
-  const seg = (Math.min(50, push) / 100) * barW;
-  const segX = dir > 0 ? barX + half : barX + half - seg;
-  const needleX = dir > 0 ? barX + half + seg : barX + half - seg;
-  const gauge = scene.add.graphics();
-  gauge.fillStyle(side === "vigilante" ? red : style.ink, 1).fillRect(segX, rowY - 6, seg, 12);
-  gauge.lineStyle(1.5, style.edge, 1).strokeRect(barX, rowY - 7, barW, 14);
-  gauge.lineStyle(1, style.edge, 1).lineBetween(barX + half, rowY - 11, barX + half, rowY + 11);
-  gauge.fillStyle(STAMP_RED, 1).fillRect(needleX - 1.5, rowY - 12, 3, 24);
+    .setOrigin(1, 0.5);
 
   const hit = scene.add.rectangle(0, 0, CARD_W, CARD_H, 0xffffff, 0);
-  c.add([body, stamp, icon, typeLabel, cost, hexMark, mat, ...art, ...extras, rules, name, rule, divider, number, gauge, hit]);
+  c.add([body, stamp, icon, typeLabel, cost, hexMark, mat, ...art, ...extras, rules, name, rule, divider, pushLabel, number, hit]);
   c.setSize(CARD_W, CARD_H);
   c.bg = hit;
   c.edge = style.edge;

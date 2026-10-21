@@ -68,9 +68,10 @@ After several rounds of look boards, the owner chose:
   widest four fit across a phone), a rounded double border, a type stamp and
   the cost with our own hexagon along the top, the art as an evidence photo
   with photo corners, a typed name label, one line of rule text, a red rubber
-  stamp for a status effect, and the push as a number plus a mini Case meter
-  (the red needle shows how far the card moves the real meter, toward Capture
-  for the Detective, Escape for the Vigilante).
+  stamp for a status effect, and the push as a big number with a "Pushes"
+  label. (A mini Case meter showing the push was tried and dropped: it always
+  started from the middle, so it showed the wrong position once the meter had
+  moved.)
 - **Hand interaction.** Tap a card to lift and grow it in place; press and hold
   to inspect a big copy without selecting; drag a card up onto the board to
   stage it in your slot (tap it again to take it back). Nothing is played
