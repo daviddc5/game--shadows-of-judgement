@@ -59,11 +59,14 @@ After several rounds of look boards, the owner chose:
   about 55% on a phone, so a non-gamer playtester found the small text too
   small to read. Keep body text at 24 px or more in game units (about 13 px on
   a phone) and card names at 24 px.
-- **Cards look like cards.** Real trading-card proportions (176 × 246, about
-  5 : 7; the widest four fit across a phone), the push as a round badge on the
-  art, and a text box under the art holding a status effect (in red), a special
-  card's short rule, or a plain card's flavour line. Everything a player needs
-  is on the card itself; there is no explanation line above the hand.
+- **Cards look like cards, with a zoom preview.** Real trading-card proportions
+  (176 × 246, about 5 : 7; the widest four fit across a phone). Hand cards are
+  compact (type, cost, name, art, a big number, and a red tag for a status
+  effect). Selecting one shows the full card, 1.25 times larger, in your own
+  slot: a round number badge on the art and a text box under it holding the
+  effect (in red), the card's short rule, or its flavour line. There is no
+  explanation line above the hand. (Chosen from five mock-ups: zoom preview,
+  fan, wide 2 x 2, list and carousel.)
 - **No newspaper framing.** That look was liked for its font and restraint,
   not for being a newspaper.
 - **Board themes are a personalisation option**, like card games such as

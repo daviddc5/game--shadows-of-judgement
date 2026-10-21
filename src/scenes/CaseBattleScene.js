@@ -418,7 +418,12 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- cards
 
-  buildCardFace(card, side) {
+  /**
+   * A card. `compact` is the hand version: name, art and a big number, no text
+   * box. Everywhere else, and in the zoomed preview of the selected card, the
+   * full card has a round number badge and a text box under the art.
+   */
+  buildCardFace(card, side, compact = false) {
     const style = this.theme.cards[side];
     const ink = hex(style.ink);
     const top = -CARD_H / 2;
@@ -455,9 +460,43 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     const art = this.buildCardArt(card, side, style);
 
-    // The push as a round badge on the corner of the art, like a stat on a
-    // trading card. Traps show their sprung value.
+    // Traps show their sprung value.
     const push = pushFor(this.state, card, card.bigPush ?? card.push);
+    const numberColor = side === "vigilante" ? hex(this.theme.red) : ink;
+    if (compact) {
+      const number = this.add
+        .text(0, ART_Y + ART_H / 2 + 40, `${push}`, {
+          fontFamily: FONT_BODY,
+          fontSize: push >= 100 ? "46px" : "54px",
+          fontStyle: "600",
+          color: numberColor,
+        })
+        .setOrigin(0.5);
+      const tag = [];
+      if (card.effect) {
+        const t = this.add
+          .text(0, ART_Y + ART_H / 2 - 2, EFFECTS[card.effect].name, {
+            fontFamily: FONT_BODY,
+            fontSize: "22px",
+            fontStyle: "600",
+            color: "#f4f2ec",
+          })
+          .setOrigin(0.5);
+        const pill = this.add
+          .graphics()
+          .fillStyle(this.theme.red, 1)
+          .fillRoundedRect(-t.width / 2 - 12, t.y - 16, t.width + 24, 32, 16);
+        tag.push(pill, t);
+      }
+      c.add([outline, bg, ...art, ...tag, number, icon, typeLabel, cost, name]);
+      c.setSize(CARD_W, CARD_H);
+      c.bg = bg;
+      c.edge = style.edge;
+      return c;
+    }
+
+    // The push as a round badge on the corner of the art, like a stat on a
+    // trading card.
     const badgeX = ART_W / 2 - 32;
     const badgeY = ART_Y + ART_H / 2 - 30;
     const badge = this.add.circle(badgeX, badgeY, 28, style.bg).setStrokeStyle(3, style.ink);
@@ -466,7 +505,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         fontFamily: FONT_BODY,
         fontSize: push >= 100 ? "28px" : "36px",
         fontStyle: "600",
-        color: side === "vigilante" ? hex(this.theme.red) : ink,
+        color: numberColor,
       })
       .setOrigin(0.5);
 
@@ -558,12 +597,13 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   renderHand() {
+    this.clearPreview();
     this.handCards.forEach((c) => c.destroy());
     this.handCards = [];
     const me = this.state.sides[this.playerSide];
     const n = me.hand.length;
     me.hand.forEach((card, i) => {
-      const c = this.buildCardFace(card, this.playerSide);
+      const c = this.buildCardFace(card, this.playerSide, true);
       const x = W / 2 + (i - (n - 1) / 2) * (CARD_W + 8);
       c.setPosition(x, HAND_Y);
       c.homeY = HAND_Y;
@@ -595,8 +635,26 @@ export default class CaseBattleScene extends Phaser.Scene {
     });
   }
 
+  /** The selected card, shown large in your own slot with its full text. */
+  showPreview(index) {
+    this.clearPreview();
+    const card = index == null ? null : this.state.sides[this.playerSide].hand[index];
+    if (!card) return;
+    const preview = this.buildCardFace(card, this.playerSide);
+    preview.bg.setStrokeStyle(4, this.theme.red);
+    preview.setPosition(SLOT.player.x, SLOT.player.y).setDepth(25).setScale(1.1).setAlpha(0);
+    this.tweens.add({ targets: preview, scale: 1.25, alpha: 1, duration: 150, ease: "Back.easeOut" });
+    this.preview = preview;
+  }
+
+  clearPreview() {
+    this.preview?.destroy();
+    this.preview = null;
+  }
+
   selectCard(index) {
     this.selectedIndex = index;
+    this.showPreview(index);
     this.handCards.forEach((c) => {
       const selected = c.index === index;
       this.tweens.add({ targets: c, y: selected ? HAND_Y - 40 : HAND_Y, scale: selected ? 1.06 : 1, duration: 140 });
@@ -662,6 +720,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.waitButton.setEnabled(false);
     this.playButton.setEnabled(false);
     this.hintText.setText("");
+    this.clearPreview();
     if (!this.online) this.showOpponentLocked();
 
     const playerCard = index == null ? null : this.state.sides[this.playerSide].hand[index];
