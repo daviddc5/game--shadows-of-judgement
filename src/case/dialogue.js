@@ -18,37 +18,39 @@
 //   win, lose     the match is over
 
 export const LINES = {
-  // Deniz Kaya: confident, playful, loves the chase and never sounds worried.
+  // Deniz Kaya: young, clever, cheeky. Always has a trick up his sleeve and a
+  // joke ready; treats the case like the best game ever (think Jaden Yuki).
   detective: {
-    start: ["A vigilante, huh? Let's go find them!", "New case! Somebody out there is having way too much fun.", "Tonight's the night. I can feel it."],
-    QUICK: ["Little leads add up!", "Someone always saw something.", "Ask around, follow the trail."],
-    NORMAL: ["The file's getting thicker!", "Another piece of the puzzle.", "Evidence doesn't lie."],
-    POWER: ["Got a warrant. Let's see who's home!", "Time to bring the whole department!", "All in. This is the big one!"],
-    COUNTER: ["Knew they'd go big. Called it!", "Ha! Saw that one coming."],
-    BAIT: ["Took the bait! Wrong rooftop, buddy.", "A fake raid, and they fell for it!"],
-    AMBUSH: ["Resting? Not me. Been parked outside all night!", "Caught napping. Worth the cold coffee!"],
-    WAIT: ["Patience. Let them make the next move.", "Save up, then hit hard."],
-    fizzle: ["Braced for a raid that never came!", "Jumpy! Somebody's feeling the heat."],
-    winning: ["I can almost hear the footsteps!", "Same streets, same hours. I know the pattern now."],
-    losing: ["Slippery one. I love a challenge!", "The trail's cold, not gone."],
-    win: ["Got 'em! Case closed.", "What a chase. Worth every sleepless night!"],
-    lose: ["Slipped away... Next time!", "Lost the trail. Okay, round two."],
+    start: ["Ooh, a vigilante! This beats paperwork any day.", "Alright, mystery person. Let's have some fun!", "Coffee: check. Gut feeling: check. Let's go!"],
+    QUICK: ["A little poke to see what happens!", "Small trick, big trouble. Heh.", "Just warming up!"],
+    NORMAL: ["Another clue for the pile. I love this part!", "Heh, the file's getting chunky.", "Sneaky, but I'm sneakier."],
+    POWER: ["Time for my ace! Warrant's signed!", "Surprise! Didn't see that one coming, huh?", "Okay, no more playing around. Well, a little more."],
+    COUNTER: ["Called it! Big moves are so easy to read.", "Ha! I had a trick up my sleeve for that."],
+    BAIT: ["Fake raid, real results! Heh.", "Took the bait! I'm hilarious."],
+    AMBUSH: ["Nap time? Nope! I brought snacks for the stakeout.", "Caught resting! Good thing I never sleep on a case."],
+    WAIT: ["Let's see what they've got. Popcorn ready.", "Saving my best trick for later."],
+    fizzle: ["Blocked nothing! That was kind of funny.", "Ooh, jumpy! Somebody's nervous."],
+    winning: ["This is way too much fun!", "Almost got 'em! Don't stop now!"],
+    losing: ["Okay, they're good. Now it's interesting!", "No sweat. I always have one more trick."],
+    win: ["Gotcha! Case closed, and I'm starving.", "That was awesome! Best case ever."],
+    lose: ["Ha! They got me. I want a rematch!", "Slipped away... Okay, that was a good one."],
   },
-  // Giovanni Santoro: cool, composed, mysterious. Few words, total control.
+  // Giovanni Santoro: a smart, classy Italian boss. Calm, calculating, always
+  // three moves ahead (think Giovanni from Pokémon, with Kira's composure).
   vigilante: {
-    start: ["Another detective. They never learn.", "The city needs me tonight.", "Let them search. They'll find only shadows."],
-    QUICK: ["A whisper here, a rumour there.", "Small moves. They add up."],
-    NORMAL: ["The city sees what I want it to see.", "Another night's work."],
-    POWER: ["Let the whole city watch.", "Now they'll remember who protects them.", "Let the detective answer that."],
-    COUNTER: ["Predictable. Chasing the noise.", "I saw that coming."],
-    BAIT: ["Guarding the wrong door.", "Exactly where I wanted them."],
-    AMBUSH: ["They rested. I don't.", "While they slept, I moved."],
-    WAIT: ["Patience.", "Let them come to me."],
-    fizzle: ["Flinching at shadows.", "Fear makes them careless."],
-    winning: ["One more street, and I'm a rumour again.", "They're losing the trail."],
-    losing: ["Closer than they should be.", "The exits are closing. Interesting."],
-    win: ["Gone. As if I was never here.", "The city keeps my secret."],
-    lose: ["Caught... for now.", "They earned it. This changes nothing."],
+    start: ["Allora. Another detective comes to play.", "Every piece is where I placed it. Let us begin.", "A pleasant evening. For me."],
+    QUICK: ["Piano, piano. Slowly, the city turns.", "A small move. Nothing is small to me."],
+    NORMAL: ["The city sees exactly what I allow.", "Business as usual."],
+    POWER: ["Now the whole city watches. Bene.", "This is what a boss does.", "Let the detective explain that to the press."],
+    COUNTER: ["Predictable. I counted on it.", "Every move, foreseen."],
+    BAIT: ["Exactly as I planned.", "They guarded the wrong door. Perfetto."],
+    AMBUSH: ["Resting? A luxury I never allow myself.", "While they slept, I worked."],
+    WAIT: ["Patience is a weapon.", "Let them make the first mistake."],
+    fizzle: ["Afraid of shadows. Che peccato.", "Nerves. They always betray the amateur."],
+    winning: ["Check. Soon, checkmate.", "One more street, and I am a rumour again."],
+    losing: ["Closer than expected. Interesting.", "A setback. I have prepared for setbacks."],
+    win: ["Arrivederci. As if I was never here.", "The city keeps my secret. As always."],
+    lose: ["Caught... A rare mistake. It won't happen twice.", "Enjoy this, Detective. Few ever do."],
   },
 };
 

@@ -29,10 +29,11 @@ Kira say these things to L?). They think about each other instead.
   winning or losing (only when the chase just moved that way), and the result.
 - At most one line per turn, ordinary cards only sometimes, and no line
   repeats in a match.
-- Each character has their own voice. Deniz is confident and playful and
-  loves a good fight (the owner's reference: Jaden Yuki from Yu-Gi-Oh! GX).
-  Giovanni is cool, composed and mysterious, a boss who says little (the
-  owner's reference: Giovanni from Pokémon).
+- Each character has their own voice. Deniz is young, clever and cheeky,
+  with a trick up his sleeve and a sense of humour (the owner's reference:
+  Jaden Yuki from Yu-Gi-Oh! GX). Giovanni is a smart, classy Italian boss,
+  calm and calculating (the owner's references: Giovanni from Pokémon, Kira
+  from Death Note).
 - Lines live in one data file, so adding a character means adding their lines.
 
 ## 2. Status effects
