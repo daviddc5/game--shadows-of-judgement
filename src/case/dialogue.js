@@ -36,23 +36,24 @@ export const LINES = {
     // Losing bruises his ego: still joking, but clearly annoyed.
     lose: ["Gone. Right under my nose... Great. Just great.", "Ha... ha. Very funny. Nobody tell the chief.", "Fine. FINE. Enjoy it. I'm not losing twice."],
   },
-  // Giovanni Santoro: a smart, classy Italian boss. Calm, calculating, always
-  // three moves ahead (think Giovanni from Pokémon, with Kira's composure).
+  // Giovanni Santoro: a smart, classy boss with only a hint of Italian. Calm,
+  // calculating, always three moves ahead (think Giovanni from Pokémon, with
+  // Kira's composure).
   vigilante: {
-    start: ["Allora. Another detective comes to play.", "Every piece is where I placed it. Let us begin.", "A pleasant evening. For me."],
-    QUICK: ["Piano, piano. Slowly, the city turns.", "A small move. Nothing is small to me."],
+    start: ["Another detective comes to play.", "Every piece is where I placed it. Let us begin.", "A pleasant evening. For me."],
+    QUICK: ["Slowly, slowly, the city turns.", "A small move. Nothing is small to me."],
     NORMAL: ["The city sees exactly what I allow.", "Business as usual."],
     POWER: ["Now the whole city watches. Bene.", "This is what a boss does.", "Let the detective explain that to the press."],
     COUNTER: ["Predictable. I counted on it.", "Every move, foreseen."],
-    BAIT: ["Exactly as I planned.", "They guarded the wrong door. Perfetto."],
+    BAIT: ["Exactly as I planned.", "They guarded the wrong door. Perfect."],
     AMBUSH: ["Resting? A luxury I never allow myself.", "While they slept, I worked."],
     WAIT: ["Patience is a weapon.", "Let them make the first mistake."],
-    fizzle: ["Afraid of shadows. Che peccato.", "Nerves. They always betray the amateur."],
+    fizzle: ["Afraid of shadows. What a pity.", "Nerves. They always betray the amateur."],
     winning: ["Check. Soon, checkmate.", "One more street, and I am a rumour again."],
     losing: ["Closer than expected. Interesting.", "A setback. I have prepared for setbacks."],
     win: ["Arrivederci. As if I was never here.", "The city keeps my secret. As always."],
     // Caught means it's over: still composed, but bitter.
-    lose: ["Handcuffs. How vulgar.", "Years of planning, undone by a detective with a coffee stain.", "Caught. Che vergogna. The city will forget me by morning."],
+    lose: ["Handcuffs. How vulgar.", "Years of planning, undone by a detective with a coffee stain.", "Caught. The city will forget me by morning."],
   },
 };
 
