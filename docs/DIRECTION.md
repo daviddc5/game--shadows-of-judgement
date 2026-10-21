@@ -55,6 +55,11 @@ After several rounds of look boards, the owner chose:
 - **Mostly black and white**, colour only in the character portraits, and **a
   touch of red** (the needle, the Vigilante's numbers, your selected card, big
   moments like "Countered!"). Plain and simple: no rain, glows or textures.
+- **Text big enough for a phone.** The game is drawn 750 px wide and shrunk to
+  about 55% on a phone, so a non-gamer playtester found the small text too
+  small to read. Keep body text at 24 px or more in game units (about 13 px on
+  a phone) and card names at 26 px. Card rules are explained in large text
+  when a card is selected instead of in a tiny line on the card.
 - **No newspaper framing.** That look was liked for its font and restraint,
   not for being a newspaper.
 - **Board themes are a personalisation option**, like card games such as
