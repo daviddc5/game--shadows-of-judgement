@@ -688,9 +688,12 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   /**
-   * The two revealed cards fly at each other. On impact the game freezes for a
-   * beat (hit stop) and ink flies; then the card pushing harder this turn holds
-   * its ground and knocks the other one back.
+   * The two revealed cards fly at each other: they wind up, dash in leaving
+   * afterimages, and on impact the game freezes for a beat (hit stop) with
+   * speed lines and a zoom punch. Then they lock and grind, sparks along the
+   * seam, while the card pushing harder this turn slowly gains ground (a close
+   * turn grinds longer). Finally it breaks through: the other card cracks and
+   * is knocked back.
    */
   async clash(faces, cards, events) {
     const fighters = ["player", "opponent"].filter((who) => cards[who]);
@@ -698,62 +701,183 @@ export default class CaseBattleScene extends Phaser.Scene {
     const cx = W / 2;
     const cy = SLOT.player.y;
     const z = this.z(cy);
+    const red = this.theme.red;
+    const camera = this.cameras.main;
 
     if (fighters.length === 1) {
       // Nobody to hit: the lone card lunges at the empty side.
       const who = fighters[0];
       const lunge = who === "player" ? -46 : 46;
       await tween(this, { targets: faces[who], x: SLOT[who].x + lunge, duration: 170, ease: "Back.easeIn" });
-      this.cameras.main.shake(90, 0.004);
+      camera.shake(90, 0.004);
       await tween(this, { targets: faces[who], x: SLOT[who].x, duration: 220, ease: "Quad.easeOut" });
       return;
     }
 
+    // Each side's push this turn, as printed on the cards (a cancelled or fizzled card pushes 0).
     const strength = { player: 0, opponent: 0 };
     for (const e of events) {
-      if (e.from === undefined) continue;
-      strength[e.side === this.playerSide ? "player" : "opponent"] += Math.abs(e.to - e.from);
+      if (!["push", "counter", "sprung"].includes(e.type)) continue;
+      const amount = pushFor(this.state, e.card, e.type === "sprung" ? e.card.bigPush : e.card.push);
+      strength[e.side === this.playerSide ? "player" : "opponent"] += amount;
     }
     const winner =
       strength.player > strength.opponent ? "player" : strength.opponent > strength.player ? "opponent" : null;
+    const loser = winner && (winner === "player" ? "opponent" : "player");
     const out = { player: 1, opponent: -1 }; // the direction away from the centre
-
+    const sideOf = { player: this.playerSide, opponent: this.opponentSide };
+    const meetX = (who, seam = cx) => seam + out[who] * (CARD_W / 2 + 2);
     fighters.forEach((who) => faces[who].setDepth(30));
+
+    // Wind up.
     await Promise.all(
       fighters.map((who) =>
         tween(this, {
           targets: faces[who],
-          x: cx + out[who] * (CARD_W / 2 + 2),
-          angle: -out[who] * 4,
-          duration: 260,
-          ease: "Back.easeIn",
+          x: SLOT[who].x + out[who] * 22,
+          angle: out[who] * 6,
+          scale: 0.96,
+          duration: 200,
+          ease: "Sine.easeOut",
         }),
       ),
     );
 
-    // Impact.
-    const ring = this.add.circle(cx, cy, 20).setStrokeStyle(6, z.ink).setDepth(44);
-    this.tweens.add({ targets: ring, scale: 7, alpha: 0, duration: 420, ease: "Cubic.easeOut", onComplete: () => ring.destroy() });
-    this.burst(cx, cy, "cb-shard", z.ink, 30, 560);
-    this.burst(cx, cy, "cb-spark", this.theme.red, 10, 420);
-    this.cameras.main.shake(200, 0.014);
-    await wait(this, 130); // hit stop
+    // Dash, leaving afterimages.
+    let frame = 0;
+    const ghosts = () => {
+      if (frame++ % 2) return;
+      fighters.forEach((who) => {
+        const f = faces[who];
+        const ghost = this.add
+          .rectangle(f.x, f.y, CARD_W, CARD_H, this.theme.cards[sideOf[who]].bg, 0.35)
+          .setStrokeStyle(2, this.theme.cards[sideOf[who]].edge, 0.35)
+          .setAngle(f.angle)
+          .setDepth(29);
+        this.tweens.add({ targets: ghost, alpha: 0, duration: 200, onComplete: () => ghost.destroy() });
+      });
+    };
+    await Promise.all(
+      fighters.map((who, i) =>
+        tween(this, {
+          targets: faces[who],
+          x: meetX(who),
+          angle: -out[who] * 3,
+          scale: 1,
+          duration: 170,
+          ease: "Expo.easeIn",
+          onUpdate: i === 0 ? ghosts : undefined,
+        }),
+      ),
+    );
 
+    // Impact: speed lines, zoom punch, hit stop.
+    const lines = this.add.graphics({ x: cx, y: cy }).setDepth(44);
+    lines.fillStyle(z.ink, 1);
+    for (let i = 0; i < 28; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const w = 0.015 + Math.random() * 0.025;
+      const inner = 70 + Math.random() * 40;
+      const outer = 330 + Math.random() * 200;
+      lines.fillTriangle(
+        Math.cos(a - w) * inner, Math.sin(a - w) * inner,
+        Math.cos(a) * outer, Math.sin(a) * outer,
+        Math.cos(a + w) * inner, Math.sin(a + w) * inner,
+      );
+    }
+    lines.setScale(0.8);
+    this.tweens.add({ targets: lines, scale: 1.15, duration: 140, ease: "Cubic.easeOut" });
+    this.tweens.add({ targets: lines, alpha: 0, delay: 140, duration: 260, onComplete: () => lines.destroy() });
+    camera.flash(80, 255, 255, 255);
+    camera.zoomTo(1.08, 60);
+    camera.shake(160, 0.012);
+    this.burst(cx, cy, "cb-shard", z.ink, 18, 450);
+    await wait(this, 140);
+    camera.zoomTo(1, 260, "Cubic.easeOut");
+
+    // Grind: locked together, the stronger card gains ground. Closer turns grind longer.
+    const total = strength.player + strength.opponent;
+    const closeness = total ? 1 - Math.abs(strength.player - strength.opponent) / total : 1;
+    const grindMs = 380 + closeness * 520;
+    const gain = winner ? -out[winner] * 28 : 0; // the seam moves towards the loser
+    const sparks = this.add
+      .particles(cx, cy, "cb-spark", {
+        y: { min: -CARD_H * 0.42, max: CARD_H * 0.42 },
+        speedX: { min: -170, max: 170 },
+        speedY: { min: -280, max: -60 },
+        gravityY: 900,
+        scale: { start: 0.55, end: 0 },
+        lifespan: 380,
+        frequency: 16,
+        tint: [z.ink, red],
+      })
+      .setDepth(45);
+    const score = this.add
+      .text(cx, cy + CARD_H / 2 + 28, `${strength.opponent}  vs  ${strength.player}`, {
+        fontFamily: FONT_BODY,
+        fontSize: "26px",
+        fontStyle: "600",
+        color: hex(z.ink),
+      })
+      .setOrigin(0.5)
+      .setDepth(45);
+    camera.shake(grindMs, 0.0025);
+    await new Promise((resolve) =>
+      this.tweens.addCounter({
+        from: 0,
+        to: 1,
+        duration: grindMs,
+        ease: "Sine.easeInOut",
+        onUpdate: (tw) => {
+          const seam = cx + gain * tw.getValue();
+          const jitter = Math.sin(this.time.now * 0.09) * 2;
+          fighters.forEach((who) => (faces[who].x = meetX(who, seam) + jitter * out[who]));
+          sparks.setX(seam);
+          score.setX(seam);
+        },
+        onComplete: resolve,
+      }),
+    );
+    sparks.stop();
+    this.time.delayedCall(450, () => sparks.destroy());
+    score.destroy();
+
+    // Break through.
+    const seam = cx + gain;
+    this.burst(seam, cy, "cb-shard", z.ink, 26, 520);
+    this.burst(seam, cy, "cb-spark", red, 12, 420);
+    camera.shake(220, 0.016);
+    if (loser) {
+      const style = this.theme.cards[sideOf[loser]];
+      const crack = this.add.graphics().lineStyle(3, style.ink, 0.9);
+      const edge = -out[loser] * (CARD_W / 2);
+      for (let k = 0; k < 3; k++) {
+        let x = edge;
+        let y = (Math.random() - 0.5) * 60;
+        const points = [{ x, y }];
+        for (let i = 0; i < 5; i++) {
+          x += out[loser] * (14 + Math.random() * 14);
+          y += (Math.random() - 0.5) * 52;
+          points.push({ x, y });
+        }
+        crack.strokePoints(points);
+      }
+      faces[loser].add(crack);
+    }
     await Promise.all(
       fighters.map((who) => {
-        const knocked = winner && who !== winner;
+        const knocked = who === loser;
         return tween(this, {
           targets: faces[who],
-          x: SLOT[who].x + (knocked ? out[who] * 34 : 0),
-          angle: knocked ? out[who] * 9 : 0,
-          duration: knocked ? 340 : 260,
+          x: SLOT[who].x + (knocked ? out[who] * 44 : 0),
+          angle: knocked ? out[who] * 16 : 0,
+          duration: knocked ? 360 : 280,
           ease: knocked ? "Back.easeOut" : "Cubic.easeOut",
         });
       }),
     );
-    if (winner) {
-      const loser = winner === "player" ? "opponent" : "player";
-      await tween(this, { targets: faces[loser], x: SLOT[loser].x, angle: 0, duration: 220, ease: "Sine.easeInOut" });
+    if (loser) {
+      await tween(this, { targets: faces[loser], x: SLOT[loser].x, angle: 0, duration: 240, ease: "Sine.easeInOut" });
     }
     fighters.forEach((who) => faces[who].setDepth(0));
   }
