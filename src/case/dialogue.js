@@ -33,7 +33,8 @@ export const LINES = {
     winning: ["This is way too much fun!", "Almost got 'em! Don't stop now!"],
     losing: ["Okay, they're good. Now it's interesting!", "No sweat. I always have one more trick."],
     win: ["Gotcha! Case closed, and I'm starving.", "That was awesome! Best case ever."],
-    lose: ["Ha! They got me. I want a rematch!", "Slipped away... Okay, that was a good one."],
+    // Losing bruises his ego: still joking, but clearly annoyed.
+    lose: ["Gone. Right under my nose... Great. Just great.", "Ha... ha. Very funny. Nobody tell the chief.", "Fine. FINE. Enjoy it. I'm not losing twice."],
   },
   // Giovanni Santoro: a smart, classy Italian boss. Calm, calculating, always
   // three moves ahead (think Giovanni from Pokémon, with Kira's composure).
@@ -50,7 +51,8 @@ export const LINES = {
     winning: ["Check. Soon, checkmate.", "One more street, and I am a rumour again."],
     losing: ["Closer than expected. Interesting.", "A setback. I have prepared for setbacks."],
     win: ["Arrivederci. As if I was never here.", "The city keeps my secret. As always."],
-    lose: ["Caught... A rare mistake. It won't happen twice.", "Enjoy this, Detective. Few ever do."],
+    // Caught means it's over: still composed, but bitter.
+    lose: ["Handcuffs. How vulgar.", "Years of planning, undone by a detective with a coffee stain.", "Caught. Che vergogna. The city will forget me by morning."],
   },
 };
 
