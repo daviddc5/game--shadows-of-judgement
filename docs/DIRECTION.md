@@ -37,7 +37,8 @@ by whether they give players more to read, not more to calculate.
 | WAIT banks +1 extra energy | Makes saving up a real, visible choice. The owner especially likes this. |
 | COUNTER only cancels POWER | Turns COUNTER into a gamble instead of an always-good card. |
 | Removed card speed | It only mattered on the final turn. Both cards now land together. |
-| Rising stakes (+4 push per turn), turn-12 verdict | Tug-of-war stalls otherwise; median game is ~7 turns. |
+| Rising stakes (+5 push per turn), turn-12 verdict | Tug-of-war stalls otherwise; median game is ~6 turns. |
+| Clean card numbers: multiples of 5, one push per type and cost | Playtesters found numbers like 19 and 7 hard to add up; same-cost cards differing by 1–2 added nothing to read. |
 | Added BAIT (beats COUNTER) and AMBUSH (beats WAIT) | Closes the mind-game loop so every turn is a read, not just "push hardest". |
 | AI reads public info only (energy, recent plays) | It should be beatable by reading it, and never cheat. |
 | New look for the battle screen (noir: rain, skyline, cyan vs crimson) | Built by Claude as part of the experiment. The owner "doesn't hate it, doesn't love it": the visual style is still open. |
