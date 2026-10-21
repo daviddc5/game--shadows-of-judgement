@@ -26,8 +26,10 @@ two leads feel like people with a rivalry. No rule changes.
   - being close to winning or losing
   - the final result
 - At most one line per moment, and not every turn, so it stays special.
-- Each character has their own voice: Deniz is calm, dry and methodical;
-  Giovanni is theatrical and charming.
+- Each character has their own voice. Deniz is confident and playful and
+  loves a good fight (the owner's reference: Jaden Yuki from Yu-Gi-Oh! GX).
+  Giovanni is cool, composed and mysterious, a boss who says little (the
+  owner's reference: Giovanni from Pokémon).
 - Lines live in one data file, so adding a character means adding their lines.
 
 ## 2. Status effects

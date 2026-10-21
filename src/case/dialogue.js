@@ -15,31 +15,31 @@
 //   win, lose  the match is over
 
 export const LINES = {
-  // Deniz Kaya: calm, dry, methodical.
+  // Deniz Kaya: confident, playful, loves a good fight and never sounds worried.
   detective: {
-    start: ["You left a trail. You always do.", "I've read your file. Twice.", "Let's keep this simple."],
-    reply: ["We'll see.", "Then you know how this ends.", "Talk all you want."],
-    power: ["Everything on the table.", "That's the whole file.", "Read it and weep."],
-    countered: ["Saw that coming a mile off.", "Too loud.", "Predictable."],
-    fizzle: ["Jumping at shadows?", "Nothing there to stop."],
-    trap: ["And there it is.", "Thank you for your cooperation."],
-    winning: ["The walls are closing in.", "Getting tired?"],
-    losing: ["Not over yet.", "I've come back from worse."],
-    win: ["Case closed.", "You have the right to remain silent."],
-    lose: ["This isn't the end.", "Next time."],
+    start: ["Alright, let's make this fun!", "Ready when you are. I'm always ready.", "Finally, a case worth getting up for!"],
+    reply: ["Big words! Let's see them.", "Ha! I like you already.", "Bring it on!"],
+    power: ["Now that's what I'm talking about!", "Here comes the big one!", "Boom! Didn't see that coming, huh?"],
+    countered: ["Called it!", "Nice try! Not today.", "I had a feeling you'd do that."],
+    fizzle: ["Ha! Wrong guess!", "Whoa, nervous much?"],
+    trap: ["Gotcha!", "Hook, line and sinker!"],
+    winning: ["This is too much fun!", "I'm just getting warmed up!"],
+    losing: ["Okay, now it's interesting.", "Don't count me out yet!"],
+    win: ["That was awesome! Rematch?", "Case closed! Good game."],
+    lose: ["Wow, you're good. Next time!", "Okay, you got me. This time."],
   },
-  // Giovanni Santoro: theatrical, charming.
+  // Giovanni Santoro: cool, composed, mysterious. Few words, total control.
   vigilante: {
-    start: ["Ah, Detective. Shall we dance?", "The city is watching. Smile.", "Buonasera, Detective."],
-    reply: ["Charming. Let's begin.", "Bravo. Now watch."],
-    power: ["Lights, camera, justice!", "Applause, please.", "The grand finale."],
-    countered: ["Oh, Detective. So obvious.", "Not tonight."],
-    fizzle: ["Nervous, Detective?", "Guarding against nothing?"],
-    trap: ["Every magician needs a volunteer.", "You fell for the show."],
-    winning: ["Can you hear the crowd?", "The night is mine."],
-    losing: ["A small setback.", "Don't get comfortable."],
-    win: ["Arrivederci, Detective.", "The city remembers me."],
-    lose: ["You'll never hold me for long.", "Enjoy it while it lasts."],
+    start: ["So. You found me.", "You're persistent, Detective. That won't be enough.", "Let's not waste each other's time."],
+    reply: ["Enthusiasm. How quaint.", "Talk is cheap, Detective."],
+    power: ["Kneel.", "This city belongs to me.", "Witness true power."],
+    countered: ["Did you think I wouldn't see that?", "Amateur."],
+    fizzle: ["Fear makes you careless.", "You flinch at shadows."],
+    trap: ["Exactly as planned.", "You walked right into it."],
+    winning: ["It's over. You just don't know it yet.", "Struggle if you like."],
+    losing: ["Interesting.", "Don't mistake patience for weakness."],
+    win: ["We won't meet again.", "The city has made its choice."],
+    lose: ["This changes nothing.", "Enjoy it, Detective. It won't last."],
   },
 };
 
