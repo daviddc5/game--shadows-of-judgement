@@ -59,7 +59,10 @@ After several rounds of look boards, the owner chose:
   about 55% on a phone, so a non-gamer playtester found the small text too
   small to read. Keep body text at 24 px or more in game units (about 13 px on
   a phone) and card names at 26 px. Card rules are explained in large text
-  when a card is selected instead of in a tiny line on the card.
+  when a card is selected.
+- **A text box under the art**, as in most trading card games: a status effect
+  (in red), a special card's short rule, or a plain card's flavour line. The
+  full explanation still appears in large text when a card is selected.
 - **No newspaper framing.** That look was liked for its font and restraint,
   not for being a newspaper.
 - **Board themes are a personalisation option**, like card games such as

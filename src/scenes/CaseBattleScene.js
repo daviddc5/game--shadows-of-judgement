@@ -27,14 +27,14 @@ const FONT_DISPLAY = FONTS.display;
 const FONT_BODY = FONTS.body;
 
 const METER = { x: 60, y: 372, w: 630, h: 18 };
-const SLOT = { opponent: { x: 230, y: 625 }, player: { x: 520, y: 625 } };
+const SLOT = { opponent: { x: 230, y: 632 }, player: { x: 520, y: 632 } };
 const CARD_W = 168;
-const CARD_H = 260;
+const CARD_H = 300;
 // Art box on every card. Artists: draw at 16:9, at least 640×360 (shown at 148×84).
 const ART_W = 148;
 const ART_H = 84;
-const ART_Y = 4;
-const HAND_Y = 1075;
+const ART_Y = -20;
+const HAND_Y = 1080;
 
 const TYPE_NAMES = {
   COUNTER: "Counter",
@@ -313,7 +313,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         ? "You push the needle toward Capture ▶"
         : "◀ You push the needle toward Escape";
     this.add
-      .text(W / 2, y + h / 2 + 56, dirText, { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.soft) })
+      .text(W / 2, y + h / 2 + 50, dirText, { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.soft) })
       .setOrigin(0.5);
 
     this.meterValue = this.state.caseValue;
@@ -337,11 +337,12 @@ export default class CaseBattleScene extends Phaser.Scene {
       const { x, y } = SLOT[who];
       const z = this.z(y);
       this.add.rectangle(x, y, CARD_W, CARD_H).setStrokeStyle(1, z.line, 0.3);
+      const labelY = y - CARD_H / 2 - 20;
       this.add
-        .text(x, y - CARD_H / 2 - 20, who === "player" ? "You" : "Them", {
+        .text(x, labelY, who === "player" ? "You" : "Them", {
           fontFamily: FONT_BODY,
           fontSize: "24px",
-          color: hex(z.soft),
+          color: hex(this.z(labelY).soft),
         })
         .setOrigin(0.5);
     });
@@ -354,7 +355,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.hintText = this.add
-      .text(W / 2, 790, "", {
+      .text(W / 2, 812, "", {
         fontFamily: FONT_BODY,
         fontSize: "26px",
         color: hex(this.z(790).ink),
@@ -416,7 +417,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       })
       .setOrigin(1, 0.5);
     const name = this.add
-      .text(0, top + 64, card.name, {
+      .text(0, top + 60, card.name, {
         fontFamily: FONT_BODY,
         fontSize: "26px",
         fontStyle: "600",
@@ -429,36 +430,57 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     const art = this.buildCardArt(card, side, style);
 
-    // Traps show their sprung value; selecting the card explains the rest
-    // (cardHelp), since a rule line on the card was too small to read on a phone.
+    // Text box under the art, like most trading card games: a status effect
+    // (in red), a special card's rule, or a plain card's flavour line. The
+    // selected card's full explanation is shown in large text (cardHelp).
+    const boxTop = ART_Y + ART_H / 2 + 6;
+    const boxH = 52;
+    const box = this.add.rectangle(0, boxTop + boxH / 2, CARD_W - 16, boxH).setStrokeStyle(1, style.ink, 0.35);
+    const textBox = [box];
+    const small = pushFor(this.state, card);
+    const sprung = card.bigPush && pushFor(this.state, card, card.bigPush);
+    const effectRule = { shaken: "Power costs +2", cornered: "They can't Wait", heat: `+${this.state.rules.heatDrift} for 2 turns` };
+    const typeRule = {
+      COUNTER: "Cancels a Power card",
+      POWER: "A Counter cancels it",
+      BAIT: `${sprung} vs Counter, else ${small}`,
+      AMBUSH: `${sprung} vs Wait, else ${small}`,
+    };
+    const boxText = (y, text, size, color, weight = "normal") =>
+      this.add
+        .text(0, y, text, {
+          fontFamily: FONT_BODY,
+          fontSize: size,
+          fontStyle: weight,
+          color,
+          align: "center",
+          lineSpacing: -5,
+          wordWrap: { width: CARD_W - 26 },
+        })
+        .setOrigin(0.5);
+    if (card.effect) {
+      textBox.push(
+        boxText(boxTop + 14, EFFECTS[card.effect].name, "21px", hex(this.theme.red), "600"),
+        boxText(boxTop + 37, effectRule[card.effect], "20px", ink),
+      );
+    } else if (typeRule[card.type]) {
+      textBox.push(boxText(boxTop + boxH / 2, typeRule[card.type], "20px", ink));
+    } else if (card.flavor) {
+      textBox.push(boxText(boxTop + boxH / 2, card.flavor, "19px", ink).setAlpha(0.8));
+    }
+
+    // Traps show their sprung value as the big number.
     const push = pushFor(this.state, card, card.bigPush ?? card.push);
     const big = this.add
-      .text(0, ART_Y + ART_H / 2 + 40, `${push}`, {
+      .text(0, boxTop + boxH + 32, `${push}`, {
         fontFamily: FONT_BODY,
         fontSize: "52px",
         fontStyle: "600",
         color: side === "vigilante" ? hex(this.theme.red) : ink,
       })
       .setOrigin(0.5);
-    // A status effect card names its effect on a red tag over the art.
-    const tag = [];
-    if (card.effect) {
-      const t = this.add
-        .text(0, ART_Y + ART_H / 2 - 4, EFFECTS[card.effect].name, {
-          fontFamily: FONT_BODY,
-          fontSize: "22px",
-          fontStyle: "600",
-          color: "#f4f2ec",
-        })
-        .setOrigin(0.5);
-      const pill = this.add
-        .graphics()
-        .fillStyle(this.theme.red, 1)
-        .fillRoundedRect(-t.width / 2 - 12, t.y - 16, t.width + 24, 32, 16);
-      tag.push(pill, t);
-    }
 
-    c.add([outline, bg, ...art, ...tag, icon, typeLabel, cost, name, big]);
+    c.add([outline, bg, ...art, ...textBox, icon, typeLabel, cost, name, big]);
     c.setSize(CARD_W, CARD_H);
     c.bg = bg;
     c.edge = style.edge;
