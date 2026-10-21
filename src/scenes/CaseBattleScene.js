@@ -1085,12 +1085,11 @@ export default class CaseBattleScene extends Phaser.Scene {
     const paper = 0xf4f2ec;
     const { left, y } = who === "player" ? { left: 146, y: 880 } : { left: 180, y: 168 };
     const label = this.add
-      .text(0, 0, `${character.name.split(" ")[0].toUpperCase()} THINKS`, {
+      .text(0, 0, `${character.name.split(" ")[0]}, thinking…`, {
         fontFamily: FONT_BODY,
-        fontSize: "20px",
+        fontSize: "22px",
         fontStyle: "600",
-        color: "#6b665c",
-        letterSpacing: 2,
+        color: "#5e594f",
       })
       .setOrigin(0.5);
     const text = this.add.text(0, 0, line, {
@@ -1104,7 +1103,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     });
     text.setOrigin(0.5);
 
-    // A manga thought balloon: an oval with a "NAME THINKS" label, and small
+    // A manga thought balloon: an oval with a "Name, thinking…" label, and small
     // bubbles trailing to the portrait instead of a pointed tail. Baked into
     // a texture so it fades as one piece (the outline and fill would
     // otherwise show through each other at partial alpha).
