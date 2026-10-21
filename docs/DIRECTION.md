@@ -59,14 +59,22 @@ After several rounds of look boards, the owner chose:
   about 55% on a phone, so a non-gamer playtester found the small text too
   small to read. Keep body text at 24 px or more in game units (about 13 px on
   a phone) and card names at 24 px.
-- **Cards look like cards, with a zoom preview.** Real trading-card proportions
-  (176 × 246, about 5 : 7; the widest four fit across a phone). Hand cards are
-  compact (type, cost, name, art, a big number, and a red tag for a status
-  effect). Selecting one shows the full card, 1.25 times larger, in your own
-  slot: a round number badge on the art and a text box under it holding the
-  effect (in red), the card's short rule, or its flavour line. There is no
-  explanation line above the hand. (Chosen from five mock-ups: zoom preview,
-  fan, wide 2 x 2, list and carousel.)
+- **Cards look like cards: the "case file" design.** Chosen from four mock-ups
+  after looking at how popular digital card games lay out cards (rounded
+  corners and a frame, art doing most of the work, numbers in fixed badge
+  places, little text). The first versions copied the layout of an existing
+  game too closely, so the final design is built from our own world
+  (`src/ui/cardFace.js`): real card proportions (176 x 246, about 5 : 7; the
+  widest four fit across a phone), a rounded double border, a type stamp and
+  the cost with our own hexagon along the top, the art as an evidence photo
+  with photo corners, a typed name label, one line of rule text, a red rubber
+  stamp for a status effect, and the push as a number plus a mini Case meter
+  (the red needle shows how far the card moves the real meter, toward Capture
+  for the Detective, Escape for the Vigilante).
+- **Hand interaction.** Tap a card to lift and grow it in place; press and hold
+  to inspect a big copy without selecting; drag a card up onto the board to
+  play it (Play card still works). A phone buzz on select, and desktop keys: 1
+  to 4 pick a card, Enter plays it, W waits, Esc puts it back.
 - **No newspaper framing.** That look was liked for its font and restraint,
   not for being a newspaper.
 - **Board themes are a personalisation option**, like card games such as
