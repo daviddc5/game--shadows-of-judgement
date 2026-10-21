@@ -1084,6 +1084,15 @@ export default class CaseBattleScene extends Phaser.Scene {
     const ink = 0x111111;
     const paper = 0xf4f2ec;
     const { left, y } = who === "player" ? { left: 146, y: 880 } : { left: 180, y: 168 };
+    const label = this.add
+      .text(0, 0, `${character.name.split(" ")[0].toUpperCase()} THINKS`, {
+        fontFamily: FONT_BODY,
+        fontSize: "20px",
+        fontStyle: "600",
+        color: "#6b665c",
+        letterSpacing: 2,
+      })
+      .setOrigin(0.5);
     const text = this.add.text(0, 0, line, {
       fontFamily: FONT_BODY,
       fontSize: "28px",
@@ -1095,47 +1104,29 @@ export default class CaseBattleScene extends Phaser.Scene {
     });
     text.setOrigin(0.5);
 
-    // A manga balloon: an oval with a curved, tapering tail towards the
-    // portrait. Baked into a texture so it fades as one piece (the outline
-    // and fill would otherwise show through each other at partial alpha).
-    const rx = text.width * 0.62 + 22;
-    const ry = text.height * 0.72 + 14;
-    const cx = 18 + rx; // balloon centre, relative to the anchor beside the portrait
-    text.setX(cx);
-    const tip = { x: -16, y: ry * 0.6 };
-    const onEdge = (deg) => {
-      const r = (deg * Math.PI) / 180;
-      return { x: cx + Math.cos(r) * rx, y: Math.sin(r) * ry };
-    };
-    const curve = (from, to, bend) => {
-      const pts = [];
-      const ctrl = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 + bend };
-      for (let i = 0; i <= 10; i++) {
-        const t = i / 10;
-        pts.push({
-          x: (1 - t) * (1 - t) * from.x + 2 * (1 - t) * t * ctrl.x + t * t * to.x,
-          y: (1 - t) * (1 - t) * from.y + 2 * (1 - t) * t * ctrl.y + t * t * to.y,
-        });
-      }
-      return pts;
-    };
-    const upper = curve(onEdge(170), tip, -8);
-    const lower = curve(tip, onEdge(128), 12);
-    const ox = 24;
+    // A manga thought balloon: an oval with a "NAME THINKS" label, and small
+    // bubbles trailing to the portrait instead of a pointed tail. Baked into
+    // a texture so it fades as one piece (the outline and fill would
+    // otherwise show through each other at partial alpha).
+    const blockW = Math.max(label.width, text.width);
+    const blockH = label.height + text.height;
+    const rx = blockW * 0.62 + 22;
+    const ry = blockH * 0.72 + 12;
+    const cx = 26 + rx; // balloon centre, relative to the anchor beside the portrait
+    label.setPosition(cx, -blockH / 2 + label.height / 2 + 2);
+    text.setPosition(cx, blockH / 2 - text.height / 2 + 2);
+    const trail = [[13, ry * 0.12, 9], [-5, ry * 0.32, 5.5]];
+    const ox = 12;
     const oy = ry + 6;
-    const shift = (pts) => pts.map((p) => ({ x: p.x + ox, y: p.y + oy }));
-    const tail = shift([...upper, ...lower]);
     const g = this.make.graphics({ x: 0, y: 0 }, false);
-    g.lineStyle(6, ink, 1).strokePoints(tail, true);
-    g.fillStyle(paper, 1).fillEllipse(cx + ox, oy, rx * 2, ry * 2, 96);
-    g.lineStyle(3, ink, 1).strokeEllipse(cx + ox, oy, rx * 2, ry * 2, 96);
-    g.fillStyle(paper, 1).fillPoints(tail, true);
-    g.lineStyle(3, ink, 1).strokePoints(shift(upper)).strokePoints(shift(lower));
+    g.fillStyle(paper, 1).lineStyle(3, ink, 1);
+    g.fillEllipse(cx + ox, oy, rx * 2, ry * 2, 96).strokeEllipse(cx + ox, oy, rx * 2, ry * 2, 96);
+    for (const [tx, ty, tr] of trail) g.fillCircle(tx + ox, ty + oy, tr).strokeCircle(tx + ox, ty + oy, tr);
     const key = `thought-${++this.thoughtCount}`;
     g.generateTexture(key, Math.ceil(cx + rx + 4 + ox), Math.ceil(ry * 2 + 12));
     g.destroy();
     const cloud = this.add.image(-ox, -oy, key).setOrigin(0, 0);
-    const bubble = this.add.container(left, y, [cloud, text]).setDepth(55).setScale(0.6).setAlpha(0);
+    const bubble = this.add.container(left, y, [cloud, label, text]).setDepth(55).setScale(0.6).setAlpha(0);
     this.bubbles[who] = bubble;
 
     const hold = Math.min(3200, 1300 + line.length * 32);
