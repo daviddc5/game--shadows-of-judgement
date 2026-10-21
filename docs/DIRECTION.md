@@ -85,7 +85,7 @@ for a card is one image plus `art: "<name>"` on the card: see
 
 ### Music
 
-The battle screen plays the owner's own duel theme in a loop
+The battle screen plays the owner's duel theme ("The Winning Hand") in a loop
 (`public/assets/audio/`, see its README), with a ♪ mute button that is saved on
 the device. Browsers only allow sound after a tap, so it starts on the first
 tap. Code-made music was tried (synthesised and sample-based, in

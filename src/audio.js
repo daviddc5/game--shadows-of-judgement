@@ -1,6 +1,6 @@
 // Background music for the battle screen, with a mute setting that is saved
-// on the device. The track is the owner's own duel theme ("Briefcase And
-// Bullet", album "Midnight Dossier"), public/assets/audio/duel-theme.mp3.
+// on the device. The track is the owner's duel theme ("The Winning Hand"),
+// public/assets/audio/duel-theme.mp3.
 export const DUEL_THEME = "duel-theme";
 const STORAGE_KEY = "shadows-of-judgment.music-muted";
 const VOLUME = 0.5;
