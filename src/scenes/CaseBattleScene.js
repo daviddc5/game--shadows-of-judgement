@@ -29,13 +29,14 @@ const FONT_BODY = FONTS.body;
 
 const METER = { x: 60, y: 372, w: 630, h: 18 };
 const SLOT = { opponent: { x: 230, y: 632 }, player: { x: 520, y: 632 } };
-const CARD_W = 168;
-const CARD_H = 300;
+// Real trading-card proportions (about 5 : 7), the widest four across a phone can be.
+const CARD_W = 176;
+const CARD_H = 246;
 // Art box on every card. Artists: draw at 16:9, at least 640×360 (shown at 148×84).
-const ART_W = 148;
-const ART_H = 84;
-const ART_Y = -20;
-const HAND_Y = 1080;
+const ART_W = 160;
+const ART_H = 90;
+const ART_Y = 2;
+const HAND_Y = 1090;
 
 const TYPE_NAMES = {
   COUNTER: "Counter",
@@ -426,14 +427,14 @@ export default class CaseBattleScene extends Phaser.Scene {
     const outline = this.cardOutline(style);
     const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(3, style.edge);
 
-    const icon = this.add.image(left + 20, top + 20, iconKey(card.type)).setDisplaySize(28, 28).setTint(style.ink);
+    // Top row: type and cost. Shaken makes Power cost more: shown in red.
+    const icon = this.add.image(left + 20, top + 19, iconKey(card.type)).setDisplaySize(28, 28).setTint(style.ink);
     const typeLabel = this.add
-      .text(left + 37, top + 20, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "22px", color: ink })
+      .text(left + 37, top + 19, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "22px", color: ink })
       .setOrigin(0, 0.5);
-    // Shaken makes Power cost more: show what it costs now, in red.
     const cardCost = this.state.sides[side].status ? costFor(this.state, side, card) : card.cost;
     const cost = this.add
-      .text(-left - 8, top + 20, `${cardCost} ⬢`, {
+      .text(-left - 8, top + 19, `${cardCost} ⬢`, {
         fontFamily: FONT_BODY,
         fontSize: "24px",
         fontStyle: "600",
@@ -441,9 +442,9 @@ export default class CaseBattleScene extends Phaser.Scene {
       })
       .setOrigin(1, 0.5);
     const name = this.add
-      .text(0, top + 60, card.name, {
+      .text(0, top + 55, card.name, {
         fontFamily: FONT_BODY,
-        fontSize: "26px",
+        fontSize: "24px",
         fontStyle: "600",
         color: ink,
         align: "center",
@@ -454,57 +455,67 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     const art = this.buildCardArt(card, side, style);
 
-    // Text box under the art, like most trading card games: a status effect
-    // (in red), a special card's rule, or a plain card's flavour line. The
-    // selected card's full explanation is shown in large text (cardHelp).
-    const boxTop = ART_Y + ART_H / 2 + 6;
-    const boxH = 52;
-    const box = this.add.rectangle(0, boxTop + boxH / 2, CARD_W - 16, boxH).setStrokeStyle(1, style.ink, 0.35);
-    const textBox = [box];
-    const small = pushFor(this.state, card);
-    const sprung = card.bigPush && pushFor(this.state, card, card.bigPush);
-    const effectRule = { shaken: "Power costs +2", cornered: "They can't Wait", heat: `+${this.state.rules.heatDrift} for 2 turns` };
-    const typeRule = {
-      COUNTER: "Cancels a Power card",
-      POWER: "A Counter cancels it",
-      BAIT: `${sprung} vs Counter, else ${small}`,
-      AMBUSH: `${sprung} vs Wait, else ${small}`,
-    };
-    const boxText = (y, text, size, color, weight = "normal") =>
-      this.add
-        .text(0, y, text, {
-          fontFamily: FONT_BODY,
-          fontSize: size,
-          fontStyle: weight,
-          color,
-          align: "center",
-          lineSpacing: -5,
-          wordWrap: { width: CARD_W - 26 },
-        })
-        .setOrigin(0.5);
-    if (card.effect) {
-      textBox.push(
-        boxText(boxTop + 14, EFFECTS[card.effect].name, "21px", hex(this.theme.red), "600"),
-        boxText(boxTop + 37, effectRule[card.effect], "20px", ink),
-      );
-    } else if (typeRule[card.type]) {
-      textBox.push(boxText(boxTop + boxH / 2, typeRule[card.type], "20px", ink));
-    } else if (card.flavor) {
-      textBox.push(boxText(boxTop + boxH / 2, card.flavor, "19px", ink).setAlpha(0.8));
-    }
-
-    // Traps show their sprung value as the big number.
+    // The push as a round badge on the corner of the art, like a stat on a
+    // trading card. Traps show their sprung value.
     const push = pushFor(this.state, card, card.bigPush ?? card.push);
+    const badgeX = ART_W / 2 - 32;
+    const badgeY = ART_Y + ART_H / 2 - 30;
+    const badge = this.add.circle(badgeX, badgeY, 28, style.bg).setStrokeStyle(3, style.ink);
     const big = this.add
-      .text(0, boxTop + boxH + 32, `${push}`, {
+      .text(badgeX, badgeY - 1, `${push}`, {
         fontFamily: FONT_BODY,
-        fontSize: "52px",
+        fontSize: push >= 100 ? "28px" : "36px",
         fontStyle: "600",
         color: side === "vigilante" ? hex(this.theme.red) : ink,
       })
       .setOrigin(0.5);
 
-    c.add([outline, bg, ...art, ...textBox, icon, typeLabel, cost, name, big]);
+    // Text box under the art, like most trading card games: a status effect
+    // (in red), a special card's rule, or a plain card's flavour line.
+    const boxTop = ART_Y + ART_H / 2 + 6;
+    const boxH = 60;
+    const box = this.add.rectangle(0, boxTop + boxH / 2, ART_W, boxH).setStrokeStyle(1, style.ink, 0.35);
+    const textBox = [box];
+    const small = pushFor(this.state, card);
+    const sprung = card.bigPush && pushFor(this.state, card, card.bigPush);
+    const effectRule = {
+      shaken: `Power costs +${this.state.rules.shakenExtraCost}`,
+      cornered: "They can't Wait",
+      heat: `+${this.state.rules.heatDrift} for 2 turns`,
+    };
+    const typeRule = {
+      COUNTER: "Cancels a Power card",
+      POWER: "A Counter cancels it",
+      BAIT: `${sprung} if they Counter, else ${small}`,
+      AMBUSH: `${sprung} if they Wait, else ${small}`,
+    };
+    const boxText = (y, text, size, color, weight = "normal") =>
+      this.add
+        .text(0, y, text, {
+          fontFamily: FONT_BODY,
+          fontSize: `${size}px`,
+          fontStyle: weight,
+          color,
+          align: "center",
+          lineSpacing: -5,
+          wordWrap: { width: ART_W - 14 },
+        })
+        .setOrigin(0.5);
+    if (card.effect) {
+      textBox.push(
+        boxText(boxTop + 17, EFFECTS[card.effect].name, 22, hex(this.theme.red), "600"),
+        boxText(boxTop + 41, effectRule[card.effect], 20, ink),
+      );
+    } else if (typeRule[card.type]) {
+      textBox.push(boxText(boxTop + boxH / 2, typeRule[card.type], 21, ink));
+    } else if (card.flavor) {
+      // Flavour lines vary in length: shrink to fit the box.
+      const t = boxText(boxTop + boxH / 2, card.flavor, 21, ink).setAlpha(0.85);
+      for (let size = 21; t.height > boxH - 8 && size > 15; size--) t.setFontSize(size);
+      textBox.push(t);
+    }
+
+    c.add([outline, bg, ...art, badge, big, ...textBox, icon, typeLabel, cost, name]);
     c.setSize(CARD_W, CARD_H);
     c.bg = bg;
     c.edge = style.edge;
@@ -553,7 +564,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const n = me.hand.length;
     me.hand.forEach((card, i) => {
       const c = this.buildCardFace(card, this.playerSide);
-      const x = W / 2 + (i - (n - 1) / 2) * (CARD_W + 10);
+      const x = W / 2 + (i - (n - 1) / 2) * (CARD_W + 8);
       c.setPosition(x, HAND_Y);
       c.homeY = HAND_Y;
       c.index = i;
@@ -592,26 +603,6 @@ export default class CaseBattleScene extends Phaser.Scene {
       c.bg.setStrokeStyle(selected ? 5 : 3, selected ? this.theme.red : c.edge);
     });
     this.playButton.setEnabled(index !== null);
-    const card = index === null ? null : this.state.sides[this.playerSide].hand[index];
-    this.hintText.setText(card ? this.cardHelp(card) : "");
-  }
-
-  /** A plain-English line explaining a card, shown when it is selected. */
-  cardHelp(card) {
-    const push = pushFor(this.state, card);
-    const big = card.bigPush && pushFor(this.state, card, card.bigPush);
-    const effectHelp = {
-      shaken: `${card.name}: pushes ${push}, and they're Shaken: their Power cards cost +${this.state.rules.shakenExtraCost} next turn.`,
-      cornered: `${card.name}: pushes ${push}, and they're Cornered: they can't Wait next turn.`,
-      heat: `${card.name}: pushes ${push}, and turns up the Heat: the meter drifts ${this.state.rules.heatDrift} your way for 2 turns.`,
-    }[card.effect];
-    if (effectHelp) return effectHelp;
-    return {
-      COUNTER: `Counter: if they play a Power card, it's cancelled and you push ${push}. Otherwise nothing happens.`,
-      POWER: `Power: pushes ${push}, but a Counter cancels it.`,
-      BAIT: `Bait: pushes ${big} if they play a Counter, otherwise ${push}.`,
-      AMBUSH: `Ambush: pushes ${big} if they Wait, otherwise ${push}.`,
-    }[card.type] ?? `${TYPE_NAMES[card.type]}: pushes the needle ${push} your way.`;
   }
 
   // ---------------------------------------------------------------- turn flow

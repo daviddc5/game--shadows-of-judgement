@@ -58,11 +58,12 @@ After several rounds of look boards, the owner chose:
 - **Text big enough for a phone.** The game is drawn 750 px wide and shrunk to
   about 55% on a phone, so a non-gamer playtester found the small text too
   small to read. Keep body text at 24 px or more in game units (about 13 px on
-  a phone) and card names at 26 px. Card rules are explained in large text
-  when a card is selected.
-- **A text box under the art**, as in most trading card games: a status effect
-  (in red), a special card's short rule, or a plain card's flavour line. The
-  full explanation still appears in large text when a card is selected.
+  a phone) and card names at 24 px.
+- **Cards look like cards.** Real trading-card proportions (176 × 246, about
+  5 : 7; the widest four fit across a phone), the push as a round badge on the
+  art, and a text box under the art holding a status effect (in red), a special
+  card's short rule, or a plain card's flavour line. Everything a player needs
+  is on the card itself; there is no explanation line above the hand.
 - **No newspaper framing.** That look was liked for its font and restraint,
   not for being a newspaper.
 - **Board themes are a personalisation option**, like card games such as
