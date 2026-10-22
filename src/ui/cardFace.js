@@ -35,17 +35,71 @@ const PHOTO_CORNER = 0x1b1b1d;
 const STAMP_RED = 0xc1121f;
 const BODY = FONTS.body;
 
-/** The card body: outline, rounded fill, double border (heavier and red when selected). */
-function paintBody(g, style, redColor, selected) {
+/**
+ * A case-file frame centred on (0, 0): outline, rounded fill and a double
+ * border (heavier and red when selected). Cards use it, and so do the panels
+ * on other screens that should look like they belong to the same case.
+ */
+export function paintFrame(g, w, h, style, redColor, selected = false, radius = RADIUS) {
   g.clear();
-  const w = CARD_W;
-  const h = CARD_H;
   if (style.outline != null) {
-    g.fillStyle(style.outline, 1).fillRoundedRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, RADIUS + 3);
+    g.fillStyle(style.outline, 1).fillRoundedRect(-w / 2 - 4, -h / 2 - 4, w + 8, h + 8, radius + 3);
   }
-  g.fillStyle(style.bg, 1).fillRoundedRect(-w / 2, -h / 2, w, h, RADIUS);
-  g.lineStyle(selected ? 5 : 3, selected ? redColor : style.edge, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, RADIUS);
-  g.lineStyle(1, style.edge, 0.5).strokeRoundedRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, RADIUS - 4);
+  g.fillStyle(style.bg, 1).fillRoundedRect(-w / 2, -h / 2, w, h, radius);
+  g.lineStyle(selected ? 5 : 3, selected ? redColor : style.edge, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, radius);
+  g.lineStyle(1, style.edge, 0.5).strokeRoundedRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, radius - 4);
+}
+
+const paintBody = (g, style, redColor, selected) => paintFrame(g, CARD_W, CARD_H, style, redColor, selected);
+
+/** A card type's stamp: a slightly turned double ring with the type's symbol. Returns [ring, icon]. */
+export function buildTypeStamp(scene, x, y, type, style, scale = 1) {
+  const ring = scene.add.graphics().setPosition(x, y);
+  // In ink, not the border colour: on the Dark page a Detective card's border matches its paper.
+  ring.lineStyle(2, style.ink, 1).strokeCircle(0, 0, 13 * scale);
+  ring.lineStyle(1, style.ink, 1).strokeCircle(0, 0, 10 * scale);
+  ring.setAngle(-8);
+  const icon = scene.add
+    .image(x, y, iconKey(type))
+    .setDisplaySize(16 * scale, 16 * scale)
+    .setTint(style.ink)
+    .setAngle(-8);
+  return [ring, icon];
+}
+
+/** A red rubber stamp with `text` on it, turned a little, centred on (x, y). */
+export function buildRubberStamp(scene, x, y, text, size = 18) {
+  const label = scene.add
+    .text(0, 0, text.toUpperCase(), {
+      fontFamily: BODY,
+      fontSize: `${size}px`,
+      fontStyle: "600",
+      color: hex(STAMP_RED),
+      letterSpacing: 1.5,
+    })
+    .setOrigin(0.5);
+  const sw = label.width + 16;
+  const sh = label.height + 4;
+  const box = scene.add.graphics();
+  box.fillStyle(0xf4f2ec, 0.9).fillRoundedRect(-sw / 2, -sh / 2, sw, sh, 3);
+  box.lineStyle(2.5, STAMP_RED, 1).strokeRoundedRect(-sw / 2, -sh / 2, sw, sh, 3);
+  const stamp = scene.add.container(x, y, [box, label]).setAngle(-7);
+  stamp.setSize(sw, sh);
+  return stamp;
+}
+
+/** The cream mat and black photo corners an evidence photo sits on, w × h centred on (x, y). */
+export function paintPhotoMat(g, x, y, w, h, corner = 13) {
+  const x0 = x - w / 2;
+  const x1 = x + w / 2;
+  const y0 = y - h / 2;
+  const y1 = y + h / 2;
+  g.fillStyle(MAT_COLOR, 1).fillRect(x0, y0, w, h);
+  g.fillStyle(PHOTO_CORNER, 1);
+  g.fillTriangle(x0, y0, x0 + corner, y0, x0, y0 + corner);
+  g.fillTriangle(x1, y0, x1 - corner, y0, x1, y0 + corner);
+  g.fillTriangle(x0, y1, x0 + corner, y1, x0, y1 - corner);
+  g.fillTriangle(x1, y1, x1 - corner, y1, x1, y1 - corner);
 }
 
 /** The photo or, if the card has real art, the picture, on its cream mat. */
@@ -78,15 +132,7 @@ export function buildCardFace(scene, card, side) {
   setSelected(false);
 
   // Top row: type stamp and name of the type on the left, cost on the right.
-  const stamp = scene.add.graphics().setPosition(left + 24.5, top + 23);
-  stamp.lineStyle(2, style.edge, 1).strokeCircle(0, 0, 13);
-  stamp.lineStyle(1, style.edge, 1).strokeCircle(0, 0, 10);
-  stamp.setAngle(-8);
-  const icon = scene.add
-    .image(left + 24.5, top + 23, iconKey(card.type))
-    .setDisplaySize(16, 16)
-    .setTint(style.ink)
-    .setAngle(-8);
+  const [stamp, icon] = buildTypeStamp(scene, left + 24.5, top + 23, card.type, style);
   const typeLabel = scene.add
     .text(left + 45, top + 23, TYPE_NAMES[card.type], { fontFamily: BODY, fontSize: "19px", color: ink })
     .setOrigin(0, 0.5);
@@ -106,39 +152,17 @@ export function buildCardFace(scene, card, side) {
   fit(typeLabel, cost.x - cost.width - 6 - typeLabel.x, 30, 13);
 
   // The evidence photo: cream mat, the art, and black photo corners.
-  const matY = ART_Y;
   const mat = scene.add.graphics();
-  mat.fillStyle(MAT_COLOR, 1).fillRect(-MAT.w / 2, matY - MAT.h / 2, MAT.w, MAT.h);
-  mat.fillStyle(PHOTO_CORNER, 1);
-  const k = 13;
+  paintPhotoMat(mat, 0, ART_Y, MAT.w, MAT.h);
   const x0 = -MAT.w / 2;
-  const x1 = MAT.w / 2;
-  const y0 = matY - MAT.h / 2;
-  const y1 = matY + MAT.h / 2;
-  mat.fillTriangle(x0, y0, x0 + k, y0, x0, y0 + k);
-  mat.fillTriangle(x1, y0, x1 - k, y0, x1, y0 + k);
-  mat.fillTriangle(x0, y1, x0 + k, y1, x0, y1 - k);
-  mat.fillTriangle(x1, y1, x1 - k, y1, x1, y1 - k);
+  const y1 = ART_Y + MAT.h / 2;
   const art = buildArt(scene, card, side, style);
 
   // A status effect is a red rubber stamp across the lower-left of the photo.
   const extras = [];
   if (card.effect) {
-    const label = scene.add
-      .text(0, 0, EFFECTS[card.effect].name.toUpperCase(), {
-        fontFamily: BODY,
-        fontSize: "18px",
-        fontStyle: "600",
-        color: hex(STAMP_RED),
-        letterSpacing: 1.5,
-      })
-      .setOrigin(0.5);
-    const sw = label.width + 16;
-    const sh = label.height + 4;
-    const box = scene.add.graphics();
-    box.fillStyle(0xf4f2ec, 0.9).fillRoundedRect(-sw / 2, -sh / 2, sw, sh, 3);
-    box.lineStyle(2.5, STAMP_RED, 1).strokeRoundedRect(-sw / 2, -sh / 2, sw, sh, 3);
-    const stampC = scene.add.container(x0 + 8 + sw / 2 + 4, y1 - 14 - 4, [box, label]).setAngle(-7);
+    const stampC = buildRubberStamp(scene, 0, 0, EFFECTS[card.effect].name);
+    stampC.setPosition(x0 + 12 + stampC.width / 2, y1 - 18);
     extras.push(stampC);
   }
 

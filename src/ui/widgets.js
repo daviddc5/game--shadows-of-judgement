@@ -1,6 +1,7 @@
 // Small themed building blocks shared by the menu scenes.
 import { FONTS, hex, zone } from "../theme.js";
 import { CHARACTERS, portraitKey } from "../case/characters.js";
+import { buildRubberStamp, paintFrame, paintPhotoMat } from "./cardFace.js";
 
 /** Shrinks a text object until it fits `maxW` × `maxH` (or reaches `min` px). */
 export function fit(text, maxW, maxH, min) {
@@ -103,54 +104,59 @@ const SIDES = [
 ];
 
 const TILE = 150;
+const PANEL = { w: 660, h: 340, gap: 360 };
 
 /**
- * One panel per side, styled like that side's cards, with a row of its
- * characters (from src/case/characters.js). Tapping a portrait picks the side
- * and the character: onSelect(sideCharacterName, characterId).
+ * One case-file panel per side, styled like that side's cards, with its
+ * characters as evidence photos (from src/case/characters.js). Tapping a photo
+ * picks the side and the character: onSelect(sideCharacterName, characterId).
+ * The chosen one gets a red border and a "Chosen" stamp.
  * Returns { select(sideCharacterName, characterId), setEnabled }.
  */
 export function characterPicker(scene, theme, top, onSelect) {
   const tiles = [];
+  const panels = [];
   SIDES.forEach((s, i) => {
-    const y = top + i * 330;
+    const y = top + i * PANEL.gap;
     const card = theme.cards[s.side];
-    if (card.outline != null) scene.add.rectangle(375, y, 666, 306, card.outline);
-    scene.add.rectangle(375, y, 660, 300, card.bg).setStrokeStyle(3, card.edge);
+    const ink = hex(card.ink);
+    const frame = scene.add.graphics().setPosition(375, y);
+    paintFrame(frame, PANEL.w, PANEL.h, card, theme.red, false, 18);
+    panels.push({ frame, card, character: s.character });
+    const left = 375 - PANEL.w / 2 + 36;
     scene.add
-      .text(70, y - 124, s.name, { fontFamily: FONTS.body, fontSize: "36px", fontStyle: "600", color: hex(card.ink) })
+      .text(left, y - 136, s.name, { fontFamily: FONTS.body, fontSize: "36px", fontStyle: "600", color: ink })
       .setOrigin(0, 0.5);
-    scene.add
-      .text(70, y - 90, s.goal, { fontFamily: FONTS.body, fontSize: "20px", color: hex(card.ink) })
-      .setOrigin(0, 0.5);
+    const goal = scene.add
+      .text(left, y - 110, s.goal, { fontFamily: FONTS.body, fontSize: "24px", color: ink, wordWrap: { width: PANEL.w - 72 } })
+      .setOrigin(0, 0);
+    fit(goal, PANEL.w - 72, 64, 18);
 
     const list = CHARACTERS[s.side];
     list.forEach((c, j) => {
-      const x = 375 + (j - (list.length - 1) / 2) * (TILE + 50);
-      const ty = y + 30;
+      const x = 375 + (j - (list.length - 1) / 2) * (TILE + 60);
+      const ty = y + 38;
+      const mat = scene.add.graphics();
+      paintPhotoMat(mat, x, ty, TILE + 16, TILE + 16, 16);
       scene.add.image(x, ty, portraitKey(c)).setDisplaySize(TILE, TILE);
-      const frame = scene.add
-        .rectangle(x, ty, TILE + 6, TILE + 6)
-        .setStrokeStyle(2, card.ink)
-        .setInteractive({ useHandCursor: true });
+      const hit = scene.add.rectangle(x, ty, TILE + 16, TILE + 16, 0xffffff, 0).setInteractive({ useHandCursor: true });
       scene.add
-        .text(x, ty + TILE / 2 + 22, c.name, { fontFamily: FONTS.body, fontSize: "22px", fontStyle: "600", color: hex(card.ink) })
+        .text(x, ty + TILE / 2 + 32, c.name, { fontFamily: FONTS.body, fontSize: "24px", fontStyle: "600", color: ink })
         .setOrigin(0.5);
-      frame.on("pointerdown", () => frame.input.enabled && onSelect(s.character, c.id));
-      tiles.push({ frame, card, character: s.character, id: c.id });
+      const chosen = buildRubberStamp(scene, x + TILE / 2 - 18, ty - TILE / 2 + 8, "Chosen", 20).setVisible(false);
+      hit.on("pointerdown", () => hit.input.enabled && onSelect(s.character, c.id));
+      tiles.push({ hit, chosen, character: s.character, id: c.id });
     });
   });
 
   return {
     select(character, id) {
-      tiles.forEach((t) => {
-        const chosen = t.character === character && t.id === id;
-        t.frame.setStrokeStyle(chosen ? 6 : 2, chosen ? theme.red : t.card.ink);
-      });
+      panels.forEach((p) => paintFrame(p.frame, PANEL.w, PANEL.h, p.card, theme.red, p.character === character, 18));
+      tiles.forEach((t) => t.chosen.setVisible(t.character === character && t.id === id));
     },
     setEnabled(enabled) {
       tiles.forEach((t) => {
-        t.frame.input.enabled = enabled;
+        t.hit.input.enabled = enabled;
       });
     },
   };

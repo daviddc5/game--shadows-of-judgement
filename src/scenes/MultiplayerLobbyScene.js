@@ -26,7 +26,7 @@ export default class MultiplayerLobbyScene extends Phaser.Scene {
     displayText(this, theme, 375, 190, "Multiplayer", 80);
     this.statusText = bodyText(this, theme, 375, 280, "Connecting to the server...", 26, { soft: true });
 
-    this.picker = characterPicker(this, theme, 560, (character, id) => this.selectCharacter(character, id));
+    this.picker = characterPicker(this, theme, 570, (character, id) => this.selectCharacter(character, id));
     this.findMatchButton = button(this, theme, 375, 1195, 520, "Find an opponent", () => this.startMatchmaking(), {
       primary: true,
     });
