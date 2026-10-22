@@ -13,7 +13,6 @@ export default class TitleScene extends Phaser.Scene {
 
     displayText(this, theme, 375, 280, "Shadows of\nJudgment", 104);
     bodyText(this, theme, 375, 428, "DETECTIVE · VS · VIGILANTE", 22, { soft: true });
-    this.add.rectangle(375, 560, 120, 3, theme.red);
 
     const tap = bodyText(this, theme, 375, 1000, "Tap to start", 30, { soft: true });
     this.tweens.add({ targets: tap, alpha: 0.3, duration: 900, yoyo: true, repeat: -1 });
