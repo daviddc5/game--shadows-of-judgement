@@ -1300,10 +1300,11 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- effects
 
-  /** A card hitting the table: a jolt and a puff of dust along its bottom edge. */
+  /** A card landing on the table: a small jolt and a puff of dust along its bottom edge. */
   slamDown(card, strength) {
-    playSfx(this, "slam", { detune: strength < 1 ? -200 : 0 }); // the opponent's sounds a little deeper
-    this.cameras.main.shake(110, 0.007 * strength);
+    // Dealt onto felt; skip the sound's swish so the thup lands now. The opponent's is a little deeper.
+    playSfx(this, "felt", { seek: 0.04, detune: strength < 1 ? -150 : 0 });
+    this.cameras.main.shake(90, 0.004 * strength);
     const ink = this.z(card.y).ink;
     const dust = this.add.particles(card.x, card.y + CARD_H / 2, "cb-shard", {
       x: { min: -CARD_W / 2, max: CARD_W / 2 },

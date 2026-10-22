@@ -49,7 +49,7 @@ export function stopMusic(scene) {
  */
 export const SFX = {
   select: 0.35,
-  slam: 0.9,
+  felt: 0.9,
   flip: 0.7,
   reveal: 0.55,
   charge: 0.5,

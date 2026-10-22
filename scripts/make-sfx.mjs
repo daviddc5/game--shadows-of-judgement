@@ -124,23 +124,15 @@ const SOUNDS = {
     return finish(out, 10);
   },
 
-  // A card slammed onto a wooden table: a hard slap of the card, and the
-  // table's knock under it. It hits at once, so play it on impact.
-  slam: () => {
-    const out = buffer(0.5);
-    // The slap: a sharp, bright crack.
-    mix(out, shape(filter(noise(0.06, 41), "highpass", 1200), hit(0.0003, 0.006)), 0, 1.4);
-    mix(out, shape(filter(noise(0.1, 42), "bandpass", 2200, 0.8), hit(0.0005, 0.014)), 0, 0.8);
-    // The table: a few short wooden modes, struck all at once.
-    [
-      [140, 0.09, 1],
-      [235, 0.07, 0.8],
-      [380, 0.05, 0.6],
-      [610, 0.035, 0.45],
-      [930, 0.025, 0.3],
-    ].forEach(([f, tau, gain]) => mix(out, shape(tone(0.5, () => f), hit(0.001, tau)), 0, gain));
-    mix(out, shape(filter(noise(0.2, 43), "lowpass", 500), hit(0.001, 0.03)), 0, 0.8);
-    return finish(room(soften(out, 2.4), 0.1, 0.5), 40);
+  // A card dealt firmly onto a felt card table, like a poker game: a short
+  // swish, then a soft, close "thup". The thup lands 0.05 s in.
+  felt: () => {
+    const out = buffer(0.35);
+    const at = 0.05;
+    mix(out, shape(filter(noise(at, 50), "bandpass", 2500, 0.8), (t) => (t / at) ** 2), 0, 0.3);
+    mix(out, shape(filter(noise(0.15, 51), "lowpass", 1400), hit(0.0008, 0.022)), at, 1);
+    mix(out, shape(tone(0.35, (t) => 160 * (1 + 0.6 * Math.exp(-t / 0.01))), hit(0.001, 0.03)), at, 0.5);
+    return finish(room(out, 0.05, 0.4), 30);
   },
 
   // Cards revealed: a quick swipe into one deep drum hit.
