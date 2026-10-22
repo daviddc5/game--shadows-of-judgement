@@ -12,7 +12,6 @@ export default class MenuScene extends Phaser.Scene {
     paintBackground(this, theme);
 
     displayText(this, theme, 375, 230, "Shadows of\nJudgment", 88);
-    this.add.rectangle(375, 380, 120, 3, theme.red);
 
     button(this, theme, 375, 560, 520, "Single player", () => {
       this.registry.set("debugMode", false);
