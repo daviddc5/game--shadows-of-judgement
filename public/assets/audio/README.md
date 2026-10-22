@@ -10,3 +10,23 @@
   (see `src/audio.js`); the ♪ button next to the help button mutes it, and the
   choice is saved on the device. It replaced an earlier theme, "Briefcase And
   Bullet".
+
+## Sound effects (`sfx/`)
+
+Made from code by `scripts/make-sfx.mjs` (filtered noise and tones, no
+samples), so they are ours with no licence to track. Run
+`node scripts/make-sfx.mjs [name]` after changing a recipe (needs ffmpeg). Any
+file can be swapped for a recorded sound with the same name; how loud each one
+plays is the `SFX` table in `src/audio.js`.
+
+| File | Plays when |
+| --- | --- |
+| `select.mp3` | You tap a card in your hand |
+| `card.mp3` | A card is played face down (lower for the opponent's) |
+| `flip.mp3` | The cards turn over |
+| `whoosh.mp3` | The cards rush at each other |
+| `impact.mp3` | They meet |
+| `grind.mp3` | They grind (stopped when the grind ends) |
+| `break.mp3` | One breaks through |
+| `sting.mp3` | The cut-in band for a big play |
+| `cancel.mp3` | A Power card is Countered |

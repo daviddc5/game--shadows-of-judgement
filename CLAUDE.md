@@ -28,6 +28,8 @@ decisions, the reasons behind them, and the roadmap. Current rules are in
   rates, game length, play and payoff rates per card type). Use it before and
   after any rules or card-number change.
 - `npm run build`: production build
+- `node scripts/make-sfx.mjs [name]`: rebuilds the sound effects in
+  `public/assets/audio/sfx/` from their recipes (needs ffmpeg)
 
 ## Checking changes in the real game
 

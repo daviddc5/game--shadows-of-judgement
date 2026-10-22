@@ -13,7 +13,7 @@ import {
 import { chooseAiPlay } from "../case/ai.js";
 import { getCharacter, portraitKey, randomCharacter } from "../case/characters.js";
 import { pickLine } from "../case/dialogue.js";
-import { isMuted, playDuelMusic, setMuted, stopMusic } from "../audio.js";
+import { isMuted, playDuelMusic, playSfx, setMuted, stopMusic } from "../audio.js";
 import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button, fit } from "../ui/widgets.js";
@@ -491,7 +491,10 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.selectedIndex = index;
     this.layoutHand();
     this.playButton.setEnabled(index !== null);
-    if (index !== null) this.buzz(8);
+    if (index !== null) {
+      this.buzz(8);
+      playSfx(this, "select");
+    }
   }
 
   /** Pressing a hand card: a tap selects, holding inspects, dragging up plays. */
@@ -636,6 +639,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const back = buildCardBack(this, this.opponentSide);
     back.setPosition(SLOT.opponent.x, -150).setAngle(-20);
     this.tweens.add({ targets: back, y: SLOT.opponent.y, angle: 0, duration: 380, ease: "Cubic.easeOut" });
+    playSfx(this, "card", { detune: -150 });
     this.opponentBack = back;
     this.arenaObjects.push(back);
   }
@@ -663,6 +667,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.selectedIndex = null;
       this.layoutHand();
       this.tweens.add({ targets: back, x: SLOT.player.x, y: SLOT.player.y, duration: 320, ease: "Cubic.easeOut" });
+      playSfx(this, "card");
       this.playerBack = back;
       this.arenaObjects.push(back);
     }
@@ -689,6 +694,7 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     // A beat of tension, then both cards turn over together and clash.
     await this.tension([this.playerBack, this.opponentBack]);
+    if (playerCard || opponentCard) playSfx(this, "flip");
     const [playerFace, opponentFace] = await Promise.all([
       this.flipToFace("player", this.playerBack, playerCard, this.playerSide),
       this.flipToFace("opponent", this.opponentBack, opponentCard, this.opponentSide),
@@ -785,8 +791,10 @@ export default class CaseBattleScene extends Phaser.Scene {
       // Nobody to hit: the lone card lunges at the empty side.
       const who = fighters[0];
       const lunge = who === "player" ? -46 : 46;
+      playSfx(this, "whoosh", { seek: 0.1 });
       await tween(this, { targets: faces[who], x: SLOT[who].x + lunge, duration: 170, ease: "Back.easeIn" });
       camera.shake(90, 0.004);
+      playSfx(this, "impact", { detune: 300 });
       await tween(this, { targets: faces[who], x: SLOT[who].x, duration: 220, ease: "Quad.easeOut" });
       return;
     }
@@ -821,6 +829,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     );
 
     // Dash, leaving afterimages.
+    playSfx(this, "whoosh", { seek: 0.08 });
     let frame = 0;
     const ghosts = () => {
       if (frame++ % 2) return;
@@ -865,6 +874,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     lines.setScale(0.8);
     this.tweens.add({ targets: lines, scale: 1.15, duration: 140, ease: "Cubic.easeOut" });
     this.tweens.add({ targets: lines, alpha: 0, delay: 140, duration: 260, onComplete: () => lines.destroy() });
+    playSfx(this, "impact");
     camera.flash(80, 255, 255, 255);
     camera.zoomTo(1.08, 60);
     camera.shake(160, 0.012);
@@ -899,6 +909,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(45);
     camera.shake(grindMs, 0.0025);
+    const grindSound = playSfx(this, "grind");
     await new Promise((resolve) =>
       this.tweens.addCounter({
         from: 0,
@@ -916,11 +927,14 @@ export default class CaseBattleScene extends Phaser.Scene {
       }),
     );
     sparks.stop();
+    grindSound?.stop();
+    grindSound?.destroy();
     this.time.delayedCall(450, () => sparks.destroy());
     score.destroy();
 
     // Break through.
     const seam = cx + gain;
+    playSfx(this, "break");
     this.burst(seam, cy, "cb-shard", z.ink, 26, 520);
     this.burst(seam, cy, "cb-spark", red, 12, 420);
     camera.shake(220, 0.016);
@@ -1024,6 +1038,8 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.tweens.add({ targets: dim, fillAlpha: 0.45, duration: 200 });
     this.tweens.add({ targets: lines, x: `${fromLeft ? "+" : "-"}=240`, duration: 1100 });
     this.tweens.add({ targets: [portrait, frame], scale: "*=1.06", duration: 1000 });
+    // The sting's boom lands as the band does.
+    playSfx(this, "sting", { seek: 0.09 });
     await tween(this, { targets: band, x: W / 2, duration: 230, ease: "Cubic.easeOut" });
     this.cameras.main.shake(120, 0.006);
     await wait(this, 750);
@@ -1066,6 +1082,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.burst(x, y, "cb-shard", red, 26, 500);
       this.tweens.add({ targets: face, scale: 0.2, angle: 200, alpha: 0, duration: 380, ease: "Back.easeIn" });
       this.floatText(x, y, "Countered!", hex(red), 56);
+      playSfx(this, "cancel");
       await wait(this, 800);
       return;
     }

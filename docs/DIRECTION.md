@@ -113,8 +113,11 @@ The battle screen plays the owner's duel theme ("The Winning Hand") in a loop
 the device. Browsers only allow sound after a tap, so it starts on the first
 tap. Code-made music was tried (synthesised and sample-based, in
 `scratchpad` experiments) and dropped: it sounded goofy next to a real
-composition. Sound effects (card flip, clash, grind, crack, cut-in sting) are
-still to do.
+composition. Sound effects (select tick, card down, flip, whoosh, impact,
+grind, break, cut-in sting, countered) are made from code by
+`scripts/make-sfx.mjs`: noise-based sounds like these come out convincing,
+unlike code-made music. They can be swapped for recordings with the same
+names (see `public/assets/audio/README.md`).
 
 ### Characters
 
