@@ -646,17 +646,31 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.hideInspect();
   }
 
-  /** A big copy of a hand card while it is held. */
+  /**
+   * A big copy of a hand card while it is held. Sliding to another card while
+   * it is open swaps just the card (sliding in from the side you moved
+   * towards), so the backdrop doesn't flicker.
+   */
   showInspect(index) {
-    this.hideInspect();
     const card = this.state.sides[this.playerSide].hand[index];
     if (!card) return;
-    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55).setDepth(90);
-    const face = buildCardFace(this, card, this.playerSide).setPosition(W / 2, 600).setDepth(91).setScale(INSPECT_SCALE * 0.9);
-    face.setAlpha(0);
-    this.tweens.add({ targets: face, scale: INSPECT_SCALE, alpha: 1, duration: 140, ease: "Back.easeOut" });
+    const switching = !!this.inspect;
+    const [shade, old] = this.inspect ?? [this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55).setDepth(90)];
+    const from = old && this.inspectIndex != null ? Math.sign(index - this.inspectIndex) * 60 : 0;
+    old?.destroy();
+    const face = buildCardFace(this, card, this.playerSide).setPosition(W / 2 + from, 600).setDepth(91);
+    if (switching) {
+      face.setScale(INSPECT_SCALE).setAlpha(0.4);
+      this.tweens.add({ targets: face, x: W / 2, alpha: 1, duration: 110, ease: "Cubic.easeOut" });
+      playSfx(this, "select");
+      this.buzz(8);
+    } else {
+      face.setScale(INSPECT_SCALE * 0.9).setAlpha(0);
+      this.tweens.add({ targets: face, scale: INSPECT_SCALE, alpha: 1, duration: 140, ease: "Back.easeOut" });
+      this.buzz(15);
+    }
     this.inspect = [shade, face];
-    this.buzz(15);
+    this.inspectIndex = index;
   }
 
   hideInspect() {
