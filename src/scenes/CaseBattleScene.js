@@ -38,7 +38,7 @@ const FAN = { y: 1078, radius: 1300, stepDeg: 6.2, scale: 1.1 };
 // The chosen card rises out of the fan, upright and grown, to this height.
 const SELECT_Y = 1010;
 const SELECT_SCALE = 1.3;
-const HOLD_MS = 380;
+const HOLD_MS = 500; // a press held this long without moving opens the big zoomed copy
 const DRAG_PX = 14; // a press that moves this far is a slide or a drag, not a tap
 const DRAG_UP = 36; // moving up this far (more up than sideways) picks the card up to drag it
 const DROP_Y = 900;
@@ -466,7 +466,12 @@ export default class CaseBattleScene extends Phaser.Scene {
       c.index = i;
       c.cardName = card.name;
       c.affordable = canAfford(this.state, this.playerSide, card);
-      c.setAlpha(c.affordable ? 1 : 0.55);
+      if (!c.affordable) {
+        // Dimmed with a solid wash rather than transparency, so a raised card never shows the fan through it.
+        const wash = this.add.graphics();
+        wash.fillStyle(this.z(c.home.y).paper, 0.5).fillRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 11);
+        c.addAt(wash, c.list.length - 1);
+      }
       c.bg.setInteractive({ useHandCursor: true });
       c.bg.on("pointerdown", (pointer) => this.startPress(c, pointer));
       c.bg.on("pointerover", () => {
@@ -527,7 +532,8 @@ export default class CaseBattleScene extends Phaser.Scene {
   selectCard(index) {
     this.selectedIndex = index;
     this.layoutHand();
-    this.playButton.setEnabled(index !== null);
+    // A card you can't afford can still be raised (sliding stays smooth), but not played.
+    this.playButton.setEnabled(index !== null && this.handCards[index]?.affordable);
     if (index !== null) {
       this.buzz(8);
       playSfx(this, "select");
@@ -551,7 +557,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     p.timer?.remove();
     const card = p.card;
     p.timer = this.time.delayedCall(HOLD_MS, () => {
-      if (this.press !== p || p.card !== card || p.dragging) return;
+      if (this.press !== p || p.card !== card || p.dragging || p.slid) return;
       p.held = true;
       this.showInspect(card.index);
     });
@@ -581,6 +587,8 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (!p.dragging) {
       const dx = pointer.x - p.x;
       const up = p.y - pointer.y;
+      // The zoom needs a press held still: any real movement cancels it.
+      if (Phaser.Math.Distance.Between(p.x, p.y, pointer.x, pointer.y) >= DRAG_PX) p.timer.remove();
       if (up > DRAG_UP && up > Math.abs(dx) && p.card.affordable) {
         // Picked up: it follows your finger and can be dropped on the board.
         p.dragging = true;
@@ -592,18 +600,15 @@ export default class CaseBattleScene extends Phaser.Scene {
         // Sliding along the hand: the card under your finger becomes the selection.
         const card = this.handCardNear(pointer.x);
         if (!p.slid || card !== p.card) {
+          // Once you slide, holding no longer zooms: that needs a press held still.
           p.slid = true;
+          p.timer.remove();
           if (card !== p.card) {
             p.card = card;
             p.x = pointer.x;
             p.y = pointer.y;
           }
-          this.startHoldTimer();
-          if (card.affordable) {
-            if (this.selectedIndex !== card.index) this.selectCard(card.index);
-          } else if (this.selectedIndex !== null) {
-            this.selectCard(null);
-          }
+          if (this.selectedIndex !== card.index) this.selectCard(card.index);
         }
         return;
       }
@@ -686,7 +691,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const index = Number(key) - 1;
     if (index >= 0 && index < this.handCards.length) {
       if (this.handCards[index].affordable) this.selectCard(this.selectedIndex === index ? null : index);
-    } else if ((key === "enter" || key === " ") && this.selectedIndex !== null) {
+    } else if ((key === "enter" || key === " ") && this.handCards[this.selectedIndex]?.affordable) {
       this.confirmPlay(this.selectedIndex);
     } else if (key === "w" && !mustPlay(this.state, this.playerSide)) {
       this.confirmPlay(null);
@@ -700,6 +705,7 @@ export default class CaseBattleScene extends Phaser.Scene {
   beginTurn(first = false) {
     const { turn, rules } = this.state;
     this.endPlayback();
+    this.handShade?.destroy();
     this.selectedIndex = null;
     this.busy = false;
     this.clearArena();
@@ -788,7 +794,9 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.playerBack = back;
       this.arenaObjects.push(back);
     }
-    this.handCards.forEach((c) => this.tweens.add({ targets: c, alpha: 0.4, duration: 200 }));
+    // The hand rests under a wash while the turn plays out (a solid wash, so the fan never shows through itself).
+    this.handShade = this.add.rectangle(W / 2, FAN.y, W, 330, this.z(FAN.y).paper, 0).setDepth(25);
+    this.tweens.add({ targets: this.handShade, fillAlpha: 0.6, duration: 200 });
 
     let events, played, nextView;
     if (this.online) {
