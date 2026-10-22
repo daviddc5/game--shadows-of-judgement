@@ -50,6 +50,15 @@ export function paintFrame(g, w, h, style, redColor, selected = false, radius = 
   g.lineStyle(1, style.edge, 0.5).strokeRoundedRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, radius - 4);
 }
 
+/**
+ * Cards grow (×1.25 when selected, ×1.8 when held to inspect), and text
+ * scaled past its own size goes soft, so card text is drawn at twice the detail.
+ */
+function sharpen(obj) {
+  if (obj.type === "Text") obj.setResolution(2);
+  else obj.list?.forEach(sharpen);
+}
+
 const paintBody = (g, style, redColor, selected) => paintFrame(g, CARD_W, CARD_H, style, redColor, selected);
 
 /** A card type's stamp: a slightly turned double ring with the type's symbol. Returns [ring, icon]. */
@@ -224,6 +233,7 @@ export function buildCardFace(scene, card, side) {
 
   const hit = scene.add.rectangle(0, 0, CARD_W, CARD_H, 0xffffff, 0);
   c.add([body, stamp, icon, typeLabel, cost, hexMark, mat, ...art, ...extras, rules, name, rule, divider, pushLabel, number, hit]);
+  sharpen(c);
   c.setSize(CARD_W, CARD_H);
   c.bg = hit;
   c.edge = style.edge;
@@ -244,6 +254,7 @@ export function buildCardBack(scene, side) {
     .setOrigin(0.5)
     .setAlpha(0.7);
   c.add([body, inner, mark]);
+  sharpen(c);
   c.setSize(CARD_W, CARD_H);
   return c;
 }

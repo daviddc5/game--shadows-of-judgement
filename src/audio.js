@@ -71,6 +71,7 @@ export const sfxKey = (name) => `sfx-${name}`;
 /** Plays a sound effect; returns it (for one you need to stop, like the grind). */
 export function playSfx(scene, name, { detune = 0, seek = 0 } = {}) {
   const key = sfxKey(name);
+  if (scene.skipping) return null; // a skipped turn plays fast and quiet
   if (scene.sound.locked || !scene.cache.audio.exists(key)) return null;
   const sound = scene.sound.add(key, { volume: SFX[name], detune });
   sound.once("complete", () => sound.destroy());

@@ -38,6 +38,10 @@ const HOLD_MS = 380;
 const DRAG_PX = 14;
 const DROP_Y = 900;
 const INSPECT_SCALE = 1.8;
+// A tap while a turn plays out speeds the rest of it up this much.
+const SKIP_SPEED = 5;
+// If a turn's animation hasn't finished after this long (game time), it is stopped and the game moves on.
+const TURN_WATCHDOG_MS = 30000;
 // A clash is "close" (and gets the full grind) when the pushes differ by at most this share of their total.
 const CLOSE_CLASH = 0.2;
 
@@ -151,6 +155,10 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.input.on("pointermove", (pointer) => this.movePress(pointer));
     this.input.on("pointerup", (pointer) => this.endPress(pointer));
     this.input.on("gameout", () => this.cancelPress());
+    // A tap anywhere (except the corner buttons) skips ahead while a turn plays out.
+    this.input.on("pointerdown", (pointer, over) => {
+      if (!over.some((o) => this.cornerButtons.includes(o))) this.skipAnimation();
+    });
     this.input.keyboard?.on("keydown", (event) => this.onKey(event));
     this.keepMusic = false; // a rematch keeps the music going
     this.events.once("shutdown", () => {
@@ -246,6 +254,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       music.setText(muted ? "♪̸" : "♪").setAlpha(muted ? 0.6 : 1);
     });
     music.setAlpha(isMuted() ? 0.6 : 1);
+    this.cornerButtons = [exit, help, music];
   }
 
   createPortrait(x, y, character, size) {
@@ -420,6 +429,10 @@ export default class CaseBattleScene extends Phaser.Scene {
       size: 34,
       primary: true,
     });
+    this.skipText = this.add
+      .text(W / 2, 1272, "", { fontFamily: FONT_BODY, fontSize: "30px", fontStyle: "600", color: hex(this.z(1272).soft) })
+      .setOrigin(0.5)
+      .setVisible(false);
   }
 
   // ---------------------------------------------------------------- cards
@@ -580,8 +593,9 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   /** Desktop shortcuts: 1-4 pick a card, Enter plays it, W waits, Esc puts it back. */
   onKey(event) {
-    if (this.busy || this.state.winner) return;
     const key = event.key.toLowerCase();
+    if (this.playingTurn && (key === " " || key === "enter")) return this.skipAnimation();
+    if (this.busy || this.state.winner) return;
     const index = Number(key) - 1;
     if (index >= 0 && index < this.handCards.length) {
       if (this.handCards[index].affordable) this.selectCard(this.selectedIndex === index ? null : index);
@@ -598,6 +612,7 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   beginTurn(first = false) {
     const { turn, rules } = this.state;
+    this.endPlayback();
     this.selectedIndex = null;
     this.busy = false;
     this.clearArena();
@@ -708,7 +723,34 @@ export default class CaseBattleScene extends Phaser.Scene {
     const opponentCard = played[this.opponentSide];
     this.quickTurn = !this.isShowdown(events, { player: playerCard, opponent: opponentCard });
 
-    // A beat of tension, then both cards turn over together and clash.
+    this.startPlayback();
+    let watchdog;
+    const finished = await Promise.race([
+      this.animateTurn(events, playerCard, opponentCard).then(() => true),
+      new Promise((resolve) => (watchdog = this.time.delayedCall(TURN_WATCHDOG_MS, () => resolve(false)))),
+    ]);
+    watchdog.remove();
+    if (!finished) this.recoverStuckTurn();
+
+    if (this.state.winner) {
+      await wait(this, 500);
+      if (this.state.winner !== "draw") {
+        const winnerWho = this.state.winner === this.playerSide ? "player" : "opponent";
+        await this.think(winnerWho, "win", true);
+        await this.think(winnerWho === "player" ? "opponent" : "player", "lose", true);
+      }
+      this.showResult();
+      return;
+    }
+    this.sayAfterTurn(events, caseBefore);
+    await wait(this, this.pace(700, 400));
+    if (this.online) applyView(this.state, nextView);
+    else startTurn(this.state);
+    this.beginTurn();
+  }
+
+  /** The revealed turn: a beat of tension, both cards turn over together, clash, then each push lands. */
+  async animateTurn(events, playerCard, opponentCard) {
     await this.tension([this.playerBack, this.opponentBack]);
     if (playerCard || opponentCard) {
       playSfx(this, "flip");
@@ -729,22 +771,53 @@ export default class CaseBattleScene extends Phaser.Scene {
       await this.playEvent(event, faces);
     }
     this.updateHud();
+  }
 
-    if (this.state.winner) {
-      await wait(this, 500);
-      if (this.state.winner !== "draw") {
-        const winnerWho = this.state.winner === this.playerSide ? "player" : "opponent";
-        await this.think(winnerWho, "win", true);
-        await this.think(winnerWho === "player" ? "opponent" : "player", "lose", true);
-      }
-      this.showResult();
-      return;
-    }
-    this.sayAfterTurn(events, caseBefore);
-    await wait(this, this.pace(700, 400));
-    if (this.online) applyView(this.state, nextView);
-    else startTurn(this.state);
-    this.beginTurn();
+  // ---------------------------------------------------------------- skipping and recovery
+
+  /** A turn starts playing out: the buttons give way to the skip hint. */
+  startPlayback() {
+    this.playingTurn = true;
+    this.waitButton.setVisible(false);
+    this.playButton.setVisible(false);
+    this.skipText.setText("Tap to skip ▸▸").setVisible(true);
+  }
+
+  /** Speeds up the rest of this turn's animation (sounds stay quiet so they don't pile up). */
+  skipAnimation() {
+    if (!this.playingTurn || this.skipping || this.rulesPanel) return;
+    this.skipping = true;
+    this.tweens.timeScale = SKIP_SPEED;
+    this.time.timeScale = SKIP_SPEED;
+    this.skipText.setText("Skipping ▸▸");
+  }
+
+  endPlayback() {
+    this.playingTurn = false;
+    this.skipping = false;
+    this.tweens.timeScale = 1;
+    this.time.timeScale = 1;
+    this.skipText.setVisible(false);
+    this.waitButton.setVisible(true);
+    this.playButton.setVisible(true);
+  }
+
+  /**
+   * A turn's animation never finished (a step that never reported back).
+   * Stopping every tween and timer leaves the stuck steps waiting forever,
+   * which cancels them; then the board is set to where the turn ended.
+   */
+  recoverStuckTurn() {
+    console.warn("Turn animation timed out; skipping to the result.");
+    this.tweens.killAll();
+    this.time.removeAllEvents();
+    Object.values(this.bubbles).forEach((b) => b?.finish());
+    this.cameras.main.resetFX();
+    this.cameras.main.setZoom(1);
+    this.meterValue = this.state.caseValue;
+    this.drawMeter(this.meterValue);
+    this.updateHud();
+    this.updatePortraits();
   }
 
   /** Both face-down cards tremble before the reveal. */
@@ -1661,6 +1734,7 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   showResult() {
     const { winner, endReason, turn } = this.state;
+    this.endPlayback();
     playSfx(this, "gavel");
     const won = winner === this.playerSide;
     const titles = {

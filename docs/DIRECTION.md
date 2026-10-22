@@ -86,6 +86,12 @@ After several rounds of look boards, the owner chose:
   within 20% of each other), or the turn that closes the case. Other turns get
   a quick dash-and-shove and quicker pushes, roughly half the time. The point
   is to get back to the next read sooner.
+- **Tap to skip.** While a turn plays out, the buttons give way to "Tap to
+  skip"; a tap (or Space/Enter) plays the rest of that turn at 5× speed, with
+  its sounds quiet. Animation is local to each player, so this works online
+  too: the server never waits for it. A watchdog stops any turn animation that
+  hasn't finished in 30 s of game time and moves on, so a stuck step can't
+  freeze a match.
 - **Hand interaction.** Tap a card to lift and grow it in place; press and hold
   to inspect a big copy without selecting; drag a card up onto the board to
   stage it in your slot (tap it again to take it back). Nothing is played
