@@ -32,3 +32,8 @@ plays is the `SFX` table in `src/audio.js`.
 | `break.mp3` | One breaks through |
 | `sting.mp3` | The cut-in band for a big play |
 | `cancel.mp3` | A Power card is Countered |
+| `needle.mp3` | The Case meter's needle moves: a ratchet that slows as it settles |
+| `shaken.mp3` | Shaken lands: a heartbeat |
+| `cornered.mp3` | Cornered lands: a door slams and the lock clicks |
+| `heat.mp3` | Heat lands: a police siren a few streets away |
+| `gavel.mp3` | The result screen: one gavel strike |

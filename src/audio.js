@@ -59,6 +59,11 @@ export const SFX = {
   break: 0.8,
   sting: 0.7,
   cancel: 0.75,
+  needle: 0.3,
+  gavel: 0.85,
+  shaken: 0.8,
+  cornered: 0.75,
+  heat: 0.45,
 };
 
 export const sfxKey = (name) => `sfx-${name}`;

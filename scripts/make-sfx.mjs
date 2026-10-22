@@ -158,6 +158,67 @@ const SOUNDS = {
     return finish(room(out, 0.25), 120);
   },
 
+  // The needle moving: a mechanical ratchet that slows as the needle settles
+  // (the meter eases out the same way).
+  needle: () => {
+    const out = buffer(0.5);
+    let t = 0;
+    for (let k = 0; t < 0.4; k++) {
+      mix(out, shape(filter(noise(0.03, 60 + k), "bandpass", 3200, 9), hit(0.0003, 0.004)), t, 0.8);
+      mix(out, shape(filter(noise(0.03, 90 + k), "bandpass", 1100, 4), hit(0.0003, 0.006)), t, 0.4);
+      t += 0.022 + k * 0.006;
+    }
+    return finish(room(out, 0.08, 0.4), 30);
+  },
+
+  // The verdict: one gavel strike on its block, in a big room.
+  gavel: () => {
+    const out = buffer(1.6);
+    mix(out, shape(filter(noise(0.05, 61), "highpass", 1800), hit(0.0003, 0.004)), 0, 1);
+    [
+      [180, 0.1, 1],
+      [420, 0.06, 0.7],
+      [690, 0.045, 0.5],
+      [1150, 0.03, 0.35],
+    ].forEach(([f, tau, gain]) => mix(out, shape(tone(1.6, () => f), hit(0.001, tau)), 0, gain));
+    mix(out, shape(filter(noise(0.2, 62), "lowpass", 700), hit(0.001, 0.03)), 0, 0.7);
+    return finish(room(soften(out, 2), 0.38, 1.4), 200);
+  },
+
+  // Shaken: a heartbeat, lub-dub, lub-dub.
+  shaken: () => {
+    const out = buffer(1.3);
+    const beat = (gain) => shape(tone(1.3, (t) => 48 + 30 * Math.exp(-t / 0.02)), hit(0.004, 0.07)).map((v) => v * gain);
+    [[0, 1], [0.16, 0.7], [0.62, 1], [0.78, 0.7]].forEach(([at, g]) => {
+      mix(out, beat(g), at);
+      mix(out, shape(filter(noise(0.1, 63), "lowpass", 300), hit(0.003, 0.03)), at, 0.4 * g);
+    });
+    return finish(room(soften(out, 1.6), 0.1), 120);
+  },
+
+  // Cornered: a heavy door slams, then the lock clicks.
+  cornered: () => {
+    const out = buffer(1.0);
+    mix(out, shape(tone(1.0, (t) => 62 + 50 * Math.exp(-t / 0.03)), hit(0.002, 0.14)), 0, 1);
+    mix(out, shape(filter(noise(0.3, 64), "lowpass", 900), hit(0.001, 0.05)), 0, 0.9);
+    mix(out, shape(filter(noise(0.05, 65), "highpass", 2000), hit(0.0003, 0.005)), 0, 0.4);
+    // The bolt: a click and a short metal clack.
+    mix(out, shape(filter(noise(0.05, 66), "bandpass", 2400, 10), hit(0.0003, 0.008)), 0.3, 0.7);
+    mix(out, shape(filter(noise(0.05, 67), "bandpass", 1300, 6), hit(0.0003, 0.012)), 0.36, 0.8);
+    return finish(room(soften(out, 2), 0.22, 0.9), 120);
+  },
+
+  // Heat: a police siren wailing a few streets away.
+  heat: () => {
+    const len = 1.8;
+    const wail = (t) => 700 + 260 * Math.sin(2 * Math.PI * (t / 1.1) - Math.PI / 2);
+    let out = tone(len, wail);
+    out = out.map((v, i) => Math.tanh(v * 2.5) * 0.6); // a harder, horn-like edge
+    out = filter(out, "lowpass", 1600);
+    out = shape(out, (t) => Math.min(1, t / 0.25) * Math.min(1, (len - t) / 0.4));
+    return finish(room(out, 0.5, 1.4), 100);
+  },
+
   // Turning a card over: two quick flicks of the edge.
   flip: () => {
     const out = buffer(0.25);
