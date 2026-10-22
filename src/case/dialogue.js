@@ -34,7 +34,7 @@ export const LINES = {
     losing: ["Okay, they're good. Now it's interesting!", "No sweat. I always have one more trick."],
     win: ["Gotcha! Case closed, and I'm starving.", "That was awesome! Best case ever."],
     // Losing bruises his ego: still joking, but clearly annoyed.
-    lose: ["Gone. Right under my nose... Great. Just great.", "Ha... ha. Very funny. Nobody tell the chief.", "Fine. FINE. Enjoy it. I'm not losing twice."],
+    lose: ["Gone. Right under my nose... Great. Just great.", "Ha... ha. Very funny. Nobody tell the chief.", "Fine. FINE. Enjoy it. I'll be hearing about this one for weeks."],
   },
   // Giovanni Santoro: a smart, classy boss with only a hint of Italian. Calm,
   // calculating, always three moves ahead (think Giovanni from Pokémon, with
