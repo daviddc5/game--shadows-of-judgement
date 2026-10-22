@@ -647,8 +647,6 @@ export default class CaseBattleScene extends Phaser.Scene {
       ease: "Cubic.easeIn",
       onComplete: () => this.slamDown(back, 0.6),
     });
-    // The slap in the slam sound lands 0.1 s in.
-    this.time.delayedCall(200, () => playSfx(this, "slam", { detune: -200 }));
     this.opponentBack = back;
     this.arenaObjects.push(back);
   }
@@ -683,7 +681,6 @@ export default class CaseBattleScene extends Phaser.Scene {
           { y: SLOT.player.y, scale: 1, angle: 0, duration: 90, ease: "Cubic.easeIn", onComplete: () => this.slamDown(back, 1) },
         ],
       });
-      this.time.delayedCall(190, () => playSfx(this, "slam"));
       this.playerBack = back;
       this.arenaObjects.push(back);
     }
@@ -1305,6 +1302,7 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   /** A card hitting the table: a jolt and a puff of dust along its bottom edge. */
   slamDown(card, strength) {
+    playSfx(this, "slam", { detune: strength < 1 ? -200 : 0 }); // the opponent's sounds a little deeper
     this.cameras.main.shake(110, 0.007 * strength);
     const ink = this.z(card.y).ink;
     const dust = this.add.particles(card.x, card.y + CARD_H / 2, "cb-shard", {

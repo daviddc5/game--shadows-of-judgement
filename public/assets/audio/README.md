@@ -24,7 +24,7 @@ plays is the `SFX` table in `src/audio.js`.
 | `select.mp3` | You tap a card in your hand |
 | `slam.mp3` | A card is slammed down face down (lower for the opponent's) |
 | `flip.mp3` | The cards turn over |
-| `reveal.mp3` | ...with a ringing "shwing" and sparkles |
+| `reveal.mp3` | ...with a swipe into a deep drum hit |
 | `charge.mp3` | Someone Waits and banks energy |
 | `whoosh.mp3` | The cards rush at each other |
 | `impact.mp3` | They meet |

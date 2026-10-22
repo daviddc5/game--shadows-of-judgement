@@ -124,31 +124,34 @@ const SOUNDS = {
     return finish(out, 10);
   },
 
-  // A card slammed onto the table, duel-anime style: a short rush of air, a
-  // hard slap, and a low boom under it. The slap lands 0.1 s in.
+  // A card slammed onto a wooden table: a hard slap of the card, and the
+  // table's knock under it. It hits at once, so play it on impact.
   slam: () => {
-    const at = 0.1;
-    const out = buffer(0.75);
-    const air = filter(noise(at, 40), "bandpass", (t) => 900 + (t / at) * 3000, 1.2);
-    mix(out, shape(air, (t) => (t / at) ** 2), 0, 0.5);
-    mix(out, shape(filter(noise(0.08, 41), "highpass", 1400), hit(0.0005, 0.007)), at, 1.3);
-    mix(out, shape(filter(noise(0.2, 42), "bandpass", 850, 0.9), hit(0.001, 0.028)), at, 1);
-    mix(out, shape(tone(0.75 - at, (t) => 44 + 80 * Math.exp(-t / 0.025)), hit(0.002, 0.13)), at, 1.1);
-    return finish(room(soften(out, 2.6), 0.16, 0.7));
+    const out = buffer(0.5);
+    // The slap: a sharp, bright crack.
+    mix(out, shape(filter(noise(0.06, 41), "highpass", 1200), hit(0.0003, 0.006)), 0, 1.4);
+    mix(out, shape(filter(noise(0.1, 42), "bandpass", 2200, 0.8), hit(0.0005, 0.014)), 0, 0.8);
+    // The table: a few short wooden modes, struck all at once.
+    [
+      [140, 0.09, 1],
+      [235, 0.07, 0.8],
+      [380, 0.05, 0.6],
+      [610, 0.035, 0.45],
+      [930, 0.025, 0.3],
+    ].forEach(([f, tau, gain]) => mix(out, shape(tone(0.5, () => f), hit(0.001, tau)), 0, gain));
+    mix(out, shape(filter(noise(0.2, 43), "lowpass", 500), hit(0.001, 0.03)), 0, 0.8);
+    return finish(room(soften(out, 2.4), 0.1, 0.5), 40);
   },
 
-  // Cards revealed: a ringing "shwing" sweeping up, with sparkles after it.
+  // Cards revealed: a quick swipe into one deep drum hit.
   reveal: () => {
-    const len = 0.28;
-    const out = buffer(1.0);
-    const swing = filter(noise(len, 43), "bandpass", (t) => 1200 + (t / len) ** 1.5 * 6500, 5);
-    mix(out, shape(swing, (t) => Math.sin(Math.PI * Math.min(1, t / len)) * (0.3 + t / len)), 0, 1.4);
-    const r = rng(44);
-    for (let k = 0; k < 14; k++) {
-      const f = 2400 + r() * 4200;
-      mix(out, shape(tone(0.3, () => f), hit(0.001, 0.035 + r() * 0.03)), 0.16 + r() * 0.4, 0.18 + r() * 0.12);
-    }
-    return finish(room(out, 0.3, 1.1), 150);
+    const at = 0.12;
+    const out = buffer(0.9);
+    const swipe = filter(noise(at, 44), "bandpass", (t) => 700 + (t / at) * 2500, 0.7);
+    mix(out, shape(swipe, (t) => (t / at) ** 2), 0, 0.5);
+    mix(out, shape(tone(0.9 - at, (t) => 58 + 45 * Math.exp(-t / 0.03)), hit(0.002, 0.2)), at, 1);
+    mix(out, shape(filter(noise(0.15, 45), "bandpass", 300, 0.9), hit(0.001, 0.04)), at, 0.6);
+    return finish(room(soften(out, 1.8), 0.2), 100);
   },
 
   // Waiting banks energy: a soft rising charge that settles on a chime.
