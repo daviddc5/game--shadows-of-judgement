@@ -2,9 +2,12 @@ import Phaser from 'phaser';
 // imports the config object from config.js
 import config from './config.js';
 import { installTextScale } from './theme.js';
+import { initFlags } from './flags.js';
 
 // Reading text follows the text size chosen on the Appearance screen.
 installTextScale(Phaser);
+
+await initFlags();
 
 const game = new Phaser.Game(config);
 
