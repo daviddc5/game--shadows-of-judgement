@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { getTheme, paintBackground } from "../theme.js";
 import { bodyText, button, displayText } from "../ui/widgets.js";
+import { isOn, onFlagsChange } from "../flags.js";
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -24,7 +25,11 @@ export default class MenuScene extends Phaser.Scene {
     button(this, theme, 375, 780, 520, "Appearance", () => this.scene.start("AppearanceScene"));
     button(this, theme, 375, 890, 520, "How to play", () => this.scene.start("InstructionsScene"));
 
-    if (import.meta.env.DEV) {
+    // Redraw when a flag is flipped in Harness, so changes show without a reload.
+    const stopListening = onFlagsChange(() => this.scene.restart());
+    this.events.once("shutdown", stopListening);
+
+    if (isOn("test_mode_enabled")) {
       button(this, theme, 375, 1010, 360, "Test mode", () => {
         this.registry.set("debugMode", true);
         this.scene.start("SinglePlayerLobbyScene", { debugMode: true });

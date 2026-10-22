@@ -12,6 +12,9 @@ COPY index.html ./
 COPY vite.config.js ./
 COPY src/ ./src/
 COPY public/ ./public/
+# Harness FME client-side key; browser keys are public by design, Vite bakes it into the bundle.
+ARG VITE_FME_CLIENT_KEY
+ENV VITE_FME_CLIENT_KEY=$VITE_FME_CLIENT_KEY
 RUN npm run build
 
 # Stage 2: Production server
