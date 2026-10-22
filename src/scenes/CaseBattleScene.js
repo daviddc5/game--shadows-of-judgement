@@ -1283,7 +1283,8 @@ export default class CaseBattleScene extends Phaser.Scene {
       const target = event.target === this.playerSide ? "player" : "opponent";
       const at = target === "player" ? { x: 80, y: 880 } : { x: 100, y: 190 };
       this.floatText(at.x + 120, at.y, `${EFFECTS[event.effect].name}!`, hex(red), 52);
-      playSfx(this, event.effect); // heartbeat, door slam or siren
+      // A heartbeat, a door slam, or for Heat: a police siren on the Vigilante, the press's cameras on the Detective.
+      playSfx(this, event.effect === "heat" && event.target === "detective" ? "paparazzi" : event.effect);
       this.state.sides[event.target].status = {
         ...this.state.sides[event.target].status,
         [event.effect]: EFFECTS[event.effect].turns,

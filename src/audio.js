@@ -64,6 +64,7 @@ export const SFX = {
   shaken: 0.8,
   cornered: 0.75,
   heat: 0.45,
+  paparazzi: 0.7,
 };
 
 export const sfxKey = (name) => `sfx-${name}`;

@@ -127,7 +127,8 @@ tap. Code-made music was tried (synthesised and sample-based, in
 composition. Sound effects (select tick, card dealt onto felt, flip and
 reveal drum hit, wait charge, whoosh, impact, grind, break, cut-in sting,
 countered, needle ratchet, a heartbeat for Shaken, a door slam for Cornered,
-a distant siren for Heat, and a gavel for the result) are made from code by `scripts/make-sfx.mjs`: noise-based sounds
+a distant siren for Heat on the Vigilante (press cameras when it's a
+smear campaign on the Detective), and a gavel for the result) are made from code by `scripts/make-sfx.mjs`: noise-based sounds
 like these come out convincing, unlike code-made music. They can be swapped
 for recordings with the same names (see `public/assets/audio/README.md`).
 The card-play sound was chosen from a sound board of eight options (stamps,

@@ -35,5 +35,6 @@ plays is the `SFX` table in `src/audio.js`.
 | `needle.mp3` | The Case meter's needle moves: a ratchet that slows as it settles |
 | `shaken.mp3` | Shaken lands: a heartbeat |
 | `cornered.mp3` | Cornered lands: a door slams and the lock clicks |
-| `heat.mp3` | Heat lands: a police siren a few streets away |
+| `heat.mp3` | Heat lands on the Vigilante: a police siren a few streets away |
+| `paparazzi.mp3` | Heat lands on the Detective (a smear campaign): camera shutters and flash pops |
 | `gavel.mp3` | The result screen: one gavel strike |
