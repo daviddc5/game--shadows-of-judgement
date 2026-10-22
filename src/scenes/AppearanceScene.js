@@ -1,12 +1,30 @@
 import Phaser from "phaser";
-import { FONTS, THEMES, getTheme, hex, paintBackground, setTheme, zone } from "../theme.js";
-import { backLink, bodyText, displayText } from "../ui/widgets.js";
+import {
+  CONTRASTS,
+  FONTS,
+  TEXT_SIZES,
+  THEMES,
+  getContrast,
+  getTextSize,
+  getTheme,
+  hex,
+  paintBackground,
+  setContrast,
+  setTextSize,
+  setTheme,
+  zone,
+} from "../theme.js";
+import { backLink, bodyText, button, displayText } from "../ui/widgets.js";
 
 const PREVIEW_W = 200;
 const PREVIEW_H = 340;
 const PER_ROW = 3;
 
-/** Lets the player pick a board theme. Every entry in THEMES appears here. */
+/**
+ * Lets the player pick a board theme (every entry in THEMES appears here), a
+ * text size and the contrast. Each choice is saved on the device and the
+ * screen redraws so the change shows at once.
+ */
 export default class AppearanceScene extends Phaser.Scene {
   constructor() {
     super({ key: "AppearanceScene" });
@@ -17,15 +35,31 @@ export default class AppearanceScene extends Phaser.Scene {
     paintBackground(this, theme);
     backLink(this, theme, () => this.scene.start("MenuScene"));
 
-    displayText(this, theme, 375, 190, "Appearance", 80);
-    bodyText(this, theme, 375, 280, "Choose how the case looks", 26, { soft: true });
+    displayText(this, theme, 375, 160, "Appearance", 80);
+    bodyText(this, theme, 375, 240, "Choose how the case looks", 26, { soft: true });
 
     THEMES.forEach((t, i) => {
       const col = i % PER_ROW;
       const row = Math.floor(i / PER_ROW);
       const x = 375 + (col - (PER_ROW - 1) / 2) * (PREVIEW_W + 30);
-      const y = 640 + row * (PREVIEW_H + 190);
+      const y = 500 + row * (PREVIEW_H + 190);
       this.drawTile(t, x, y, t.id === theme.id);
+    });
+
+    this.optionRow(theme, 930, "Text size", TEXT_SIZES, getTextSize().id, setTextSize);
+    this.optionRow(theme, 1120, "Contrast", CONTRASTS, getContrast(), setContrast);
+  }
+
+  /** A label and a row of buttons; the chosen one is filled in. */
+  optionRow(theme, y, label, options, chosen, save) {
+    bodyText(this, theme, 375, y, label, 28).setFontStyle("600");
+    const w = 200;
+    options.forEach((o, i) => {
+      const x = 375 + (i - (options.length - 1) / 2) * (w + 20);
+      button(this, theme, x, y + 76, w, o.name, () => {
+        save(o.id);
+        this.scene.restart();
+      }, { primary: o.id === chosen, h: 76, size: 28 });
     });
   }
 
@@ -80,8 +114,11 @@ export default class AppearanceScene extends Phaser.Scene {
       this.scene.restart();
     });
 
-    bodyText(this, current, x, y + PREVIEW_H / 2 + 46, t.name, 28, { color: hex(zone(current, y + PREVIEW_H / 2 + 46).ink) }).setFontStyle("600");
-    bodyText(this, current, x, y + PREVIEW_H / 2 + 104, t.description, 19, { soft: true, wrap: PREVIEW_W + 20 });
+    const name = bodyText(this, current, x, y + PREVIEW_H / 2 + 46, t.name, 28, {
+      color: hex(zone(current, y + PREVIEW_H / 2 + 46).ink),
+    }).setFontStyle("600");
+    // The description sits under the name, however big the text is.
+    bodyText(this, current, x, name.y + name.height / 2 + 6, t.description, 19, { soft: true, wrap: PREVIEW_W + 20 }).setOrigin(0.5, 0);
     if (selected) bodyText(this, current, x, y - PREVIEW_H / 2 - 30, "Selected", 20, { color: hex(current.red) });
   }
 }

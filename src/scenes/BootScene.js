@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { FONTS } from "../theme.js";
 import { SIDES } from "../case/cards.js";
 import { portraitFiles } from "../case/characters.js";
-import { DUEL_THEME } from "../audio.js";
+import { DUEL_THEME, SFX, sfxKey } from "../audio.js";
 
 //define the BootScene class that is the first scene to load
 
@@ -21,6 +21,7 @@ export default class BootScene extends Phaser.Scene {
 
     this.loadCardArt();
     this.load.audio(DUEL_THEME, "assets/audio/duel-theme.mp3");
+    for (const name of Object.keys(SFX)) this.load.audio(sfxKey(name), `assets/audio/sfx/${name}.mp3`);
   }
 
   /** Card art: any card with `art: "<name>"` loads public/assets/images/cards/<name>.png. */

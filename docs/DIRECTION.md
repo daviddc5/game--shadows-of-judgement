@@ -59,6 +59,15 @@ After several rounds of look boards, the owner chose:
   about 55% on a phone, so a non-gamer playtester found the small text too
   small to read. Keep body text at 24 px or more in game units (about 13 px on
   a phone) and card names at 24 px.
+- **Accessibility settings on the Appearance screen**, saved on the device:
+  - **Text size** (Standard, Large ×1.15, Larger ×1.3). It scales every piece
+    of reading text (EB Garamond) as it is created (`installTextScale` in
+    `src/theme.js`); blackletter decoration keeps its size. Text placed next to
+    other things is laid out from its real width (or shrunk with `fit()` in
+    `src/ui/widgets.js`), so check new screens at Larger.
+  - **Contrast** (Standard, High). High turns every near-black into black and
+    every near-white into white, muted text included, and drops faded text on
+    cards.
 - **Cards look like cards: the "case file" design.** Chosen from four mock-ups
   after looking at how popular digital card games lay out cards (rounded
   corners and a frame, art doing most of the work, numbers in fixed badge
@@ -72,6 +81,11 @@ After several rounds of look boards, the owner chose:
   label. (A mini Case meter showing the push was tried and dropped: it always
   started from the middle, so it showed the wrong position once the meter had
   moved.)
+- **Small turns play fast.** A full clash (wind-up, hit stop, grind, break)
+  only happens on a showdown: a Power, Counter or trap, a close clash (pushes
+  within 20% of each other), or the turn that closes the case. Other turns get
+  a quick dash-and-shove and quicker pushes, roughly half the time. The point
+  is to get back to the next read sooner.
 - **Hand interaction.** Tap a card to lift and grow it in place; press and hold
   to inspect a big copy without selecting; drag a card up onto the board to
   stage it in your slot (tap it again to take it back). Nothing is played
@@ -104,8 +118,15 @@ The battle screen plays the owner's duel theme ("The Winning Hand") in a loop
 the device. Browsers only allow sound after a tap, so it starts on the first
 tap. Code-made music was tried (synthesised and sample-based, in
 `scratchpad` experiments) and dropped: it sounded goofy next to a real
-composition. Sound effects (card flip, clash, grind, crack, cut-in sting) are
-still to do.
+composition. Sound effects (select tick, card dealt onto felt, flip and
+reveal drum hit, wait charge, whoosh, impact, grind, break, cut-in sting,
+countered, needle ratchet, a heartbeat for Shaken, a door slam for Cornered,
+a distant siren for Heat, and a gavel for the result) are made from code by `scripts/make-sfx.mjs`: noise-based sounds
+like these come out convincing, unlike code-made music. They can be swapped
+for recordings with the same names (see `public/assets/audio/README.md`).
+The card-play sound was chosen from a sound board of eight options (stamps,
+typewriter, revolver, switchblade, briefcase, felt); the owner picked felt for
+both sides.
 
 ### Characters
 

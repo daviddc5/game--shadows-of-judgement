@@ -42,3 +42,38 @@ export function playDuelMusic(scene) {
 export function stopMusic(scene) {
   scene.sound.get(DUEL_THEME)?.stop();
 }
+
+/**
+ * Sound effects in public/assets/audio/sfx/, made by scripts/make-sfx.mjs (or
+ * replaced by recordings with the same names), and how loud each plays.
+ */
+export const SFX = {
+  select: 0.35,
+  felt: 0.9,
+  flip: 0.7,
+  reveal: 0.55,
+  charge: 0.5,
+  whoosh: 0.5,
+  impact: 0.85,
+  grind: 0.35,
+  break: 0.8,
+  sting: 0.7,
+  cancel: 0.75,
+  needle: 0.3,
+  gavel: 0.85,
+  shaken: 0.8,
+  cornered: 0.75,
+  heat: 0.45,
+};
+
+export const sfxKey = (name) => `sfx-${name}`;
+
+/** Plays a sound effect; returns it (for one you need to stop, like the grind). */
+export function playSfx(scene, name, { detune = 0, seek = 0 } = {}) {
+  const key = sfxKey(name);
+  if (scene.sound.locked || !scene.cache.audio.exists(key)) return null;
+  const sound = scene.sound.add(key, { volume: SFX[name], detune });
+  sound.once("complete", () => sound.destroy());
+  sound.play({ seek });
+  return sound;
+}
