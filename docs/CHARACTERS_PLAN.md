@@ -36,7 +36,14 @@ Kira say these things to L?). They think about each other instead.
   from Death Note).
 - Lines live in one data file, so adding a character means adding their lines.
 
-## 2. Status effects
+## 2. Status effects (first three done)
+
+Built: Shaken, Cornered and Heat, one card each per side (see
+[CASE_METER_EXPERIMENT.md](CASE_METER_EXPERIMENT.md) for the numbers).
+Wiretapped is left for later: it reveals part of a hidden hand, which needs
+care in online play. Simulator (20,000 games): wins 49.9% / 49.9%, verdicts
+6.1%, effects land in about 18% of plays.
+
 
 Some cards trade push for a lingering effect, like status conditions in
 Pokémon. Same-cost cards can then differ in push when the weaker one has an

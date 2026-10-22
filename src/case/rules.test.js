@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { RULES, createMatch, resolveTurn, startTurn, pushFor } from "./rules.js";
+import { RULES, costFor, createMatch, mustPlay, resolveTurn, startTurn, pushFor } from "./rules.js";
 import { chooseAiPlay } from "./ai.js";
 import { SIDES } from "./cards.js";
 
@@ -149,6 +149,57 @@ describe("Case meter rules", () => {
         if (!state.winner) startTurn(state);
       }
       expect(state.turn).toBeLessThanOrEqual(RULES.maxTurns);
+    }
+  });
+});
+
+describe("status effects", () => {
+  const withEffect = (side, effect) => {
+    const c = SIDES[side].cards.find((x) => x.effect === effect);
+    return { ...c, uid: `${c.id}#test` };
+  };
+  const turnWith = (state, detectiveCard, vigilanteCard) => {
+    state.sides.detective.hand = detectiveCard ? [detectiveCard] : [];
+    state.sides.vigilante.hand = vigilanteCard ? [vigilanteCard] : [];
+    state.sides.detective.energy = 10;
+    state.sides.vigilante.energy = 10;
+    return resolveTurn(state, play(detectiveCard, vigilanteCard));
+  };
+
+  it("Shaken makes Power cost more on the next turn only", () => {
+    const state = createMatch({ rng: () => 0.5 });
+    const { events } = turnWith(state, withEffect("detective", "shaken"), null);
+    expect(events.find((e) => e.type === "effect")).toMatchObject({ target: "vigilante", effect: "shaken" });
+    const power = card("vigilante", "POWER");
+    expect(costFor(state, "vigilante", power)).toBe(power.cost + RULES.shakenExtraCost);
+    turnWith(state, null, card("vigilante", "QUICK"));
+    expect(costFor(state, "vigilante", power)).toBe(power.cost);
+  });
+
+  it("Cornered stops a side from waiting while it can afford a card", () => {
+    const state = createMatch({ rng: () => 0.5 });
+    turnWith(state, withEffect("detective", "cornered"), null);
+    state.sides.vigilante.hand = [card("vigilante", "QUICK")];
+    state.sides.vigilante.energy = 10;
+    expect(mustPlay(state, "vigilante")).toBe(true);
+    expect(() => resolveTurn(state, play(false, false))).toThrow(/Cornered/);
+    state.sides.vigilante.energy = 0;
+    expect(mustPlay(state, "vigilante")).toBe(false);
+  });
+
+  it("Heat drifts the meter toward the side that applied it for two turns", () => {
+    const state = createMatch({ rng: () => 0.5 });
+    turnWith(state, null, withEffect("vigilante", "heat"));
+    for (let i = 0; i < 3; i++) {
+      const before = state.caseValue;
+      const { events } = turnWith(state, null, null);
+      const drift = events.find((e) => e.type === "heat");
+      if (i < 2) {
+        expect(drift).toMatchObject({ side: "detective" });
+        expect(state.caseValue).toBe(before - RULES.heatDrift);
+      } else {
+        expect(drift).toBeUndefined();
+      }
     }
   });
 });

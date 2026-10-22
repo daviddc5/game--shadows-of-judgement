@@ -28,6 +28,14 @@ running the same engine via `server/caseRoom.js`).
   (cost 3) and 25 (cost 4), Power 55 (cost 6) and 75 (cost 8), Counter 20, Bait
   5 or 35 when it springs, Ambush 5 or 30. Playtesters found odd numbers like
   19 and 7 hard to add up.
+- **Status effects.** A few cheaper cards trade push for an effect on the
+  opponent, shown as a red tag by their energy:
+  - **Shaken** (Press Conference, Anonymous Threat; cost 2, push 5): their
+    Power cards cost +2 next turn.
+  - **Cornered** (Lockdown, Blackmail; cost 3, push 10): they can't Wait next
+    turn if they can afford any card.
+  - **Heat** (Most Wanted, Smear Campaign; cost 3, push 10): the meter drifts
+    10 your way at the start of each of the next 2 turns.
 - **Rising stakes.** Every card gains +5 push per turn, so games end in about
   6 turns. After turn 12, whichever side the needle leans wins.
 

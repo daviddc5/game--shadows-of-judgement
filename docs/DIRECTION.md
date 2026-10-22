@@ -58,8 +58,25 @@ After several rounds of look boards, the owner chose:
 - **Text big enough for a phone.** The game is drawn 750 px wide and shrunk to
   about 55% on a phone, so a non-gamer playtester found the small text too
   small to read. Keep body text at 24 px or more in game units (about 13 px on
-  a phone) and card names at 26 px. Card rules are explained in large text
-  when a card is selected instead of in a tiny line on the card.
+  a phone) and card names at 24 px.
+- **Cards look like cards: the "case file" design.** Chosen from four mock-ups
+  after looking at how popular digital card games lay out cards (rounded
+  corners and a frame, art doing most of the work, numbers in fixed badge
+  places, little text). The first versions copied the layout of an existing
+  game too closely, so the final design is built from our own world
+  (`src/ui/cardFace.js`): real card proportions (176 x 246, about 5 : 7; the
+  widest four fit across a phone), a rounded double border, a type stamp and
+  the cost with our own hexagon along the top, the art as an evidence photo
+  with photo corners, a typed name label, one line of rule text, a red rubber
+  stamp for a status effect, and the push as a big number with a "Pushes"
+  label. (A mini Case meter showing the push was tried and dropped: it always
+  started from the middle, so it showed the wrong position once the meter had
+  moved.)
+- **Hand interaction.** Tap a card to lift and grow it in place; press and hold
+  to inspect a big copy without selecting; drag a card up onto the board to
+  stage it in your slot (tap it again to take it back). Nothing is played
+  until Play card is pressed. A phone buzz on select, and desktop keys: 1
+  to 4 pick a card, Enter plays it, W waits, Esc puts it back.
 - **No newspaper framing.** That look was liked for its font and restraint,
   not for being a newspaper.
 - **Board themes are a personalisation option**, like card games such as
@@ -79,6 +96,16 @@ card games, so art is a long-term goal; the owner may learn to draw or hire an
 artist. Until then the box shows a drawn placeholder scene, a different one per type (storm, rooftops, tower, streetlamp, harbour, alley) (`src/ui/cardArtPlaceholder.js`). Adding art
 for a card is one image plus `art: "<name>"` on the card: see
 `public/assets/images/cards/README.md` (16:9, at least 640×360).
+
+### Music
+
+The battle screen plays the owner's duel theme ("The Winning Hand") in a loop
+(`public/assets/audio/`, see its README), with a ♪ mute button that is saved on
+the device. Browsers only allow sound after a tap, so it starts on the first
+tap. Code-made music was tried (synthesised and sample-based, in
+`scratchpad` experiments) and dropped: it sounded goofy next to a real
+composition. Sound effects (card flip, clash, grind, crack, cut-in sting) are
+still to do.
 
 ### Characters
 

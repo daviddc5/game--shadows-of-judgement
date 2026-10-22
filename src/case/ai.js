@@ -1,5 +1,5 @@
 import { SIDES } from "./cards.js";
-import { otherSide, publicView, pushFor } from "./rules.js";
+import { canAfford, costFor, mustPlay, otherSide, publicView, pushFor } from "./rules.js";
 
 const POWER_THREAT_ENERGY = 6; // cheapest POWER card cost
 const TYPICAL_POWER = 60; // average push of a POWER card
@@ -16,7 +16,9 @@ export function predictOpponent(state, side) {
   const lastMine = me.history[me.history.length - 1];
 
   const p = { POWER: 0, COUNTER: 0, BAIT: 0, AMBUSH: 0, WAIT: 0.1 };
-  if (foe.energy >= POWER_THREAT_ENERGY) p.POWER = foe.energy >= 8 ? 0.4 : 0.3;
+  // Shaken makes their Power cards cost more.
+  const threat = POWER_THREAT_ENERGY + (foe.status?.shaken > 0 ? state.rules.shakenExtraCost : 0);
+  if (foe.energy >= threat) p.POWER = foe.energy >= threat + 2 ? 0.4 : 0.3;
   if (foe.energy >= 2) {
     // They counter when we look ready to POWER.
     p.COUNTER = me.energy >= POWER_THREAT_ENERGY ? 0.3 : 0.08;
@@ -28,6 +30,8 @@ export function predictOpponent(state, side) {
   // Saving up for a POWER card, or too poor to do much.
   if (foe.energy === 4 || foe.energy === 5) p.WAIT += 0.15;
   if (foe.energy < 2) p.WAIT += 0.3;
+  // A Cornered side can't wait (if it can play anything at all).
+  if (foe.status?.cornered > 0 && foe.energy >= 1) p.WAIT = 0;
 
   const total = Object.values(p).reduce((a, b) => a + b, 0);
   const scale = total > 0.85 ? 0.85 / total : 1; // keep room for ordinary cards
@@ -37,7 +41,8 @@ export function predictOpponent(state, side) {
 }
 
 /** Expected meter gain of one option against a predicted opponent mix. */
-function expectedGain(state, me, card, p) {
+function expectedGain(state, side, card, p) {
+  const me = state.sides[side];
   const unit = (amount) => pushFor(state, card, amount);
   const theirs = (amount) => pushFor(state, null, amount);
   const energyValue = 0.15 * theirs(4); // what one spare energy is roughly worth
@@ -49,8 +54,8 @@ function expectedGain(state, me, card, p) {
     const unlocks = me.hand.find(
       (c) =>
         c.type === "POWER" &&
-        c.cost > me.energy + energyPerTurn &&
-        c.cost <= me.energy + energyPerTurn + waitBonus,
+        costFor(state, side, c) > me.energy + energyPerTurn &&
+        costFor(state, side, c) <= me.energy + energyPerTurn + waitBonus,
     );
     const saving = unlocks ? 0.4 * pushFor(state, unlocks) : 0;
     return saving + waitBonus * energyValue - p.AMBUSH * theirs(TYPICAL_TRAP_BONUS);
@@ -73,7 +78,21 @@ function expectedGain(state, me, card, p) {
     default:
       gain = unit(card.push);
   }
-  return gain - card.cost * energyValue;
+  if (card.effect) gain += effectValue(state, side, card.effect, p);
+  return gain - costFor(state, side, card) * energyValue;
+}
+
+/** Rough worth, in meter points, of putting a status effect on the opponent. */
+function effectValue(state, side, effect, p) {
+  const foe = state.sides[otherSide(side)];
+  if (effect === "heat") return 2 * state.rules.heatDrift * 0.8;
+  if (effect === "shaken") {
+    // Worth most when they are about to afford a Power card.
+    const nextEnergy = foe.energy + state.rules.energyPerTurn;
+    return nextEnergy >= POWER_THREAT_ENERGY ? 0.3 * pushFor(state, null, 55) : 2;
+  }
+  if (effect === "cornered") return 4 + 10 * p.WAIT;
+  return 0;
 }
 
 /**
@@ -85,7 +104,7 @@ export function chooseAiPlay(state, side, { rng = Math.random, skill = 1 } = {})
   const direction = SIDES[side].direction;
   const affordable = me.hand
     .map((card, index) => ({ card, index }))
-    .filter(({ card }) => card.cost <= me.energy);
+    .filter(({ card }) => canAfford(state, side, card));
 
   if (affordable.length === 0) return null;
 
@@ -104,9 +123,10 @@ export function chooseAiPlay(state, side, { rng = Math.random, skill = 1 } = {})
   }
 
   const p = predictOpponent(state, side);
-  const options = [{ index: null, card: null }, ...affordable].map((o) => ({
+  const choices = mustPlay(state, side) ? affordable : [{ index: null, card: null }, ...affordable];
+  const options = choices.map((o) => ({
     ...o,
-    value: expectedGain(state, me, o.card, p),
+    value: expectedGain(state, side, o.card, p),
   }));
 
   // Softmax over expected gain keeps the AI hard to read.

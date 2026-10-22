@@ -14,7 +14,20 @@ export const RULES = {
   pushScale: 1, // multiplies every card's push (cards hold their real numbers, so 1)
   escalation: 0, // extra push per turn: push * (1 + escalation * (turn - 1))
   escalationFlat: 5, // flat push added per turn: push + escalationFlat * (turn - 1)
+  shakenExtraCost: 2, // a Shaken side's Power cards cost this much more
+  heatDrift: 10, // how far Heat moves the meter at the start of each turn
 };
+
+// Status effects some cards put on the opponent (card.effect). Each lasts
+// `turns` turns starting with the opponent's next one, and both players can
+// see it.
+export const EFFECTS = {
+  shaken: { name: "Shaken", turns: 1, text: "their Power cards cost +2 next turn" },
+  cornered: { name: "Cornered", turns: 1, text: "they can't Wait next turn" },
+  heat: { name: "Heat", turns: 2, text: "the meter drifts your way for 2 turns" },
+};
+
+const noStatus = () => ({ shaken: 0, cornered: 0, heat: 0 });
 
 /** How far a card moves the meter this turn (`amount` defaults to its normal push). */
 export function pushFor(state, card, amount = card.push) {
@@ -65,6 +78,7 @@ export function createMatch({ rng = Math.random, rules = RULES } = {}) {
       hand: [],
       discard: [],
       history: [], // what this side played each turn (null = waited)
+      status: noStatus(), // turns left of each effect on this side
     };
   });
   const state = {
@@ -91,8 +105,20 @@ export function startTurn(state, rng = Math.random) {
   return state;
 }
 
+/** What a card costs this side right now (Shaken makes Power cost more). */
+export function costFor(state, side, card) {
+  const shaken = state.sides[side].status?.shaken > 0 && card.type === "POWER";
+  return card.cost + (shaken ? state.rules.shakenExtraCost : 0);
+}
+
 export function canAfford(state, side, card) {
-  return !!card && card.cost <= state.sides[side].energy;
+  return !!card && costFor(state, side, card) <= state.sides[side].energy;
+}
+
+/** A Cornered side can't Wait while it can afford any card in hand. */
+export function mustPlay(state, side) {
+  const p = state.sides[side];
+  return p.status?.cornered > 0 && p.hand.some((card) => canAfford(state, side, card));
 }
 
 function clampCase(state, value) {
@@ -129,9 +155,12 @@ export function resolveTurn(state, plays) {
     if (card && !canAfford(state, side, card)) {
       throw new Error(`${side} cannot afford ${card.name}`);
     }
+    if (!card && mustPlay(state, side)) {
+      throw new Error(`${side} is Cornered and can't wait`);
+    }
     if (card) {
       p.hand.splice(index, 1);
-      p.energy -= card.cost;
+      p.energy -= costFor(state, side, card);
       p.discard.push(card);
       played[side] = card;
     } else {
@@ -160,6 +189,13 @@ export function resolveTurn(state, plays) {
   );
 
   let running = state.caseValue;
+  // Heat on a side drags the meter toward the other side's goal first.
+  SIDE_IDS.forEach((side) => {
+    if (!(state.sides[side].status?.heat > 0)) return;
+    const from = clampCase(state, running);
+    running -= SIDES[side].direction * rules.heatDrift;
+    events.push({ type: "heat", side, from, to: clampCase(state, running) });
+  });
   for (const side of order) {
     const card = played[side];
     const direction = SIDES[side].direction;
@@ -185,6 +221,20 @@ export function resolveTurn(state, plays) {
   state.caseValue = clampCase(state, running);
   checkEnd(state);
 
+  // This turn's effects wear off, then new ones land on the opponent.
+  SIDE_IDS.forEach((side) => {
+    const status = state.sides[side].status;
+    if (!status) return;
+    Object.keys(status).forEach((k) => (status[k] = Math.max(0, status[k] - 1)));
+  });
+  for (const side of order) {
+    const effect = played[side].effect;
+    if (!effect || cancelled[side] || state.winner) continue;
+    const target = otherSide(side);
+    state.sides[target].status[effect] = EFFECTS[effect].turns;
+    events.push({ type: "effect", side, target, effect, card: played[side] });
+  }
+
   if (!state.winner && state.turn >= rules.maxTurns) {
     if (state.caseValue > rules.caseStart) state.winner = "detective";
     else if (state.caseValue < rules.caseStart) state.winner = "vigilante";
@@ -206,5 +256,6 @@ export function publicView(state, side) {
     energy: p.energy,
     handCount: p.hand.length,
     history: [...p.history],
+    status: { ...p.status },
   };
 }

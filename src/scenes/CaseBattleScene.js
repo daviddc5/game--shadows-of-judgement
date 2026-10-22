@@ -1,8 +1,10 @@
 import Phaser from "phaser";
 import { SIDES } from "../case/cards.js";
 import {
+  EFFECTS,
   canAfford,
   createMatch,
+  mustPlay,
   otherSide,
   pushFor,
   resolveTurn,
@@ -11,11 +13,12 @@ import {
 import { chooseAiPlay } from "../case/ai.js";
 import { getCharacter, portraitKey, randomCharacter } from "../case/characters.js";
 import { pickLine } from "../case/dialogue.js";
+import { isMuted, playDuelMusic, setMuted, stopMusic } from "../audio.js";
 import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button } from "../ui/widgets.js";
-import { ensureTypeIcons, iconKey } from "../ui/cardIcons.js";
-import { buildPlaceholderArt } from "../ui/cardArtPlaceholder.js";
+import { ensureTypeIcons } from "../ui/cardIcons.js";
+import { CARD_H, CARD_W, TYPE_NAMES, buildCardBack, buildCardFace, buildSlotOutline } from "../ui/cardFace.js";
 
 const W = 750;
 const H = 1334;
@@ -24,23 +27,17 @@ const FONT_DISPLAY = FONTS.display;
 const FONT_BODY = FONTS.body;
 
 const METER = { x: 60, y: 372, w: 630, h: 18 };
-const SLOT = { opponent: { x: 230, y: 625 }, player: { x: 520, y: 625 } };
-const CARD_W = 168;
-const CARD_H = 260;
-// Art box on every card. Artists: draw at 16:9, at least 640×360 (shown at 148×84).
-const ART_W = 148;
-const ART_H = 84;
-const ART_Y = 4;
-const HAND_Y = 1075;
-
-const TYPE_NAMES = {
-  COUNTER: "Counter",
-  QUICK: "Quick",
-  NORMAL: "Normal",
-  POWER: "Power",
-  BAIT: "Bait",
-  AMBUSH: "Ambush",
-};
+const SLOT = { opponent: { x: 230, y: 632 }, player: { x: 520, y: 632 } };
+const HAND_Y = 1100;
+// Hand interaction: a tap lifts and grows the card; holding inspects it; a drag
+// up past DROP_Y stages it in your slot. Nothing is played until Play card is
+// pressed.
+const SELECT_LIFT = 34;
+const SELECT_SCALE = 1.25;
+const HOLD_MS = 380;
+const DRAG_PX = 14;
+const DROP_Y = 900;
+const INSPECT_SCALE = 1.8;
 
 const wait = (scene, ms) =>
   new Promise((resolve) => scene.time.delayedCall(ms, resolve));
@@ -91,6 +88,7 @@ function applyView(state, view) {
     energy: view.opponent.energy,
     hand: new Array(view.opponent.handCount).fill(null),
     history: view.opponent.history,
+    status: view.opponent.status,
   };
 }
 
@@ -146,7 +144,18 @@ export default class CaseBattleScene extends Phaser.Scene {
       window.__caseScene = this;
       if (this.registry.get("debugMode") && !this.online) this.createDebugControls();
     }
-    this.events.once("shutdown", () => NetworkManager.clearCallbacks());
+    this.press = null;
+    this.inspect = null;
+    this.input.on("pointermove", (pointer) => this.movePress(pointer));
+    this.input.on("pointerup", (pointer) => this.endPress(pointer));
+    this.input.on("gameout", () => this.cancelPress());
+    this.input.keyboard?.on("keydown", (event) => this.onKey(event));
+    this.keepMusic = false; // a rematch keeps the music going
+    this.events.once("shutdown", () => {
+      NetworkManager.clearCallbacks();
+      if (!this.keepMusic) stopMusic(this);
+    });
+    playDuelMusic(this);
 
     this.beginTurn(true);
   }
@@ -170,7 +179,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     NetworkManager.onPlayRejected = ({ message }) => {
       this.busy = false;
       this.renderHand();
-      this.waitButton.setEnabled(true);
+      this.updateWaitButton();
       this.flashHint(message);
     };
     NetworkManager.onOpponentDisconnected = () => {
@@ -179,6 +188,7 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   leaveToMenu() {
+    stopMusic(this);
     if (this.online) NetworkManager.disconnect();
     this.scene.start("MenuScene");
   }
@@ -217,6 +227,23 @@ export default class CaseBattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     help.on("pointerdown", () => this.toggleRules());
+
+    // Music on/off, saved on the device.
+    const music = this.add
+      .text(100, 38, isMuted() ? "♪̸" : "♪", {
+        fontFamily: FONT_BODY,
+        fontSize: "40px",
+        fontStyle: "600",
+        color: hex(z.soft),
+        padding: { x: 22, y: 14 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    music.on("pointerdown", () => {
+      const muted = setMuted(this, !isMuted());
+      music.setText(muted ? "♪̸" : "♪").setAlpha(muted ? 0.6 : 1);
+    });
+    music.setAlpha(isMuted() ? 0.6 : 1);
   }
 
   createPortrait(x, y, character, size) {
@@ -309,7 +336,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         ? "You push the needle toward Capture ▶"
         : "◀ You push the needle toward Escape";
     this.add
-      .text(W / 2, y + h / 2 + 56, dirText, { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.soft) })
+      .text(W / 2, y + h / 2 + 50, dirText, { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.soft) })
       .setOrigin(0.5);
 
     this.meterValue = this.state.caseValue;
@@ -332,12 +359,13 @@ export default class CaseBattleScene extends Phaser.Scene {
     ["opponent", "player"].forEach((who) => {
       const { x, y } = SLOT[who];
       const z = this.z(y);
-      this.add.rectangle(x, y, CARD_W, CARD_H).setStrokeStyle(1, z.line, 0.3);
+      buildSlotOutline(this, x, y, z.line);
+      const labelY = y - CARD_H / 2 - 20;
       this.add
-        .text(x, y - CARD_H / 2 - 20, who === "player" ? "You" : "Them", {
+        .text(x, labelY, who === "player" ? "You" : "Them", {
           fontFamily: FONT_BODY,
           fontSize: "24px",
-          color: hex(z.soft),
+          color: hex(this.z(labelY).soft),
         })
         .setOrigin(0.5);
     });
@@ -349,8 +377,11 @@ export default class CaseBattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // Lights up while a dragged card is over the board.
+    this.slotGlow = buildSlotOutline(this, SLOT.player.x, SLOT.player.y, this.theme.red, 1, 4).setAlpha(0);
+
     this.hintText = this.add
-      .text(W / 2, 790, "", {
+      .text(W / 2, 812, "", {
         fontFamily: FONT_BODY,
         fontSize: "26px",
         color: hex(this.z(790).ink),
@@ -388,124 +419,30 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- cards
 
-  buildCardFace(card, side) {
-    const style = this.theme.cards[side];
-    const ink = hex(style.ink);
-    const top = -CARD_H / 2;
-    const left = -CARD_W / 2;
-    const c = this.add.container(0, 0);
-    const outline = this.cardOutline(style);
-    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(3, style.edge);
-
-    const icon = this.add.image(left + 20, top + 20, iconKey(card.type)).setDisplaySize(28, 28).setTint(style.ink);
-    const typeLabel = this.add
-      .text(left + 37, top + 20, TYPE_NAMES[card.type], { fontFamily: FONT_BODY, fontSize: "22px", color: ink })
-      .setOrigin(0, 0.5);
-    const cost = this.add
-      .text(-left - 8, top + 20, `${card.cost} ⬢`, {
-        fontFamily: FONT_BODY,
-        fontSize: "24px",
-        fontStyle: "600",
-        color: ink,
-      })
-      .setOrigin(1, 0.5);
-    const name = this.add
-      .text(0, top + 64, card.name, {
-        fontFamily: FONT_BODY,
-        fontSize: "26px",
-        fontStyle: "600",
-        color: ink,
-        align: "center",
-        lineSpacing: -8,
-        wordWrap: { width: CARD_W - 12 },
-      })
-      .setOrigin(0.5);
-
-    const art = this.buildCardArt(card, side, style);
-
-    // Traps show their sprung value; selecting the card explains the rest
-    // (cardHelp), since a rule line on the card was too small to read on a phone.
-    const push = pushFor(this.state, card, card.bigPush ?? card.push);
-    const big = this.add
-      .text(0, ART_Y + ART_H / 2 + 40, `${push}`, {
-        fontFamily: FONT_BODY,
-        fontSize: "52px",
-        fontStyle: "600",
-        color: side === "vigilante" ? hex(this.theme.red) : ink,
-      })
-      .setOrigin(0.5);
-    c.add([outline, bg, ...art, icon, typeLabel, cost, name, big]);
-    c.setSize(CARD_W, CARD_H);
-    c.bg = bg;
-    c.edge = style.edge;
-    return c;
-  }
-
-  /**
-   * The art box. A card with an `art` texture key (loaded in BootScene from
-   * public/assets/images/cards/) shows its picture; otherwise a drawn scene
-   * for the card type (src/ui/cardArtPlaceholder.js).
-   */
-  buildCardArt(card, side, style) {
-    if (card.art && this.textures.exists(card.art)) {
-      const picture = this.add.image(0, ART_Y, card.art).setDisplaySize(ART_W, ART_H);
-      const frame = this.add.rectangle(0, ART_Y, ART_W, ART_H).setStrokeStyle(1, style.ink, 0.45);
-      return [picture, frame];
-    }
-    return buildPlaceholderArt(this, card, side, ART_Y, ART_W, ART_H, style.ink);
-  }
-
-  /** A thin line just outside the card's border (invisible when the style has none). */
-  cardOutline(style) {
-    return this.add
-      .rectangle(0, 0, CARD_W + 6, CARD_H + 6, style.outline ?? style.edge)
-      .setVisible(style.outline != null);
-  }
-
-  buildCardBack(side) {
-    const style = this.theme.cards[side];
-    const c = this.add.container(0, 0);
-    const outline = this.cardOutline(style);
-    const bg = this.add.rectangle(0, 0, CARD_W, CARD_H, style.bg).setStrokeStyle(3, style.edge);
-    const inner = this.add.rectangle(0, 0, CARD_W - 24, CARD_H - 24).setStrokeStyle(1, style.ink, 0.4);
-    const mark = this.add
-      .text(0, 0, "?", { fontFamily: FONT_DISPLAY, fontSize: "80px", color: hex(style.ink) })
-      .setOrigin(0.5)
-      .setAlpha(0.7);
-    c.add([outline, bg, inner, mark]);
-    return c;
-  }
-
   renderHand() {
+    this.cancelPress();
     this.handCards.forEach((c) => c.destroy());
     this.handCards = [];
     const me = this.state.sides[this.playerSide];
     const n = me.hand.length;
     me.hand.forEach((card, i) => {
-      const c = this.buildCardFace(card, this.playerSide);
-      const x = W / 2 + (i - (n - 1) / 2) * (CARD_W + 10);
+      const c = buildCardFace(this, card, this.playerSide);
+      const x = W / 2 + (i - (n - 1) / 2) * (CARD_W + 8);
       c.setPosition(x, HAND_Y);
-      c.homeY = HAND_Y;
+      c.homeX = x;
       c.index = i;
-      const affordable = canAfford(this.state, this.playerSide, card);
-      c.setAlpha(affordable ? 1 : 0.5);
-      c.bg.setInteractive({ useHandCursor: affordable });
+      c.cardName = card.name;
+      c.affordable = canAfford(this.state, this.playerSide, card);
+      c.setAlpha(c.affordable ? 1 : 0.55);
+      c.bg.setInteractive({ useHandCursor: true });
+      c.bg.on("pointerdown", (pointer) => this.startPress(c, pointer));
       c.bg.on("pointerover", () => {
-        if (!this.busy && affordable && this.selectedIndex !== i) {
+        if (!this.busy && !this.press && c.affordable && this.selectedIndex !== i) {
           this.tweens.add({ targets: c, y: HAND_Y - 12, duration: 120 });
         }
       });
       c.bg.on("pointerout", () => {
-        if (this.selectedIndex !== i) this.tweens.add({ targets: c, y: HAND_Y, duration: 120 });
-      });
-      c.bg.on("pointerdown", () => {
-        if (this.busy) return;
-        if (!affordable) {
-          this.flashHint(`Not enough energy for ${card.name}`);
-          this.tweens.add({ targets: c, x: c.x + 8, duration: 50, yoyo: true, repeat: 2 });
-          return;
-        }
-        this.selectCard(this.selectedIndex === i ? null : i);
+        if (!this.press && this.selectedIndex !== i) this.tweens.add({ targets: c, y: HAND_Y, duration: 120 });
       });
       // Deal in from below.
       c.y = HAND_Y + 300;
@@ -514,28 +451,139 @@ export default class CaseBattleScene extends Phaser.Scene {
     });
   }
 
-  selectCard(index) {
-    this.selectedIndex = index;
-    this.handCards.forEach((c) => {
-      const selected = c.index === index;
-      this.tweens.add({ targets: c, y: selected ? HAND_Y - 40 : HAND_Y, scale: selected ? 1.06 : 1, duration: 140 });
-      c.bg.setStrokeStyle(selected ? 5 : 3, selected ? this.theme.red : c.edge);
-    });
-    this.playButton.setEnabled(index !== null);
-    const card = index === null ? null : this.state.sides[this.playerSide].hand[index];
-    this.hintText.setText(card ? this.cardHelp(card) : "");
+  // ---- hand interaction
+
+  buzz(ms) {
+    try {
+      navigator.vibrate?.(ms);
+    } catch {
+      // Not supported: no buzz.
+    }
   }
 
-  /** A plain-English line explaining a card, shown when it is selected. */
-  cardHelp(card) {
-    const push = pushFor(this.state, card);
-    const big = card.bigPush && pushFor(this.state, card, card.bigPush);
-    return {
-      COUNTER: `Counter: if they play a Power card, it's cancelled and you push ${push}. Otherwise nothing happens.`,
-      POWER: `Power: pushes ${push}, but a Counter cancels it.`,
-      BAIT: `Bait: pushes ${big} if they play a Counter, otherwise ${push}.`,
-      AMBUSH: `Ambush: pushes ${big} if they Wait, otherwise ${push}.`,
-    }[card.type] ?? `${TYPE_NAMES[card.type]}: pushes the needle ${push} your way.`;
+  /**
+   * Where every hand card rests: the selected one lifted and grown (or, if it
+   * was dragged onto the board, staged in your slot), the rest at home.
+   */
+  layoutHand() {
+    this.handCards.forEach((c) => {
+      const selected = c.index === this.selectedIndex;
+      if (!selected) c.staged = false;
+      this.tweens.killTweensOf(c);
+      c.setDepth(selected ? 10 : 0);
+      c.setSelected(selected);
+      const staged = selected && c.staged;
+      this.tweens.add({
+        targets: c,
+        x: staged ? SLOT.player.x : c.homeX,
+        y: staged ? SLOT.player.y : selected ? HAND_Y - SELECT_LIFT : HAND_Y,
+        scale: staged ? 1 : selected ? SELECT_SCALE : 1,
+        duration: 150,
+        ease: "Cubic.easeOut",
+      });
+    });
+  }
+
+  selectCard(index) {
+    this.selectedIndex = index;
+    this.layoutHand();
+    this.playButton.setEnabled(index !== null);
+    if (index !== null) this.buzz(8);
+  }
+
+  /** Pressing a hand card: a tap selects, holding inspects, dragging up plays. */
+  startPress(card, pointer) {
+    if (this.busy || this.press) return;
+    this.press = {
+      card,
+      x: pointer.x,
+      y: pointer.y,
+      held: false,
+      dragging: false,
+      timer: this.time.delayedCall(HOLD_MS, () => {
+        if (this.press?.card !== card || this.press.dragging) return;
+        this.press.held = true;
+        this.showInspect(card.index);
+      }),
+    };
+  }
+
+  movePress(pointer) {
+    const p = this.press;
+    if (!p || p.held) return;
+    if (!p.dragging) {
+      if (Phaser.Math.Distance.Between(p.x, p.y, pointer.x, pointer.y) < DRAG_PX) return;
+      if (!p.card.affordable) return;
+      p.dragging = true;
+      p.timer.remove();
+      this.tweens.killTweensOf(p.card);
+      p.card.setDepth(30).setScale(1.1);
+    }
+    p.card.setPosition(pointer.x, pointer.y - 70);
+    this.slotGlow.setAlpha(pointer.y < DROP_Y ? 1 : 0);
+  }
+
+  endPress(pointer) {
+    const p = this.press;
+    if (!p) return;
+    this.press = null;
+    p.timer.remove();
+    this.slotGlow.setAlpha(0);
+    if (p.held) return this.hideInspect();
+    const card = p.card;
+    if (p.dragging) {
+      // Dropped on the board: stage it in your slot. Play card confirms.
+      card.staged = pointer.y < DROP_Y && !this.busy;
+      this.selectCard(card.staged ? card.index : this.selectedIndex);
+      return;
+    }
+    if (!card.affordable) {
+      this.flashHint(`Not enough energy for ${card.cardName}`);
+      this.tweens.add({ targets: card, x: card.homeX + 8, duration: 50, yoyo: true, repeat: 2 });
+      return;
+    }
+    this.selectCard(this.selectedIndex === card.index ? null : card.index);
+  }
+
+  cancelPress() {
+    this.press?.timer.remove();
+    this.press = null;
+    this.slotGlow?.setAlpha(0);
+    this.hideInspect();
+  }
+
+  /** A big copy of a hand card while it is held. */
+  showInspect(index) {
+    this.hideInspect();
+    const card = this.state.sides[this.playerSide].hand[index];
+    if (!card) return;
+    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.55).setDepth(90);
+    const face = buildCardFace(this, card, this.playerSide).setPosition(W / 2, 600).setDepth(91).setScale(INSPECT_SCALE * 0.9);
+    face.setAlpha(0);
+    this.tweens.add({ targets: face, scale: INSPECT_SCALE, alpha: 1, duration: 140, ease: "Back.easeOut" });
+    this.inspect = [shade, face];
+    this.buzz(15);
+  }
+
+  hideInspect() {
+    this.inspect?.forEach((o) => o.destroy());
+    this.inspect = null;
+  }
+
+  /** Desktop shortcuts: 1-4 pick a card, Enter plays it, W waits, Esc puts it back. */
+  onKey(event) {
+    if (this.busy || this.state.winner) return;
+    const key = event.key.toLowerCase();
+    const index = Number(key) - 1;
+    if (index >= 0 && index < this.handCards.length) {
+      if (this.handCards[index].affordable) this.selectCard(this.selectedIndex === index ? null : index);
+    } else if ((key === "enter" || key === " ") && this.selectedIndex !== null) {
+      this.confirmPlay(this.selectedIndex);
+    } else if (key === "w" && !mustPlay(this.state, this.playerSide)) {
+      this.confirmPlay(null);
+    } else if (key === "escape") {
+      this.selectCard(null);
+    }
   }
 
   // ---------------------------------------------------------------- turn flow
@@ -548,8 +596,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.turnText.setText(`TURN ${roman(turn)} OF ${roman(rules.maxTurns)}`);
     const bonus = rules.escalationFlat * (turn - 1);
     this.stakesText.setText(turn === 1 ? "The city is watching" : `Stakes rising: every card +${bonus}`);
-    this.waitButton.setLabel(`Wait  +${rules.energyPerTurn + rules.waitBonus} ⬢`);
-    this.waitButton.setEnabled(true);
+    this.updateWaitButton();
     this.playButton.setEnabled(false);
     this.updateHud();
     this.renderHand();
@@ -583,7 +630,7 @@ export default class CaseBattleScene extends Phaser.Scene {
   showOpponentLocked() {
     if (this.opponentLocked || this.state.winner) return;
     this.opponentLocked = true;
-    const back = this.buildCardBack(this.opponentSide);
+    const back = buildCardBack(this, this.opponentSide);
     back.setPosition(SLOT.opponent.x, -150).setAngle(-20);
     this.tweens.add({ targets: back, y: SLOT.opponent.y, angle: 0, duration: 380, ease: "Cubic.easeOut" });
     this.opponentBack = back;
@@ -596,6 +643,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.waitButton.setEnabled(false);
     this.playButton.setEnabled(false);
     this.hintText.setText("");
+    this.cancelPress();
     if (!this.online) this.showOpponentLocked();
 
     const playerCard = index == null ? null : this.state.sides[this.playerSide].hand[index];
@@ -604,10 +652,13 @@ export default class CaseBattleScene extends Phaser.Scene {
     // Move the chosen hand card into the arena as a face-down card.
     if (playerCard) {
       const handCard = this.handCards[index];
-      const back = this.buildCardBack(this.playerSide);
+      const back = buildCardBack(this, this.playerSide);
       back.setPosition(handCard.x, handCard.y);
       handCard.destroy();
       this.handCards.splice(index, 1);
+      // The cards left in your hand drop back to rest.
+      this.selectedIndex = null;
+      this.layoutHand();
       this.tweens.add({ targets: back, x: SLOT.player.x, y: SLOT.player.y, duration: 320, ease: "Cubic.easeOut" });
       this.playerBack = back;
       this.arenaObjects.push(back);
@@ -692,11 +743,12 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.tweens.add({ targets: t, alpha: 1, duration: 200 });
       return t;
     }
-    const face = this.buildCardFace(card, side);
+    const face = buildCardFace(this, card, side);
     face.setPosition(x, y - 26).setScale(0, 1.1).setVisible(false);
     this.arenaObjects.push(face);
     if (card.type === "POWER") {
-      const glow = this.add.rectangle(0, 0, CARD_W + 18, CARD_H + 18).setStrokeStyle(10, this.theme.red, 0.85);
+      const glow = this.add.graphics();
+      glow.lineStyle(10, this.theme.red, 0.85).strokeRoundedRect(-(CARD_W + 18) / 2, -(CARD_H + 18) / 2, CARD_W + 18, CARD_H + 18, 18);
       face.addAt(glow, 0);
       this.tweens.add({ targets: glow, alpha: 0.25, duration: 320, yoyo: true, repeat: 5, delay: 300 });
     }
@@ -1052,6 +1104,28 @@ export default class CaseBattleScene extends Phaser.Scene {
       return;
     }
 
+    if (event.type === "heat") {
+      const meterX = METER.x + (METER.w * event.to) / 100;
+      this.floatText(meterX, METER.y + 60, "Heat", hex(red), 46);
+      await this.tweenMeter(event.to);
+      this.updatePortraits();
+      await wait(this, 300);
+      return;
+    }
+
+    if (event.type === "effect") {
+      const target = event.target === this.playerSide ? "player" : "opponent";
+      const at = target === "player" ? { x: 80, y: 880 } : { x: 100, y: 190 };
+      this.floatText(at.x + 120, at.y, `${EFFECTS[event.effect].name}!`, hex(red), 52);
+      this.state.sides[event.target].status = {
+        ...this.state.sides[event.target].status,
+        [event.effect]: EFFECTS[event.effect].turns,
+      };
+      this.updateStatusTags();
+      await wait(this, 700);
+      return;
+    }
+
     if (event.type === "end") {
       const winnerWho = event.winner === this.playerSide ? "player" : "opponent";
       if (event.winner !== "draw") {
@@ -1278,6 +1352,39 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- HUD
 
+  /** Wait is off while you're Cornered and can afford a card. */
+  updateWaitButton() {
+    const { rules } = this.state;
+    const cornered = mustPlay(this.state, this.playerSide);
+    this.waitButton.setLabel(cornered ? "Cornered" : `Wait  +${rules.energyPerTurn + rules.waitBonus} ⬢`);
+    this.waitButton.setEnabled(!cornered);
+  }
+
+  /** Red tags beside each side's energy for the status effects on them. */
+  updateStatusTags() {
+    for (const [who, side, x, y] of [
+      ["player", this.playerSide, 470, 906],
+      ["opponent", this.opponentSide, 506, 198],
+    ]) {
+      this.statusTags?.[who]?.destroy();
+      const status = this.state.sides[side].status ?? {};
+      const tags = Object.keys(EFFECTS)
+        .filter((k) => status[k] > 0)
+        .map((k) => (k === "heat" ? `Heat ${status[k]}` : EFFECTS[k].name));
+      const c = this.add.container(x, y).setDepth(20);
+      let cx = 0;
+      for (const label of tags) {
+        const t = this.add
+          .text(cx + 12, 0, label, { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: "#f4f2ec" })
+          .setOrigin(0, 0.5);
+        const pill = this.add.graphics().fillStyle(this.theme.red, 1).fillRoundedRect(cx, -17, t.width + 24, 34, 17);
+        c.add([pill, t]);
+        cx += t.width + 32;
+      }
+      this.statusTags = { ...this.statusTags, [who]: c };
+    }
+  }
+
   updateHud() {
     this.setPips(this.playerEnergy, this.state.sides[this.playerSide].energy);
     this.setPips(this.opponentEnergy, this.state.sides[this.opponentSide].energy);
@@ -1294,6 +1401,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const opponentCards = this.state.sides[this.opponentSide].hand.length;
     this.opponentHand.forEach((c, i) => c.setVisible(i < opponentCards));
     this.updatePortraits();
+    this.updateStatusTags();
   }
 
   setPips({ pips, label, z }, energy) {
@@ -1467,7 +1575,10 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     const again = this.online
       ? button(this, this.theme, W / 2, 770, 400, "New match", () => this.scene.start("MultiplayerLobbyScene"), { primary: true })
-      : button(this, this.theme, W / 2, 770, 400, "Rematch", () => this.scene.restart(), { primary: true });
+      : button(this, this.theme, W / 2, 770, 400, "Rematch", () => {
+          this.keepMusic = true;
+          this.scene.restart();
+        }, { primary: true });
     again.setDepth(201);
     button(this, this.theme, W / 2, 880, 400, "Menu", () => this.leaveToMenu()).setDepth(201);
   }
