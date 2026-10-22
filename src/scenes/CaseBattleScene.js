@@ -491,9 +491,12 @@ export default class CaseBattleScene extends Phaser.Scene {
       c.setDepth(selected ? 10 : 0);
       c.setSelected(selected);
       const staged = selected && c.staged;
+      // A selected card grows, so one at either end of the hand moves in enough to stay on screen.
+      const room = (CARD_W * SELECT_SCALE) / 2 + 6;
+      const liftedX = Phaser.Math.Clamp(c.homeX, room, W - room);
       this.tweens.add({
         targets: c,
-        x: staged ? SLOT.player.x : c.homeX,
+        x: staged ? SLOT.player.x : selected ? liftedX : c.homeX,
         y: staged ? SLOT.player.y : selected ? HAND_Y - SELECT_LIFT : HAND_Y,
         scale: staged ? 1 : selected ? SELECT_SCALE : 1,
         duration: 150,
