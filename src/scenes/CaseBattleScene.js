@@ -39,7 +39,8 @@ const FAN = { y: 1078, radius: 1300, stepDeg: 6.2, scale: 1.1 };
 const SELECT_Y = 1010;
 const SELECT_SCALE = 1.3;
 const HOLD_MS = 380;
-const DRAG_PX = 14;
+const DRAG_PX = 14; // a press that moves this far is a slide or a drag, not a tap
+const DRAG_UP = 36; // moving up this far (more up than sideways) picks the card up to drag it
 const DROP_Y = 900;
 const INSPECT_SCALE = 1.8;
 // A tap while a turn plays out speeds the rest of it up this much.
@@ -533,33 +534,79 @@ export default class CaseBattleScene extends Phaser.Scene {
     }
   }
 
-  /** Pressing a hand card: a tap selects, holding inspects, dragging up plays. */
+  /**
+   * Pressing a hand card: a tap selects, holding inspects (slide to inspect
+   * the others), sliding along the hand moves the selection to the card under
+   * your finger, and dragging up picks the card up to stage it on the board.
+   */
   startPress(card, pointer) {
     if (this.busy || this.press) return;
-    this.press = {
-      card,
-      x: pointer.x,
-      y: pointer.y,
-      held: false,
-      dragging: false,
-      timer: this.time.delayedCall(HOLD_MS, () => {
-        if (this.press?.card !== card || this.press.dragging) return;
-        this.press.held = true;
-        this.showInspect(card.index);
-      }),
-    };
+    this.press = { card, x: pointer.x, y: pointer.y, held: false, dragging: false, slid: false };
+    this.startHoldTimer();
+  }
+
+  /** Holding still on the pressed card for a moment inspects it. */
+  startHoldTimer() {
+    const p = this.press;
+    p.timer?.remove();
+    const card = p.card;
+    p.timer = this.time.delayedCall(HOLD_MS, () => {
+      if (this.press !== p || p.card !== card || p.dragging) return;
+      p.held = true;
+      this.showInspect(card.index);
+    });
+  }
+
+  /** The hand card whose place in the fan is nearest to x. */
+  handCardNear(x) {
+    let best = null;
+    for (const c of this.handCards) {
+      if (!best || Math.abs(c.home.x - x) < Math.abs(best.home.x - x)) best = c;
+    }
+    return best;
   }
 
   movePress(pointer) {
     const p = this.press;
-    if (!p || p.held) return;
+    if (!p) return;
+    if (p.held) {
+      // Inspecting: sliding along the hand shows the big copy of the card under your finger.
+      const card = this.handCardNear(pointer.x);
+      if (card !== p.card) {
+        p.card = card;
+        this.showInspect(card.index);
+      }
+      return;
+    }
     if (!p.dragging) {
-      if (Phaser.Math.Distance.Between(p.x, p.y, pointer.x, pointer.y) < DRAG_PX) return;
-      if (!p.card.affordable) return;
-      p.dragging = true;
-      p.timer.remove();
-      this.tweens.killTweensOf(p.card);
-      p.card.setDepth(30).setScale(1.1).setAngle(0);
+      const dx = pointer.x - p.x;
+      const up = p.y - pointer.y;
+      if (up > DRAG_UP && up > Math.abs(dx) && p.card.affordable) {
+        // Picked up: it follows your finger and can be dropped on the board.
+        p.dragging = true;
+        p.timer.remove();
+        this.tweens.killTweensOf(p.card);
+        p.card.setDepth(30).setScale(1.1).setAngle(0);
+      } else {
+        if (!p.slid && Math.abs(dx) < DRAG_PX) return;
+        // Sliding along the hand: the card under your finger becomes the selection.
+        const card = this.handCardNear(pointer.x);
+        if (!p.slid || card !== p.card) {
+          p.slid = true;
+          if (card !== p.card) {
+            p.card = card;
+            p.x = pointer.x;
+            p.y = pointer.y;
+          }
+          this.startHoldTimer();
+          if (card.affordable) {
+            if (this.selectedIndex !== card.index) this.selectCard(card.index);
+          } else if (this.selectedIndex !== null) {
+            this.selectCard(null);
+          }
+        }
+        return;
+      }
     }
     p.card.setPosition(pointer.x, pointer.y - 70);
     this.slotGlow.setAlpha(pointer.y < DROP_Y ? 1 : 0);
@@ -573,6 +620,11 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.slotGlow.setAlpha(0);
     if (p.held) return this.hideInspect();
     const card = p.card;
+    if (p.slid && !p.dragging) {
+      // Let go after sliding: the card under your finger stays selected.
+      if (!card.affordable) this.flashHint(`Not enough energy for ${card.cardName}`);
+      return;
+    }
     if (p.dragging) {
       // Dropped on the board: stage it in your slot. Play card confirms.
       card.staged = pointer.y < DROP_Y && !this.busy;

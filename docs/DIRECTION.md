@@ -96,8 +96,9 @@ After several rounds of look boards, the owner chose:
   card on top so every card's right edge, with its cost and push, stays
   readable. Chosen from four mock-ups: the picked card rises out of the fan
   rather than appearing big over the board, so the board stays visible while
-  you read your opponent. Tap a card to raise and grow it; press and hold
-  to inspect a big copy without selecting; drag a card up onto the board to
+  you read your opponent. Tap a card to raise and grow it, or slide along
+  the hand and the card under your finger rises (a tick and a buzz on each); press and hold
+  to inspect a big copy without selecting (slide to inspect the others); drag a card up onto the board to
   stage it in your slot (tap it again to take it back). Nothing is played
   until Play card is pressed. A phone buzz on select, and desktop keys: 1
   to 4 pick a card, Enter plays it, W waits, Esc puts it back.
