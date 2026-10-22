@@ -16,7 +16,7 @@ import { pickLine } from "../case/dialogue.js";
 import { isMuted, playDuelMusic, setMuted, stopMusic } from "../audio.js";
 import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
-import { button } from "../ui/widgets.js";
+import { button, fit } from "../ui/widgets.js";
 import { ensureTypeIcons } from "../ui/cardIcons.js";
 import { CARD_H, CARD_W, TYPE_NAMES, buildCardBack, buildCardFace, buildSlotOutline } from "../ui/cardFace.js";
 
@@ -273,19 +273,21 @@ export default class CaseBattleScene extends Phaser.Scene {
     const side = this.opponentSide;
     const z = this.z(185);
     this.opponentPortrait = this.createPortrait(100, 190, this.opponentCharacter, 124);
-    this.add
+    const name = this.add
       .text(184, 140, this.opponentCharacter.name, { fontFamily: FONT_BODY, fontSize: "44px", fontStyle: "600", color: hex(z.ink) })
       .setOrigin(0, 0.5);
+    fit(name, 350, 60, 30); // leave room for their hand of card backs
     this.opponentEnergy = this.createEnergyPips(194, 198);
 
-    this.add
+    const recent = this.add
       .text(184, 240, "Recent", { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.soft) })
       .setOrigin(0, 0.5);
+    this.historyX = recent.x + recent.width + 18;
     this.historyDots = [];
     for (let i = 0; i < 5; i++) {
       this.historyDots.push(
         this.add
-          .text(274 + i * 90, 240, "", { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.ink) })
+          .text(this.historyX, 240, "", { fontFamily: FONT_BODY, fontSize: "24px", color: hex(z.ink) })
           .setOrigin(0, 0.5),
       );
     }
@@ -380,8 +382,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     // Lights up while a dragged card is over the board.
     this.slotGlow = buildSlotOutline(this, SLOT.player.x, SLOT.player.y, this.theme.red, 1, 4).setAlpha(0);
 
+    // Anchored by its bottom so larger text grows up into the arena, not into your name.
     this.hintText = this.add
-      .text(W / 2, 812, "", {
+      .text(W / 2, 834, "", {
         fontFamily: FONT_BODY,
         fontSize: "26px",
         color: hex(this.z(790).ink),
@@ -389,7 +392,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         wordWrap: { width: 680 },
         lineSpacing: -2,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 1);
   }
 
   createPlayerPanel() {
@@ -1014,7 +1017,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       })
       .setOrigin(align, 0.5);
     const characterName = this.add
-      .text(tx, 84, character.name, { fontFamily: FONT_BODY, fontSize: "24px", color: "#bdb8ae" })
+      .text(tx, 84, character.name, { fontFamily: FONT_BODY, fontSize: "24px", color: this.theme.highContrast ? "#ffffff" : "#bdb8ae" })
       .setOrigin(align, 0.5);
     band.add([portrait, frame, kicker, name, characterName]);
 
@@ -1163,7 +1166,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         fontFamily: FONT_BODY,
         fontSize: "22px",
         fontStyle: "600",
-        color: "#46423b",
+        color: this.theme.highContrast ? "#000000" : "#46423b",
       })
       .setOrigin(0.5);
     const text = this.add.text(0, 0, line, {
@@ -1397,6 +1400,16 @@ export default class CaseBattleScene extends Phaser.Scene {
       t.setText(entry ? TYPE_NAMES[entry] : "Wait");
       t.setColor(hex(entry ? z.ink : z.soft));
     });
+    // One after another; with large text, the oldest drop off if they don't fit.
+    const shown = this.historyDots.slice(0, history.length);
+    const gap = 22;
+    const widthOf = (list) => list.reduce((sum, t) => sum + t.width + gap, -gap);
+    while (shown.length > 1 && this.historyX + widthOf(shown) > W - 24) shown.shift().setText("");
+    let x = this.historyX;
+    for (const t of shown) {
+      t.setX(x);
+      x += t.width + gap;
+    }
 
     const opponentCards = this.state.sides[this.opponentSide].hand.length;
     this.opponentHand.forEach((c, i) => c.setVisible(i < opponentCards));

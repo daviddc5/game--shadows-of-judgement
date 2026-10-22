@@ -68,23 +68,107 @@ export const THEMES = [
 ];
 
 const STORAGE_KEY = "shadows-of-judgment.theme";
+const TEXT_SIZE_KEY = "shadows-of-judgment.text-size";
+const CONTRAST_KEY = "shadows-of-judgment.contrast";
+
+function load(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null; // Storage can be blocked (private mode); fall back to the default.
+  }
+}
+
+function save(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Not saved; the choice is lost on reload.
+  }
+}
 
 export function getTheme() {
-  let id = null;
-  try {
-    id = window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    // Storage can be blocked (private mode); fall back to the default.
-  }
-  return THEMES.find((t) => t.id === id) ?? THEMES[0];
+  const id = load(STORAGE_KEY);
+  const theme = THEMES.find((t) => t.id === id) ?? THEMES[0];
+  return getContrast() === "high" ? highContrast(theme) : theme;
 }
 
 export function setTheme(id) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, id);
-  } catch {
-    // Not saved, but the choice still applies for this session via the registry.
-  }
+  save(STORAGE_KEY, id);
+}
+
+// ---------------------------------------------------------------- accessibility
+
+/**
+ * Text sizes on the Appearance screen. The scale applies to every piece of
+ * reading text (EB Garamond); blackletter is decoration and keeps its size.
+ */
+export const TEXT_SIZES = [
+  { id: "standard", name: "Standard", scale: 1 },
+  { id: "large", name: "Large", scale: 1.15 },
+  { id: "larger", name: "Larger", scale: 1.3 },
+];
+
+export const CONTRASTS = [
+  { id: "standard", name: "Standard" },
+  { id: "high", name: "High" },
+];
+
+export function getTextSize() {
+  const id = load(TEXT_SIZE_KEY);
+  return TEXT_SIZES.find((s) => s.id === id) ?? TEXT_SIZES[0];
+}
+
+export function setTextSize(id) {
+  save(TEXT_SIZE_KEY, id);
+}
+
+export function getContrast() {
+  return load(CONTRAST_KEY) === "high" ? "high" : "standard";
+}
+
+export function setContrast(id) {
+  save(CONTRAST_KEY, id);
+}
+
+/**
+ * High contrast: every near-black becomes black and every near-white becomes
+ * white (muted ink included), so text and borders stand out fully. Red stays.
+ */
+function highContrast(theme) {
+  const push = (n) => {
+    const lum = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+    if (lum < 0.3) return 0x000000;
+    if (lum > 0.7) return 0xffffff;
+    return n;
+  };
+  const map = (obj) =>
+    Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => [k, typeof v === "number" && k !== "at" && k !== "red" ? push(v) : v]),
+    );
+  return {
+    ...map(theme),
+    highContrast: true,
+    cards: { detective: map(theme.cards.detective), vigilante: map(theme.cards.vigilante) },
+    split: theme.split && map(theme.split),
+  };
+}
+
+/**
+ * Makes every EB Garamond text the game creates follow the chosen text size.
+ * Call once, before the game starts.
+ */
+export function installTextScale(Phaser) {
+  const factory = Phaser.GameObjects.GameObjectFactory.prototype;
+  const makeText = factory.text;
+  factory.text = function (x, y, text, style) {
+    const { scale } = getTextSize();
+    const px = style && parseFloat(style.fontSize);
+    if (scale !== 1 && px && style.fontFamily === FONTS.body) {
+      style = { ...style, fontSize: `${Math.round(px * scale)}px` };
+    }
+    return makeText.call(this, x, y, text, style);
+  };
 }
 
 /** The colours that apply at a given y position (the top of a split theme differs). */

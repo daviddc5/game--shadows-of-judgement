@@ -59,6 +59,15 @@ After several rounds of look boards, the owner chose:
   about 55% on a phone, so a non-gamer playtester found the small text too
   small to read. Keep body text at 24 px or more in game units (about 13 px on
   a phone) and card names at 24 px.
+- **Accessibility settings on the Appearance screen**, saved on the device:
+  - **Text size** (Standard, Large ×1.15, Larger ×1.3). It scales every piece
+    of reading text (EB Garamond) as it is created (`installTextScale` in
+    `src/theme.js`); blackletter decoration keeps its size. Text placed next to
+    other things is laid out from its real width (or shrunk with `fit()` in
+    `src/ui/widgets.js`), so check new screens at Larger.
+  - **Contrast** (Standard, High). High turns every near-black into black and
+    every near-white into white, muted text included, and drops faded text on
+    cards.
 - **Cards look like cards: the "case file" design.** Chosen from four mock-ups
   after looking at how popular digital card games lay out cards (rounded
   corners and a frame, art doing most of the work, numbers in fixed badge

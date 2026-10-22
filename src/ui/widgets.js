@@ -2,6 +2,13 @@
 import { FONTS, hex, zone } from "../theme.js";
 import { CHARACTERS, portraitKey } from "../case/characters.js";
 
+/** Shrinks a text object until it fits `maxW` × `maxH` (or reaches `min` px). */
+export function fit(text, maxW, maxH, min) {
+  let size = parseInt(text.style.fontSize, 10);
+  while ((text.width > maxW || text.height > maxH) && size > min) text.setFontSize(--size);
+  return text;
+}
+
 /** Blackletter text in the theme's ink for its position on screen. */
 export function displayText(scene, theme, x, y, text, size = 48, { color, align = "center" } = {}) {
   const z = zone(theme, y);

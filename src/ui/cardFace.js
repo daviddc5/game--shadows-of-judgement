@@ -7,6 +7,7 @@ import { FONTS, hex } from "../theme.js";
 import { EFFECTS, costFor, pushFor } from "../case/rules.js";
 import { iconKey } from "./cardIcons.js";
 import { buildPlaceholderArt } from "./cardArtPlaceholder.js";
+import { fit } from "./widgets.js";
 
 // Real trading-card proportions (about 5 : 7), the widest four across a phone can be.
 export const CARD_W = 176;
@@ -33,13 +34,6 @@ const MAT_COLOR = 0xefece3;
 const PHOTO_CORNER = 0x1b1b1d;
 const STAMP_RED = 0xc1121f;
 const BODY = FONTS.body;
-
-/** Shrinks a text object until it fits `maxW` × `maxH` (or reaches `min` px). */
-function fit(text, maxW, maxH, min) {
-  let size = parseInt(text.style.fontSize, 10);
-  while ((text.width > maxW || text.height > maxH) && size > min) text.setFontSize(--size);
-  return text;
-}
 
 /** The card body: outline, rounded fill, double border (heavier and red when selected). */
 function paintBody(g, style, redColor, selected) {
@@ -72,6 +66,8 @@ export function buildCardFace(scene, card, side) {
   const { theme, state } = scene;
   const style = theme.cards[side];
   const ink = hex(style.ink);
+  // Faded text is softer to look at; high contrast keeps it at full strength.
+  const faded = (a) => (theme.highContrast ? 1 : a);
   const red = theme.red;
   const left = -CARD_W / 2;
   const top = -CARD_H / 2;
@@ -106,6 +102,8 @@ export function buildCardFace(scene, card, side) {
       color: cardCost > card.cost ? hex(red) : ink,
     })
     .setOrigin(1, 0.5);
+  // With large text, the type name gives way to the cost.
+  fit(typeLabel, cost.x - cost.width - 6 - typeLabel.x, 30, 13);
 
   // The evidence photo: cream mat, the art, and black photo corners.
   const matY = ART_Y;
@@ -177,7 +175,7 @@ export function buildCardFace(scene, card, side) {
       wordWrap: { width: 150 },
     })
     .setOrigin(0.5)
-    .setAlpha(0.85);
+    .setAlpha(faded(0.85));
   fit(rule, 150, 36, 14);
 
   // Bottom row: "Pushes" and how far the card moves the Case meter. Traps show
@@ -190,7 +188,7 @@ export function buildCardFace(scene, card, side) {
   const pushLabel = scene.add
     .text(left + 13, rowY, "Pushes", { fontFamily: BODY, fontSize: "20px", color: ink })
     .setOrigin(0, 0.5)
-    .setAlpha(0.8);
+    .setAlpha(faded(0.8));
   const number = scene.add
     .text(-left - 13, rowY - 1, `${push}`, {
       fontFamily: BODY,
