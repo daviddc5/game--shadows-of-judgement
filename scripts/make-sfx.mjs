@@ -124,13 +124,43 @@ const SOUNDS = {
     return finish(out, 10);
   },
 
-  // A card slid onto the table: a paper swish, then a light tap as it lands.
-  card: () => {
-    const out = buffer(0.32);
-    const swish = filter(noise(0.32, 2), "bandpass", (t) => 2200 + t * 6000, 0.8);
-    mix(out, shape(swish, (t) => (t < 0.09 ? (t / 0.09) ** 2 : Math.exp(-(t - 0.09) / 0.035))));
-    mix(out, shape(filter(noise(0.1, 3), "lowpass", 900), hit(0.001, 0.014)), 0.11, 0.9);
-    return finish(room(out, 0.12, 0.6));
+  // A card slammed onto the table, duel-anime style: a short rush of air, a
+  // hard slap, and a low boom under it. The slap lands 0.1 s in.
+  slam: () => {
+    const at = 0.1;
+    const out = buffer(0.75);
+    const air = filter(noise(at, 40), "bandpass", (t) => 900 + (t / at) * 3000, 1.2);
+    mix(out, shape(air, (t) => (t / at) ** 2), 0, 0.5);
+    mix(out, shape(filter(noise(0.08, 41), "highpass", 1400), hit(0.0005, 0.007)), at, 1.3);
+    mix(out, shape(filter(noise(0.2, 42), "bandpass", 850, 0.9), hit(0.001, 0.028)), at, 1);
+    mix(out, shape(tone(0.75 - at, (t) => 44 + 80 * Math.exp(-t / 0.025)), hit(0.002, 0.13)), at, 1.1);
+    return finish(room(soften(out, 2.6), 0.16, 0.7));
+  },
+
+  // Cards revealed: a ringing "shwing" sweeping up, with sparkles after it.
+  reveal: () => {
+    const len = 0.28;
+    const out = buffer(1.0);
+    const swing = filter(noise(len, 43), "bandpass", (t) => 1200 + (t / len) ** 1.5 * 6500, 5);
+    mix(out, shape(swing, (t) => Math.sin(Math.PI * Math.min(1, t / len)) * (0.3 + t / len)), 0, 1.4);
+    const r = rng(44);
+    for (let k = 0; k < 14; k++) {
+      const f = 2400 + r() * 4200;
+      mix(out, shape(tone(0.3, () => f), hit(0.001, 0.035 + r() * 0.03)), 0.16 + r() * 0.4, 0.18 + r() * 0.12);
+    }
+    return finish(room(out, 0.3, 1.1), 150);
+  },
+
+  // Waiting banks energy: a soft rising charge that settles on a chime.
+  charge: () => {
+    const len = 0.45;
+    const out = buffer(1.0);
+    const glide = (t) => 220 * 2 ** (Math.min(t, len) / len * 2); // up two octaves
+    mix(out, shape(tone(1.0, glide), (t) => (t < len ? (t / len) ** 1.5 : Math.exp(-(t - len) / 0.12))), 0, 0.5);
+    mix(out, shape(tone(1.0, (t) => glide(t) * 1.5), (t) => (t < len ? (t / len) ** 2 : Math.exp(-(t - len) / 0.1))), 0, 0.2);
+    mix(out, shape(filter(noise(len, 45), "bandpass", (t) => 800 + (t / len) * 4000, 3), (t) => (t / len) ** 2), 0, 0.25);
+    [880, 1320, 1760].forEach((f, k) => mix(out, shape(tone(0.55, () => f), hit(0.002, 0.18)), len + k * 0.03, 0.25));
+    return finish(room(out, 0.25), 120);
   },
 
   // Turning a card over: two quick flicks of the edge.

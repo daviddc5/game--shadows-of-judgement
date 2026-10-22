@@ -22,8 +22,10 @@ plays is the `SFX` table in `src/audio.js`.
 | File | Plays when |
 | --- | --- |
 | `select.mp3` | You tap a card in your hand |
-| `card.mp3` | A card is played face down (lower for the opponent's) |
+| `slam.mp3` | A card is slammed down face down (lower for the opponent's) |
 | `flip.mp3` | The cards turn over |
+| `reveal.mp3` | ...with a ringing "shwing" and sparkles |
+| `charge.mp3` | Someone Waits and banks energy |
 | `whoosh.mp3` | The cards rush at each other |
 | `impact.mp3` | They meet |
 | `grind.mp3` | They grind (stopped when the grind ends) |

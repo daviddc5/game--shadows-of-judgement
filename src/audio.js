@@ -49,8 +49,10 @@ export function stopMusic(scene) {
  */
 export const SFX = {
   select: 0.35,
-  card: 0.6,
+  slam: 0.9,
   flip: 0.7,
+  reveal: 0.55,
+  charge: 0.5,
   whoosh: 0.5,
   impact: 0.85,
   grind: 0.35,

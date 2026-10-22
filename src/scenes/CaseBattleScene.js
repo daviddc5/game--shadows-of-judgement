@@ -637,9 +637,18 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (this.opponentLocked || this.state.winner) return;
     this.opponentLocked = true;
     const back = buildCardBack(this, this.opponentSide);
-    back.setPosition(SLOT.opponent.x, -150).setAngle(-20);
-    this.tweens.add({ targets: back, y: SLOT.opponent.y, angle: 0, duration: 380, ease: "Cubic.easeOut" });
-    playSfx(this, "card", { detune: -150 });
+    back.setPosition(SLOT.opponent.x, -150).setAngle(-20).setScale(1.15);
+    this.tweens.add({
+      targets: back,
+      y: SLOT.opponent.y,
+      angle: 0,
+      scale: 1,
+      duration: 300,
+      ease: "Cubic.easeIn",
+      onComplete: () => this.slamDown(back, 0.6),
+    });
+    // The slap in the slam sound lands 0.1 s in.
+    this.time.delayedCall(200, () => playSfx(this, "slam", { detune: -200 }));
     this.opponentBack = back;
     this.arenaObjects.push(back);
   }
@@ -666,8 +675,15 @@ export default class CaseBattleScene extends Phaser.Scene {
       // The cards left in your hand drop back to rest.
       this.selectedIndex = null;
       this.layoutHand();
-      this.tweens.add({ targets: back, x: SLOT.player.x, y: SLOT.player.y, duration: 320, ease: "Cubic.easeOut" });
-      playSfx(this, "card");
+      // Lift it over your slot, then slam it down.
+      this.tweens.chain({
+        targets: back,
+        tweens: [
+          { x: SLOT.player.x, y: SLOT.player.y - 40, scale: 1.18, angle: -4, duration: 200, ease: "Cubic.easeOut" },
+          { y: SLOT.player.y, scale: 1, angle: 0, duration: 90, ease: "Cubic.easeIn", onComplete: () => this.slamDown(back, 1) },
+        ],
+      });
+      this.time.delayedCall(190, () => playSfx(this, "slam"));
       this.playerBack = back;
       this.arenaObjects.push(back);
     }
@@ -694,7 +710,10 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     // A beat of tension, then both cards turn over together and clash.
     await this.tension([this.playerBack, this.opponentBack]);
-    if (playerCard || opponentCard) playSfx(this, "flip");
+    if (playerCard || opponentCard) {
+      playSfx(this, "flip");
+      playSfx(this, "reveal");
+    }
     const [playerFace, opponentFace] = await Promise.all([
       this.flipToFace("player", this.playerBack, playerCard, this.playerSide),
       this.flipToFace("opponent", this.opponentBack, opponentCard, this.opponentSide),
@@ -1059,6 +1078,7 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     if (event.type === "wait") {
       this.floatText(x, y + 70, `+${this.state.rules.waitBonus} ⬢ saved`, hex(z.soft), 28, FONT_BODY);
+      playSfx(this, "charge");
       return;
     }
 
@@ -1282,6 +1302,25 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------- effects
+
+  /** A card hitting the table: a jolt and a puff of dust along its bottom edge. */
+  slamDown(card, strength) {
+    this.cameras.main.shake(110, 0.007 * strength);
+    const ink = this.z(card.y).ink;
+    const dust = this.add.particles(card.x, card.y + CARD_H / 2, "cb-shard", {
+      x: { min: -CARD_W / 2, max: CARD_W / 2 },
+      speedX: { min: -260, max: 260 },
+      speedY: { min: -120, max: -20 },
+      scale: { start: 0.5, end: 0 },
+      alpha: { start: 0.6, end: 0 },
+      lifespan: 320,
+      tint: ink,
+      emitting: false,
+    });
+    dust.setDepth(25);
+    dust.explode(Math.round(14 * strength));
+    this.time.delayedCall(420, () => dust.destroy());
+  }
 
   burst(x, y, texture, tint, count, lifespan) {
     const emitter = this.add.particles(x, y, texture, {
