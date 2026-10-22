@@ -86,8 +86,22 @@ After several rounds of look boards, the owner chose:
   within 20% of each other), or the turn that closes the case. Other turns get
   a quick dash-and-shove and quicker pushes, roughly half the time. The point
   is to get back to the next read sooner.
-- **Hand interaction.** Tap a card to lift and grow it in place; press and hold
-  to inspect a big copy without selecting; drag a card up onto the board to
+- **Tap to skip.** While a turn plays out, the buttons give way to "Tap to
+  skip"; a tap (or Space/Enter) plays the rest of that turn at 5× speed, with
+  its sounds quiet. Animation is local to each player, so this works online
+  too: the server never waits for it. A watchdog stops any turn animation that
+  hasn't finished in 30 s of game time and moves on, so a stuck step can't
+  freeze a match.
+- **Hand interaction.** The hand is held as a fan (like Yu-Gi-Oh!), the left
+  card on top so every card's right edge, with its cost and push, stays
+  readable. Chosen from four mock-ups: the picked card rises out of the fan
+  rather than appearing big over the board, so the board stays visible while
+  you read your opponent. Tap a card to raise and grow it, or slide along
+  the hand and the card under your finger rises (a tick and a buzz on each;
+  cards you can't afford rise too, dimmed, so the slide stays smooth, but
+  can't be played); press and hold
+  still for half a second to inspect a big copy without selecting (then slide
+  to inspect the others; sliding first never zooms); drag a card up onto the board to
   stage it in your slot (tap it again to take it back). Nothing is played
   until Play card is pressed. A phone buzz on select, and desktop keys: 1
   to 4 pick a card, Enter plays it, W waits, Esc puts it back.
@@ -121,7 +135,8 @@ tap. Code-made music was tried (synthesised and sample-based, in
 composition. Sound effects (select tick, card dealt onto felt, flip and
 reveal drum hit, wait charge, whoosh, impact, grind, break, cut-in sting,
 countered, needle ratchet, a heartbeat for Shaken, a door slam for Cornered,
-a distant siren for Heat, and a gavel for the result) are made from code by `scripts/make-sfx.mjs`: noise-based sounds
+a distant siren for Heat on the Vigilante (press cameras when it's a
+smear campaign on the Detective), and a gavel for the result) are made from code by `scripts/make-sfx.mjs`: noise-based sounds
 like these come out convincing, unlike code-made music. They can be swapped
 for recordings with the same names (see `public/assets/audio/README.md`).
 The card-play sound was chosen from a sound board of eight options (stamps,

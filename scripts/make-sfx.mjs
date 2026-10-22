@@ -219,6 +219,25 @@ const SOUNDS = {
     return finish(room(out, 0.5, 1.4), 100);
   },
 
+  // Heat on the Detective (a smear campaign): the press, a burst of camera
+  // shutters and flash pops.
+  paparazzi: () => {
+    const out = buffer(1.3);
+    const r = rng(70);
+    const shots = [0, 0.13, 0.21, 0.42, 0.5, 0.58, 0.83, 0.95];
+    shots.forEach((at, k) => {
+      const g = 0.6 + r() * 0.4;
+      // Shutter: the curtain opens and closes, two dry clicks.
+      mix(out, shape(filter(noise(0.03, 71 + k), "bandpass", 2600 + r() * 600, 6), hit(0.0003, 0.004)), at, g);
+      mix(out, shape(filter(noise(0.03, 81 + k), "bandpass", 1900 + r() * 400, 5), hit(0.0003, 0.005)), at + 0.035, 0.8 * g);
+      // The mirror slap under it.
+      mix(out, shape(filter(noise(0.05, 91 + k), "lowpass", 700), hit(0.0005, 0.012)), at + 0.004, 0.5 * g);
+      // A flash's soft pop on some of them.
+      if (k % 3 === 0) mix(out, shape(filter(noise(0.04, 101 + k), "bandpass", 4500, 2), hit(0.0005, 0.006)), at + 0.06, 0.15);
+    });
+    return finish(room(out, 0.18, 0.8), 100);
+  },
+
   // Turning a card over: two quick flicks of the edge.
   flip: () => {
     const out = buffer(0.25);

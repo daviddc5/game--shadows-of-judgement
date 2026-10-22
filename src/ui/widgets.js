@@ -1,7 +1,7 @@
 // Small themed building blocks shared by the menu scenes.
 import { FONTS, hex, zone } from "../theme.js";
 import { CHARACTERS, portraitKey } from "../case/characters.js";
-import { buildRubberStamp, paintFrame, paintPhotoMat } from "./cardFace.js";
+import { buildRubberStamp, paintFrame, paintPhotoCorners, paintPhotoMat } from "./cardFace.js";
 
 /** Shrinks a text object until it fits `maxW` × `maxH` (or reaches `min` px). */
 export function fit(text, maxW, maxH, min) {
@@ -137,8 +137,9 @@ export function characterPicker(scene, theme, top, onSelect) {
       const x = 375 + (j - (list.length - 1) / 2) * (TILE + 60);
       const ty = y + 38;
       const mat = scene.add.graphics();
-      paintPhotoMat(mat, x, ty, TILE + 16, TILE + 16, 16);
+      paintPhotoMat(mat, x, ty, TILE + 16, TILE + 16);
       scene.add.image(x, ty, portraitKey(c)).setDisplaySize(TILE, TILE);
+      paintPhotoCorners(scene.add.graphics(), x, ty, TILE + 16, TILE + 16, 22, 4);
       const hit = scene.add.rectangle(x, ty, TILE + 16, TILE + 16, 0xffffff, 0).setInteractive({ useHandCursor: true });
       scene.add
         .text(x, ty + TILE / 2 + 32, c.name, { fontFamily: FONTS.body, fontSize: "24px", fontStyle: "600", color: ink })

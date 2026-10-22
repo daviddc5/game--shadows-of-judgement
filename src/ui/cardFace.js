@@ -50,6 +50,15 @@ export function paintFrame(g, w, h, style, redColor, selected = false, radius = 
   g.lineStyle(1, style.edge, 0.5).strokeRoundedRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, radius - 4);
 }
 
+/**
+ * Cards grow (×1.25 when selected, ×1.8 when held to inspect), and text
+ * scaled past its own size goes soft, so card text is drawn at twice the detail.
+ */
+function sharpen(obj) {
+  if (obj.type === "Text") obj.setResolution(2);
+  else obj.list?.forEach(sharpen);
+}
+
 const paintBody = (g, style, redColor, selected) => paintFrame(g, CARD_W, CARD_H, style, redColor, selected);
 
 /** A card type's stamp: a slightly turned double ring with the type's symbol. Returns [ring, icon]. */
@@ -88,13 +97,20 @@ export function buildRubberStamp(scene, x, y, text, size = 18) {
   return stamp;
 }
 
-/** The cream mat and black photo corners an evidence photo sits on, w × h centred on (x, y). */
-export function paintPhotoMat(g, x, y, w, h, corner = 13) {
-  const x0 = x - w / 2;
-  const x1 = x + w / 2;
-  const y0 = y - h / 2;
-  const y1 = y + h / 2;
-  g.fillStyle(MAT_COLOR, 1).fillRect(x0, y0, w, h);
+/** The cream mat an evidence photo sits on, w × h centred on (x, y). */
+export function paintPhotoMat(g, x, y, w, h) {
+  g.fillStyle(MAT_COLOR, 1).fillRect(x - w / 2, y - h / 2, w, h);
+}
+
+/**
+ * Black photo corners over the photo's corners, drawn after the photo. They
+ * sit just inside the mat, so a cream edge frames them even on a black card.
+ */
+export function paintPhotoCorners(g, x, y, w, h, corner = 13, inset = 3) {
+  const x0 = x - w / 2 + inset;
+  const x1 = x + w / 2 - inset;
+  const y0 = y - h / 2 + inset;
+  const y1 = y + h / 2 - inset;
   g.fillStyle(PHOTO_CORNER, 1);
   g.fillTriangle(x0, y0, x0 + corner, y0, x0, y0 + corner);
   g.fillTriangle(x1, y0, x1 - corner, y0, x1, y0 + corner);
@@ -154,6 +170,8 @@ export function buildCardFace(scene, card, side) {
   // The evidence photo: cream mat, the art, and black photo corners.
   const mat = scene.add.graphics();
   paintPhotoMat(mat, 0, ART_Y, MAT.w, MAT.h);
+  const corners = scene.add.graphics();
+  paintPhotoCorners(corners, 0, ART_Y, MAT.w, MAT.h);
   const x0 = -MAT.w / 2;
   const y1 = ART_Y + MAT.h / 2;
   const art = buildArt(scene, card, side, style);
@@ -223,7 +241,8 @@ export function buildCardFace(scene, card, side) {
     .setOrigin(1, 0.5);
 
   const hit = scene.add.rectangle(0, 0, CARD_W, CARD_H, 0xffffff, 0);
-  c.add([body, stamp, icon, typeLabel, cost, hexMark, mat, ...art, ...extras, rules, name, rule, divider, pushLabel, number, hit]);
+  c.add([body, stamp, icon, typeLabel, cost, hexMark, mat, ...art, corners, ...extras, rules, name, rule, divider, pushLabel, number, hit]);
+  sharpen(c);
   c.setSize(CARD_W, CARD_H);
   c.bg = hit;
   c.edge = style.edge;
@@ -244,6 +263,7 @@ export function buildCardBack(scene, side) {
     .setOrigin(0.5)
     .setAlpha(0.7);
   c.add([body, inner, mark]);
+  sharpen(c);
   c.setSize(CARD_W, CARD_H);
   return c;
 }
