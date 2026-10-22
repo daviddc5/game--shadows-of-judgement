@@ -92,7 +92,11 @@ After several rounds of look boards, the owner chose:
   too: the server never waits for it. A watchdog stops any turn animation that
   hasn't finished in 30 s of game time and moves on, so a stuck step can't
   freeze a match.
-- **Hand interaction.** Tap a card to lift and grow it in place; press and hold
+- **Hand interaction.** The hand is held as a fan (like Yu-Gi-Oh!), the left
+  card on top so every card's right edge, with its cost and push, stays
+  readable. Chosen from four mock-ups: the picked card rises out of the fan
+  rather than appearing big over the board, so the board stays visible while
+  you read your opponent. Tap a card to raise and grow it; press and hold
   to inspect a big copy without selecting; drag a card up onto the board to
   stage it in your slot (tap it again to take it back). Nothing is played
   until Play card is pressed. A phone buzz on select, and desktop keys: 1

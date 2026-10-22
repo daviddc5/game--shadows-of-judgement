@@ -28,12 +28,16 @@ const FONT_BODY = FONTS.body;
 
 const METER = { x: 60, y: 372, w: 630, h: 18 };
 const SLOT = { opponent: { x: 230, y: 632 }, player: { x: 520, y: 632 } };
-const HAND_Y = 1100;
+// The hand is held as a fan, like cards in a real hand: each card turned a
+// little around a point far below the screen, the left card on top, so every
+// card's right edge (its cost and push) stays readable.
+const FAN = { y: 1078, radius: 1300, stepDeg: 6.2, scale: 1.1 };
 // Hand interaction: a tap lifts and grows the card; holding inspects it; a drag
 // up past DROP_Y stages it in your slot. Nothing is played until Play card is
 // pressed.
-const SELECT_LIFT = 34;
-const SELECT_SCALE = 1.25;
+// The chosen card rises out of the fan, upright and grown, to this height.
+const SELECT_Y = 1010;
+const SELECT_SCALE = 1.3;
 const HOLD_MS = 380;
 const DRAG_PX = 14;
 const DROP_Y = 900;
@@ -58,6 +62,17 @@ const CUT_IN_KICKER = {
   BAIT: "Baited!",
   AMBUSH: "Ambushed!",
 };
+
+/** Where the i-th of n cards sits in the fan: position and turn, around a point far below the screen. */
+function fanPose(i, n) {
+  const angle = (i - (n - 1) / 2) * FAN.stepDeg;
+  const rad = Phaser.Math.DegToRad(angle);
+  return {
+    x: W / 2 + FAN.radius * Math.sin(rad),
+    y: FAN.y + FAN.radius * (1 - Math.cos(rad)),
+    angle,
+  };
+}
 
 function roman(n) {
   const table = [[10, "X"], [9, "IX"], [5, "V"], [4, "IV"], [1, "I"]];
@@ -445,9 +460,8 @@ export default class CaseBattleScene extends Phaser.Scene {
     const n = me.hand.length;
     me.hand.forEach((card, i) => {
       const c = buildCardFace(this, card, this.playerSide);
-      const x = W / 2 + (i - (n - 1) / 2) * (CARD_W + 8);
-      c.setPosition(x, HAND_Y);
-      c.homeX = x;
+      c.home = fanPose(i, n);
+      c.setPosition(c.home.x, c.home.y).setAngle(c.home.angle).setScale(FAN.scale).setDepth(n - i);
       c.index = i;
       c.cardName = card.name;
       c.affordable = canAfford(this.state, this.playerSide, card);
@@ -456,15 +470,15 @@ export default class CaseBattleScene extends Phaser.Scene {
       c.bg.on("pointerdown", (pointer) => this.startPress(c, pointer));
       c.bg.on("pointerover", () => {
         if (!this.busy && !this.press && c.affordable && this.selectedIndex !== i) {
-          this.tweens.add({ targets: c, y: HAND_Y - 12, duration: 120 });
+          this.tweens.add({ targets: c, y: c.home.y - 12, duration: 120 });
         }
       });
       c.bg.on("pointerout", () => {
-        if (!this.press && this.selectedIndex !== i) this.tweens.add({ targets: c, y: HAND_Y, duration: 120 });
+        if (!this.press && this.selectedIndex !== i) this.tweens.add({ targets: c, y: c.home.y, duration: 120 });
       });
       // Deal in from below.
-      c.y = HAND_Y + 300;
-      this.tweens.add({ targets: c, y: HAND_Y, duration: 320, delay: i * 70, ease: "Back.easeOut" });
+      c.y = c.home.y + 300;
+      this.tweens.add({ targets: c, y: c.home.y, duration: 320, delay: i * 70, ease: "Back.easeOut" });
       this.handCards.push(c);
     });
   }
@@ -480,25 +494,29 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   /**
-   * Where every hand card rests: the selected one lifted and grown (or, if it
-   * was dragged onto the board, staged in your slot), the rest at home.
+   * Where every hand card rests: the selected one risen out of the fan, upright
+   * and grown (or, if it was dragged onto the board, staged in your slot), the
+   * rest in the fan.
    */
   layoutHand() {
-    this.handCards.forEach((c) => {
+    const n = this.handCards.length;
+    this.handCards.forEach((c, i) => {
       const selected = c.index === this.selectedIndex;
       if (!selected) c.staged = false;
       this.tweens.killTweensOf(c);
-      c.setDepth(selected ? 10 : 0);
+      c.home = fanPose(i, n);
+      c.setDepth(selected ? 20 : n - i);
       c.setSelected(selected);
       const staged = selected && c.staged;
-      // A selected card grows, so one at either end of the hand moves in enough to stay on screen.
+      // The risen card is bigger, so one from either end of the fan moves in enough to stay on screen.
       const room = (CARD_W * SELECT_SCALE) / 2 + 6;
-      const liftedX = Phaser.Math.Clamp(c.homeX, room, W - room);
+      const risenX = Phaser.Math.Clamp(c.home.x, room, W - room);
       this.tweens.add({
         targets: c,
-        x: staged ? SLOT.player.x : selected ? liftedX : c.homeX,
-        y: staged ? SLOT.player.y : selected ? HAND_Y - SELECT_LIFT : HAND_Y,
-        scale: staged ? 1 : selected ? SELECT_SCALE : 1,
+        x: staged ? SLOT.player.x : selected ? risenX : c.home.x,
+        y: staged ? SLOT.player.y : selected ? SELECT_Y : c.home.y,
+        angle: selected ? 0 : c.home.angle,
+        scale: staged ? 1 : selected ? SELECT_SCALE : FAN.scale,
         duration: 150,
         ease: "Cubic.easeOut",
       });
@@ -541,7 +559,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       p.dragging = true;
       p.timer.remove();
       this.tweens.killTweensOf(p.card);
-      p.card.setDepth(30).setScale(1.1);
+      p.card.setDepth(30).setScale(1.1).setAngle(0);
     }
     p.card.setPosition(pointer.x, pointer.y - 70);
     this.slotGlow.setAlpha(pointer.y < DROP_Y ? 1 : 0);
@@ -563,7 +581,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     }
     if (!card.affordable) {
       this.flashHint(`Not enough energy for ${card.cardName}`);
-      this.tweens.add({ targets: card, x: card.homeX + 8, duration: 50, yoyo: true, repeat: 2 });
+      this.tweens.add({ targets: card, x: card.home.x + 8, duration: 50, yoyo: true, repeat: 2 });
       return;
     }
     this.selectCard(this.selectedIndex === card.index ? null : card.index);
@@ -687,7 +705,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     if (playerCard) {
       const handCard = this.handCards[index];
       const back = buildCardBack(this, this.playerSide);
-      back.setPosition(handCard.x, handCard.y);
+      back.setPosition(handCard.x, handCard.y).setAngle(handCard.angle).setScale(handCard.scale);
       handCard.destroy();
       this.handCards.splice(index, 1);
       // The cards left in your hand drop back to rest.
