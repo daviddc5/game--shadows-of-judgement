@@ -723,7 +723,7 @@ export default class CaseBattleScene extends Phaser.Scene {
           ? "Final turn: the verdict follows the needle."
           : "",
     );
-    if (!first) this.showBanner(`Turn ${roman(turn)}`);
+    if (!first) this.showBanner("Turn", roman(turn));
     this.spokeThisTurn = false;
     if (first) {
       // Opening thoughts: the opponent's first, then yours.
@@ -1604,13 +1604,27 @@ export default class CaseBattleScene extends Phaser.Scene {
     });
   }
 
-  showBanner(text) {
+  /**
+   * A band across the board: `text` in blackletter, then an optional `number`
+   * in upright serif. Blackletter draws the Roman numeral I like a J, so a
+   * numeral stays in the reading font ("Turn IX", never "Turn JX").
+   */
+  showBanner(text, number) {
     const z = this.z(SLOT.player.y);
     const band = this.add.rectangle(W / 2, SLOT.player.y, W, 110, z.paper, 0.94).setStrokeStyle(1, z.line).setDepth(40);
-    const t = this.add
-      .text(W / 2, SLOT.player.y, text, { fontFamily: FONT_DISPLAY, fontSize: "76px", color: hex(z.ink) })
-      .setOrigin(0.5)
-      .setDepth(41);
+    const word = this.add
+      .text(0, 0, text, { fontFamily: FONT_DISPLAY, fontSize: "76px", color: hex(z.ink) })
+      .setOrigin(0, 0.5);
+    const parts = [word];
+    if (number) {
+      parts.push(
+        this.add
+          .text(word.width + 22, 4, number, { fontFamily: FONT_BODY, fontSize: "64px", fontStyle: "600", color: hex(z.ink) })
+          .setOrigin(0, 0.5),
+      );
+    }
+    const width = parts.reduce((right, t) => Math.max(right, t.x + t.width), 0);
+    const t = this.add.container(W / 2 - width / 2, SLOT.player.y, parts).setDepth(41);
     band.scaleY = 0;
     this.tweens.add({ targets: band, scaleY: 1, duration: 140 });
     this.tweens.add({
@@ -1656,7 +1670,8 @@ export default class CaseBattleScene extends Phaser.Scene {
       const tags = Object.keys(EFFECTS)
         .filter((k) => status[k] > 0)
         .map((k) => (k === "heat" ? `Heat ${status[k]}` : EFFECTS[k].name));
-      const c = this.add.container(x, y).setDepth(20);
+      // Below a raised hand card (depth 20), so the card you're looking at is never drawn over.
+      const c = this.add.container(x, y).setDepth(15);
       let cx = 0;
       for (const label of tags) {
         const t = this.add
