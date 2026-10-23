@@ -167,28 +167,83 @@ with an artist.
 - **Hidden-target districts (asymmetric deduction).** Vigilante hides a target,
   Detective gathers clues. Thematic, but two roles to learn. Possible later.
 
+## Where things stand (handoff, 23 Oct 2026)
+
+Everything below is in `main`. The owner deploys by hand (`git pull`,
+`npm install`, `npm run deploy`) and works on a branch, merging only when they
+say so.
+
+**Done recently:** status effect cards (Shaken, Cornered, Heat); the
+case-file card design; a fanned hand with tap, slide-to-select, long-press
+zoom and drag-to-stage; sound effects and the duel theme; accessibility
+settings (text size, contrast); tap to skip a turn's animation plus a 30 s
+watchdog; small turns play faster; How to Play and lobbies in the case-file
+style; a Status Effects help page (also opened by tapping a status tag); the
+Campaign screen with a guided tutorial; feature flags (Harness FME, by the
+owner).
+
+**Decisions waiting on the owner:**
+
+- **Longer games.** Matches feel short (simulator: median 7 turns, 1 in 10
+  over by turn 3). Proposed: Case meter 0 to 150 starting at 75, 15 turns
+  (`caseStart=75 caseMax=150 maxTurns=15`): median 10 turns, shortest 10% go
+  5 turns, 12% decided by the verdict, wins still 50/50, card numbers
+  unchanged. The meter, its labels and How to Play currently assume 100, so
+  they must read `RULES` instead. Not built yet.
+- **Status effect sounds.** Options are on a tap-to-hear page (press cameras,
+  printing press or telephone for Heat on Deniz; siren, police radio or
+  two-tone siren for Heat on Giovanni; heartbeat, fast clock or dread for
+  Shaken; door slam, handcuffs or cell bars for Cornered). The current ones
+  stay until the owner picks.
+- **Small turns.** They now play faster (full clash only on showdowns). The
+  owner later said the animations aren't too long and help players take in
+  the turn; ask whether to keep the faster small turns or go back to the full
+  clash every turn.
+- The menu keeps "Single player" (renaming to "Quick play" was considered
+  and dropped).
+
+**Suggested next steps, in order:**
+
+1. Longer games (above), once approved.
+2. Script the tutorial's first turns (fixed hands and opponent plays, so a
+   Counter really cancels your Power and a Bait really lands). See
+   [CAMPAIGN.md](CAMPAIGN.md).
+3. The next campaign case, "The Harbour Fire" (start behind on the meter).
+4. One passive ability per character (Deniz, Giovanni), the first step toward
+   more characters, signature cards and later the shop.
+
+**Not yet tested:** a multiplayer match on the live server after the latest
+changes (the online flow was last tested headlessly before the fanned hand).
+
 ## Roadmap
 
-1. **Now: give the game characters.** In order: characters think (inner thoughts), cards with
-   status effects, then ally (character) cards. See
+1. **Now: give the game characters.** In order: characters think (inner
+   thoughts, done), cards with status effects (done), then one passive ability
+   per character and ally (character) cards. See
    [CHARACTERS_PLAN.md](CHARACTERS_PLAN.md).
-2. **Next: three districts (Marvel Snap style).** Each district is its own small
+2. **Campaign.** Started: a Campaign screen with a guided tutorial as Case 0,
+   three placeholder cases. See [CAMPAIGN.md](CAMPAIGN.md).
+3. **Next: three districts (Marvel Snap style).** Each district is its own small
    Case meter; win 2 of 3; choose a card *and* where to play it. The owner wanted
    something like this originally but earlier feedback called it confusing; the
    difference now is one rule repeated three times instead of eight different
-   stats. Build it as a separate mode to compare against the single meter.
-3. **Later: variety.** Either selectable characters with one passive ability each
-   (cheap step toward the long-term teams idea), or a single-player campaign of
-   escalating cases with card rewards between fights. The campaign is started:
-   a Campaign screen with a guided tutorial as Case 0, see
-   [CAMPAIGN.md](CAMPAIGN.md).
-   Long term, the owner wants more detectives and vigilantes (keeping the
-   Detective vs Vigilante split), personalisable decks, and a shop for opening
-   cards, with shared and character-specific cards. This is also the main
-   marketing hook. See [COLLECTION_AND_SHOP.md](COLLECTION_AND_SHOP.md).
-4. **Visual pass.** Unify title, menu and lobby screens with the battle screen
-   (they still use the old plain style), add sound, settle the art direction.
-5. ~~Port multiplayer~~ Done: the server runs the same rules engine, and the
+   stats. Build it as a separate mode to compare against the single meter. The
+   owner also doesn't want the game to look like Marvel Snap, so this needs care.
+4. **Later: collection and shop.** More detectives and vigilantes (keeping the
+   Detective vs Vigilante split), personalisable decks, and packs: 1 free pack
+   a day, points can be bought for cosmetics or faster collecting, never
+   power. Needs accounts and a database. See
+   [COLLECTION_AND_SHOP.md](COLLECTION_AND_SHOP.md).
+5. **Art.** Card art is placeholder; the owner may draw it (pixel art or noir
+   silhouettes suit the look) or commission it. Avoid AI art in anything sold:
+   the portraits and the music are AI-made, which matters for a paid release or
+   crowdfunding.
+6. **Commercial path** (owner's question): too early to crowdfund. First build
+   an audience (itch.io page, short clips, a Discord), real art and more
+   content, then a Steam page with wishlists, then crowdfunding or a publisher.
+7. ~~Visual pass~~ Done: title, menu, lobbies and How to Play use the battle
+   screen's case-file style; sound is in.
+8. ~~Port multiplayer~~ Done: the server runs the same rules engine, and the
    old eight-stat code has been removed.
 
 ## Known issues and housekeeping
