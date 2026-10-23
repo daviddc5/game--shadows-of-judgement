@@ -58,6 +58,8 @@ pipeline:
                     repo: europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
                     tags:
                       - <+codebase.commitSha>
+                    buildArgs:
+                      VITE_FME_CLIENT_KEY: <+secrets.getValue("fme_client_key")>
                     caching: true
                   timeout: ""
                   type: BuildAndPushDockerRegistry
