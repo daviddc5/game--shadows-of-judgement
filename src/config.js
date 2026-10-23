@@ -6,6 +6,7 @@ import CaseBattleScene from "./scenes/CaseBattleScene.js";
 import InstructionsScene from "./scenes/InstructionsScene.js";
 import SinglePlayerLobbyScene from "./scenes/SinglePlayerLobbyScene.js";
 import AppearanceScene from "./scenes/AppearanceScene.js";
+import CampaignScene from "./scenes/CampaignScene.js";
 
 const config = {
   //type is the rendering context
@@ -36,6 +37,7 @@ const config = {
     InstructionsScene,
     SinglePlayerLobbyScene,
     AppearanceScene,
+    CampaignScene,
   ],
 };
 

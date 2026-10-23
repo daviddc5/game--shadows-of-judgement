@@ -13,19 +13,20 @@ export default class MenuScene extends Phaser.Scene {
 
     displayText(this, theme, 375, 230, "Shadows of\nJudgment", 88);
 
-    button(this, theme, 375, 560, 520, "Single player", () => {
+    button(this, theme, 375, 520, 520, "Campaign", () => this.scene.start("CampaignScene"), { primary: true });
+    button(this, theme, 375, 630, 520, "Single player", () => {
       this.registry.set("debugMode", false);
       this.scene.start("SinglePlayerLobbyScene", { debugMode: false });
-    }, { primary: true });
-    button(this, theme, 375, 670, 520, "Multiplayer", () => {
+    });
+    button(this, theme, 375, 740, 520, "Multiplayer", () => {
       this.registry.set("debugMode", false);
       this.scene.start("MultiplayerLobbyScene");
     });
-    button(this, theme, 375, 780, 520, "Appearance", () => this.scene.start("AppearanceScene"));
-    button(this, theme, 375, 890, 520, "How to play", () => this.scene.start("InstructionsScene"));
+    button(this, theme, 375, 850, 520, "Appearance", () => this.scene.start("AppearanceScene"));
+    button(this, theme, 375, 960, 520, "How to play", () => this.scene.start("InstructionsScene"));
 
     if (import.meta.env.DEV) {
-      button(this, theme, 375, 1010, 360, "Test mode", () => {
+      button(this, theme, 375, 1080, 360, "Test mode", () => {
         this.registry.set("debugMode", true);
         this.scene.start("SinglePlayerLobbyScene", { debugMode: true });
       }, { h: 64, size: 30 });

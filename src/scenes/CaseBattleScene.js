@@ -13,6 +13,7 @@ import {
 import { chooseAiPlay } from "../case/ai.js";
 import { getCharacter, portraitKey, randomCharacter } from "../case/characters.js";
 import { pickLine } from "../case/dialogue.js";
+import { getCase } from "../case/campaign.js";
 import { isMuted, playDuelMusic, playSfx, setMuted, stopMusic } from "../audio.js";
 import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
@@ -118,7 +119,9 @@ function applyView(state, view) {
  * Battle using the Case meter ruleset (src/case).
  * Single player runs the rules locally against the AI. Online play
  * (scene data `{ online: matchFoundData }`) sends choices to the server,
- * which runs the same rules, and animates the events it sends back.
+ * which runs the same rules, and animates the events it sends back. A
+ * campaign case (`{ campaign: caseId }`, src/case/campaign.js) is single
+ * player with that case's coaching tips in the hint area.
  * Colours come from the player's chosen theme (src/theme.js).
  */
 export default class CaseBattleScene extends Phaser.Scene {
@@ -127,7 +130,9 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   create(data) {
+    this.sceneData = data;
     this.online = data?.online ?? null;
+    this.campaignCase = (!this.online && data?.campaign && getCase(data.campaign)) || null;
     if (this.online) {
       this.playerSide = this.online.side;
       this.state = stateFromView(this.online.view);
@@ -720,12 +725,14 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.playButton.setEnabled(false);
     this.updateHud();
     this.renderHand();
+    const tip = this.campaignCase?.tips?.[turn - 1];
     this.hintText.setText(
-      first
-        ? "Pick a card. They're picking too.\nBoth cards land together."
-        : turn === rules.maxTurns
-          ? "Final turn: the verdict follows the needle."
-          : "",
+      tip ??
+        (first
+          ? "Pick a card. They're picking too.\nBoth cards land together."
+          : turn === rules.maxTurns
+            ? "Final turn: the verdict follows the needle."
+            : ""),
     );
     if (!first) this.showBanner(`Turn ${roman(turn)}`);
     this.spokeThisTurn = false;
@@ -1965,11 +1972,18 @@ export default class CaseBattleScene extends Phaser.Scene {
 
     const again = this.online
       ? button(this, this.theme, W / 2, 770, 400, "New match", () => this.scene.start("MultiplayerLobbyScene"), { primary: true })
-      : button(this, this.theme, W / 2, 770, 400, "Rematch", () => {
+      : button(this, this.theme, W / 2, 770, 400, this.campaignCase ? "Play again" : "Rematch", () => {
           this.keepMusic = true;
-          this.scene.restart();
+          this.scene.restart(this.sceneData);
         }, { primary: true });
     again.setDepth(201);
-    button(this, this.theme, W / 2, 880, 400, "Menu", () => this.leaveToMenu()).setDepth(201);
+    if (this.campaignCase) {
+      button(this, this.theme, W / 2, 880, 400, "Campaign", () => {
+        stopMusic(this);
+        this.scene.start("CampaignScene");
+      }).setDepth(201);
+    } else {
+      button(this, this.theme, W / 2, 880, 400, "Menu", () => this.leaveToMenu()).setDepth(201);
+    }
   }
 }
