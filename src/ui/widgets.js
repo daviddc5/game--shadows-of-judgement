@@ -123,6 +123,18 @@ export function characterPicker(scene, theme, top, onSelect) {
     const frame = scene.add.graphics().setPosition(375, y);
     paintFrame(frame, PANEL.w, PANEL.h, card, theme.red, false, 18);
     panels.push({ frame, card, character: s.character });
+    // Tapping anywhere on the panel picks that side (its first character, or the one already
+    // chosen there); a photo on top of it picks that character.
+    const list = CHARACTERS[s.side];
+    const panelHit = scene.add
+      .rectangle(375, y, PANEL.w, PANEL.h, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    panels[panels.length - 1].hit = panelHit;
+    panelHit.on("pointerdown", () => {
+      if (!panelHit.input.enabled) return;
+      const current = tiles.find((t) => t.character === s.character && t.chosen.visible);
+      onSelect(s.character, current?.id ?? list[0].id);
+    });
     const left = 375 - PANEL.w / 2 + 36;
     scene.add
       .text(left, y - 136, s.name, { fontFamily: FONTS.body, fontSize: "36px", fontStyle: "600", color: ink })
@@ -132,7 +144,6 @@ export function characterPicker(scene, theme, top, onSelect) {
       .setOrigin(0, 0);
     fit(goal, PANEL.w - 72, 64, 18);
 
-    const list = CHARACTERS[s.side];
     list.forEach((c, j) => {
       const x = 375 + (j - (list.length - 1) / 2) * (TILE + 60);
       const ty = y + 38;
@@ -156,8 +167,8 @@ export function characterPicker(scene, theme, top, onSelect) {
       tiles.forEach((t) => t.chosen.setVisible(t.character === character && t.id === id));
     },
     setEnabled(enabled) {
-      tiles.forEach((t) => {
-        t.hit.input.enabled = enabled;
+      [...tiles.map((t) => t.hit), ...panels.map((p) => p.hit)].forEach((hit) => {
+        hit.input.enabled = enabled;
       });
     },
   };

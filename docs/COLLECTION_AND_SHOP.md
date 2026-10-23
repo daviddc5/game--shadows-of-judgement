@@ -49,6 +49,26 @@ The current rules already support this with little change:
 - The balance simulator (`npm run simulate`) can be extended to run decks
   against each other, to catch broken cards before they ship.
 
+## Packs and points (the owner's model)
+
+Decided in principle; the numbers get tuned once there is a real card pool.
+
+- **A pack costs 1 point and holds 4 cards.** Every player gets **1 free pack
+  a day**, and more can be earned by playing (daily missions, wins).
+- **Points can also be bought.** What paying gets you is only:
+  - **cosmetics**: foil and alternate-art versions of cards, board themes,
+    card backs, character outfits; or
+  - **the full card list sooner**: more packs, so a collection fills faster.
+- **Paying never gets you power.** Every gameplay card can be earned for free
+  at a fair pace, and new cards are sidegrades (different, not stronger).
+- **Duplicates turn into points** (or "dust") to spend on a specific card, so
+  no pack is wasted.
+- **Needs before it can work:** a card pool big enough that packs stay
+  exciting (well beyond today's ~12 cards a side, with new sets over time), a
+  deck builder, and accounts plus a database to store collections.
+- **Paid random packs are loot boxes:** publish the odds, expect an "includes
+  random items" age label, and check each country's rules (see below).
+
 ## The shop: things to decide carefully
 
 - **Random paid packs are legally risky.** Paid loot boxes are restricted or

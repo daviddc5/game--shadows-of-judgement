@@ -50,7 +50,9 @@ After several rounds of look boards, the owner chose:
 - **UnifrakturMaguntia** blackletter for decoration only: the logo, screen
   titles and big moments. **Anything that has to be read** (card names and
   numbers, buttons, character names, rules) uses upright EB Garamond (no
-  italics), and muted text is kept dark enough to read. The owner found blackletter and grey text hard to
+  italics), and muted text is kept dark enough to read. Roman numerals
+  are never set in blackletter, which draws I like J ("Turn JX"), so the
+  round banner is in EB Garamond. The owner found blackletter and grey text hard to
   read in play.
 - **Mostly black and white**, colour only in the character portraits, and **a
   touch of red** (the needle, the Vigilante's numbers, your selected card, big
@@ -177,7 +179,9 @@ with an artist.
    stats. Build it as a separate mode to compare against the single meter.
 3. **Later: variety.** Either selectable characters with one passive ability each
    (cheap step toward the long-term teams idea), or a single-player campaign of
-   escalating cases with card rewards between fights.
+   escalating cases with card rewards between fights. The campaign is started:
+   a Campaign screen with a guided tutorial as Case 0, see
+   [CAMPAIGN.md](CAMPAIGN.md).
    Long term, the owner wants more detectives and vigilantes (keeping the
    Detective vs Vigilante split), personalisable decks, and a shop for opening
    cards, with shared and character-specific cards. This is also the main
