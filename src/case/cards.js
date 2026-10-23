@@ -1,6 +1,6 @@
 // Card data for the "Case meter" ruleset.
 // Every card pushes the shared Case meter toward its owner's end.
-// Detective pushes it up (toward 100), the Vigilante pushes it down (toward 0).
+// Detective pushes it up (toward 200), the Vigilante pushes it down (toward 0).
 
 export const CARD_TYPES = {
   COUNTER: { color: 0xe5484d, label: "COUNTER" },

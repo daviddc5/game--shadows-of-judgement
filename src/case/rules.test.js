@@ -9,7 +9,7 @@ function card(side, type) {
 }
 
 // Builds a match where each side holds exactly the given card and plenty of energy.
-function setup(detectiveType, vigilanteType, caseValue = 50) {
+function setup(detectiveType, vigilanteType, caseValue = RULES.caseStart) {
   const state = createMatch({ rng: () => 0.5 });
   state.caseValue = caseValue;
   state.sides.detective.hand = detectiveType ? [card("detective", detectiveType)] : [];
@@ -34,11 +34,11 @@ describe("Case meter rules", () => {
     const state = setup("QUICK", null);
     const push = pushFor(state, state.sides.detective.hand[0]);
     resolveTurn(state, play(true, false));
-    expect(state.caseValue).toBe(50 + push);
+    expect(state.caseValue).toBe(RULES.caseStart + push);
 
     const state2 = setup(null, "QUICK");
     resolveTurn(state2, play(false, true));
-    expect(state2.caseValue).toBe(50 - push);
+    expect(state2.caseValue).toBe(RULES.caseStart - push);
   });
 
   it("COUNTER cancels a POWER card and pushes for its owner", () => {
@@ -46,7 +46,7 @@ describe("Case meter rules", () => {
     const counterPush = pushFor(state, state.sides.detective.hand[0]);
     const { events } = resolveTurn(state, play(true, true));
     expect(events.map((e) => e.type)).toEqual(["counter", "cancelled"]);
-    expect(state.caseValue).toBe(50 + counterPush);
+    expect(state.caseValue).toBe(RULES.caseStart + counterPush);
   });
 
   it("COUNTER fizzles against anything that is not POWER", () => {
@@ -54,7 +54,7 @@ describe("Case meter rules", () => {
     const normalPush = pushFor(state, state.sides.vigilante.hand[0]);
     const { events } = resolveTurn(state, play(true, true));
     expect(events.map((e) => e.type)).toEqual(["fizzle", "push"]);
-    expect(state.caseValue).toBe(50 - normalPush);
+    expect(state.caseValue).toBe(RULES.caseStart - normalPush);
   });
 
   it("spends energy on a cancelled POWER card", () => {
@@ -69,7 +69,7 @@ describe("Case meter rules", () => {
     const bait = state.sides.vigilante.hand[0];
     const { events } = resolveTurn(state, play(true, true));
     expect(events.map((e) => e.type)).toEqual(["fizzle", "sprung"]);
-    expect(state.caseValue).toBe(50 - pushFor(state, bait, bait.bigPush));
+    expect(state.caseValue).toBe(RULES.caseStart - pushFor(state, bait, bait.bigPush));
   });
 
   it("BAIT only pushes a little against anything else", () => {
@@ -77,7 +77,7 @@ describe("Case meter rules", () => {
     const quick = state.sides.detective.hand[0];
     const bait = state.sides.vigilante.hand[0];
     resolveTurn(state, play(true, true));
-    expect(state.caseValue).toBe(50 + pushFor(state, quick) - pushFor(state, bait));
+    expect(state.caseValue).toBe(RULES.caseStart + pushFor(state, quick) - pushFor(state, bait));
   });
 
   it("AMBUSH pushes big when the opponent WAITs", () => {
@@ -85,7 +85,7 @@ describe("Case meter rules", () => {
     const ambush = state.sides.detective.hand[0];
     const { events } = resolveTurn(state, play(true, false));
     expect(events.map((e) => e.type)).toEqual(["wait", "sprung"]);
-    expect(state.caseValue).toBe(50 + pushFor(state, ambush, ambush.bigPush));
+    expect(state.caseValue).toBe(RULES.caseStart + pushFor(state, ambush, ambush.bigPush));
   });
 
   it("AMBUSH only pushes a little when the opponent plays a card", () => {
@@ -93,7 +93,7 @@ describe("Case meter rules", () => {
     const ambush = state.sides.detective.hand[0];
     const quick = state.sides.vigilante.hand[0];
     resolveTurn(state, play(true, true));
-    expect(state.caseValue).toBe(50 + pushFor(state, ambush) - pushFor(state, quick));
+    expect(state.caseValue).toBe(RULES.caseStart + pushFor(state, ambush) - pushFor(state, quick));
   });
 
   it("waiting banks bonus energy", () => {
@@ -104,23 +104,23 @@ describe("Case meter rules", () => {
   });
 
   it("both cards land together and net out before the meter is clamped", () => {
-    const state = setup("QUICK", "POWER", 95);
+    const state = setup("QUICK", "POWER", RULES.caseMax - 5);
     const net = pushFor(state, state.sides.detective.hand[0]) - pushFor(state, state.sides.vigilante.hand[0]);
     const { events } = resolveTurn(state, play(true, true));
     expect(events.filter((e) => e.type === "push")).toHaveLength(2);
     expect(state.winner).toBeNull();
-    expect(state.caseValue).toBe(95 + net);
+    expect(state.caseValue).toBe(RULES.caseMax - 5 + net);
   });
 
   it("ends the case when the net push reaches an end", () => {
-    const state = setup("POWER", "QUICK", 90);
+    const state = setup("POWER", "QUICK", RULES.caseMax - 10);
     resolveTurn(state, play(true, true));
     expect(state.winner).toBe("detective");
     expect(state.endReason).toBe("capture");
   });
 
   it("gives the verdict to whichever side the meter leans at the turn limit", () => {
-    const state = setup(null, null, 60);
+    const state = setup(null, null, RULES.caseStart + 10);
     state.turn = RULES.maxTurns;
     resolveTurn(state, play(false, false));
     expect(state.winner).toBe("detective");

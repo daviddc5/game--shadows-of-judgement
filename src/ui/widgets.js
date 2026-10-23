@@ -99,7 +99,7 @@ export function backLink(scene, theme, onClick, label = "← Back") {
 }
 
 const SIDES = [
-  { character: "Independent Detective", side: "detective", name: "Detective", goal: "Push the Case to 100 to capture the Vigilante." },
+  { character: "Independent Detective", side: "detective", name: "Detective", goal: "Push the Case to 200 to capture the Vigilante." },
   { character: "Vigilante", side: "vigilante", name: "Vigilante", goal: "Drag the Case down to 0 to escape the Detective." },
 ];
 

@@ -2,15 +2,15 @@ import { SIDES, buildDeck } from "./cards.js";
 
 // Tunable rules for the Case meter prototype.
 export const RULES = {
-  caseStart: 50,
+  caseStart: 100,
   caseMin: 0, // Vigilante escapes
-  caseMax: 100, // Detective captures
+  caseMax: 200, // Detective captures
   startEnergy: 1,
   energyPerTurn: 2,
   waitBonus: 1, // extra energy for skipping a turn
   maxEnergy: 10,
   handSize: 4,
-  maxTurns: 12, // after this the verdict goes to whichever side the meter leans
+  maxTurns: 20, // after this the verdict goes to whichever side the meter leans
   pushScale: 1, // multiplies every card's push (cards hold their real numbers, so 1)
   escalation: 0, // extra push per turn: push * (1 + escalation * (turn - 1))
   escalationFlat: 5, // flat push added per turn: push + escalationFlat * (turn - 1)

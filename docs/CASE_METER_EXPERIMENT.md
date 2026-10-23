@@ -6,8 +6,10 @@ running the same engine via `server/caseRoom.js`).
 
 ## Rules
 
-- **One meter, 0–100, starts at 50.** The Detective wins at 100 (capture), the
-  Vigilante wins at 0 (escape).
+- **One meter, 0–200, starts at 100.** The Detective wins at 200 (capture), the
+  Vigilante wins at 0 (escape). (It was 0–100 until the "longer games" change:
+  a single uncountered Power card, 55 + stakes, covered the whole 50 to a win,
+  so one guess often decided the case by turn 3.)
 - **Simultaneous picks.** Both players choose a card or WAIT, then both reveal.
   Both cards land together and their pushes add up; the case ends if the net
   result reaches an end. (Card speed was removed: it only mattered on the final
@@ -37,7 +39,7 @@ running the same engine via `server/caseRoom.js`).
   - **Heat** (Most Wanted, Smear Campaign; cost 3, push 10): the meter drifts
     10 your way at the start of each of the next 2 turns.
 - **Rising stakes.** Every card gains +5 push per turn, so games end in about
-  6 turns. After turn 12, whichever side the needle leans wins.
+  13 turns. After turn 20, whichever side the needle leans wins.
 
 ## Files
 
@@ -59,6 +61,7 @@ length. Pass rule overrides to try changes without editing code:
 npm run simulate -- 10000 escalationFlat=2 energyPerTurn=1
 ```
 
-Current defaults: detective 50.2% / vigilante 49.7%, median game 7 turns,
-about 8% decided by the turn-12 verdict. The simulator also reports how often
+Current defaults: detective 49.5% / vigilante 50.3%, median game 13 turns
+(p10 8, p90 20), about 9% decided by the turn-20 verdict. Before the longer
+games change (0–100 meter, turn-12 verdict): median 7 turns, p10 3. The simulator also reports how often
 each card type is played and how often COUNTER, BAIT and AMBUSH pay off.

@@ -31,7 +31,8 @@ await page.evaluate((side) => {
 await page.waitForTimeout(2000);
 await page.screenshot({ path: `${outDir}/00-start.png` });
 
-for (let turn = 1; turn <= 12; turn++) {
+const maxTurns = await page.evaluate(() => window.__caseScene.state.rules.maxTurns);
+for (let turn = 1; turn <= maxTurns; turn++) {
   // Play the most expensive affordable card each turn.
   const choice = await page.evaluate(() => {
     const s = window.__caseScene;

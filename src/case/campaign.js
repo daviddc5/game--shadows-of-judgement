@@ -19,7 +19,7 @@ export const CASES = [
     // One line per turn, in the hint area above your hand.
     tips: [
       "Tap a card to raise it, then press Play card.\nYour opponent is choosing at the same time.",
-      "You're the Detective: push the needle up to 100.\nYour push number is on each card.",
+      "You're the Detective: push the needle up to 200.\nYour push number is on each card.",
       "Low on energy? Wait saves it (+1 extra)\nfor a big Power card later.",
       "Power cards push hard, but a Counter cancels them.\nHave they been saving energy?",
       "Bait beats a Counter. Ambush beats a Wait.\nGuess what they'll do next.",

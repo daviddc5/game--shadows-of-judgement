@@ -380,9 +380,21 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.drawMeter(this.meterValue);
   }
 
+  /** Screen x of a meter value. */
+  meterX(value) {
+    const { caseMin, caseMax } = this.state.rules;
+    return METER.x + (METER.w * (value - caseMin)) / (caseMax - caseMin);
+  }
+
+  /** How far the meter leans toward `side`'s goal, from -1 (lost) to 1 (won). */
+  leanFor(side, value) {
+    const { caseMin, caseMax, caseStart } = this.state.rules;
+    return ((value - caseStart) * SIDES[side].direction) / ((caseMax - caseMin) / 2);
+  }
+
   drawMeter(value) {
     const { x, y, w, h } = METER;
-    const split = x + (w * value) / 100;
+    const split = this.meterX(value);
     const mid = x + w / 2;
     this.meterGfx.clear();
     // Fill from the centre toward whoever is ahead.
@@ -1376,7 +1388,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     }
 
     if (event.type === "heat") {
-      const meterX = METER.x + (METER.w * event.to) / 100;
+      const meterX = this.meterX(event.to);
       this.floatText(meterX, METER.y + 60, "Heat", hex(red), 46);
       await this.tweenMeter(event.to);
       this.updatePortraits();
@@ -1403,7 +1415,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       const winnerWho = event.winner === this.playerSide ? "player" : "opponent";
       if (event.winner !== "draw") {
         this.cameras.main.shake(400, 0.015);
-        this.burst(METER.x + (METER.w * this.state.caseValue) / 100, METER.y, "cb-spark", red, 40, 900);
+        this.burst(this.meterX(this.state.caseValue), METER.y, "cb-spark", red, 40, 900);
       }
       if (winnerWho === "player") this.cameras.main.flash(300, ...rgb(this.theme.paper));
     }
@@ -1502,9 +1514,9 @@ export default class CaseBattleScene extends Phaser.Scene {
     const moved = this.state.caseValue - caseBefore;
     for (const side of [this.playerSide, this.opponentSide]) {
       const dir = SIDES[side].direction;
-      const lead = (this.state.caseValue - 50) * dir;
-      if (lead >= 25 && moved * dir > 0 && Math.random() < 0.6) return this.think(whoOf(side), "winning");
-      if (lead <= -25 && moved * dir < 0 && Math.random() < 0.6) return this.think(whoOf(side), "losing");
+      const lead = this.leanFor(side, this.state.caseValue);
+      if (lead >= 0.5 && moved * dir > 0 && Math.random() < 0.6) return this.think(whoOf(side), "winning");
+      if (lead <= -0.5 && moved * dir < 0 && Math.random() < 0.6) return this.think(whoOf(side), "losing");
     }
     const pushes = events.filter((e) => e.type === "push" && (e.card.type === "QUICK" || e.card.type === "NORMAL"));
     if (pushes.length && Math.random() < 0.35) {
@@ -1574,7 +1586,7 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   sparkTrail(x, y) {
-    const target = METER.x + (METER.w * this.meterValue) / 100;
+    const target = this.meterX(this.meterValue);
     for (let i = 0; i < 6; i++) {
       const s = this.add.image(x, y, "cb-spark").setTint(this.z(y).ink).setScale(0.9).setDepth(45);
       this.tweens.add({
@@ -1735,11 +1747,11 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   updatePortraits() {
-    const lean = (this.meterValue - 50) * SIDES[this.playerSide].direction;
+    const lean = this.leanFor(this.playerSide, this.meterValue);
     const mood = (forPlayer) => {
       const l = forPlayer ? lean : -lean;
-      if (l >= 15) return "winning";
-      if (l <= -15) return "losing";
+      if (l >= 0.3) return "winning";
+      if (l <= -0.3) return "losing";
       return "neutral";
     };
     for (const [portrait, forPlayer] of [[this.playerPortrait, true], [this.opponentPortrait, false]]) {
@@ -1804,8 +1816,8 @@ export default class CaseBattleScene extends Phaser.Scene {
       70,
       240,
       [
-        "One shared meter. The Detective wins at 100,",
-        "the Vigilante wins at 0.",
+        `One shared meter. The Detective wins at ${r.caseMax},`,
+        `the Vigilante wins at ${r.caseMin}.`,
         "",
         "Both players pick a card at the same time.",
         "Both cards land together and their pushes add up.",
@@ -1902,8 +1914,8 @@ export default class CaseBattleScene extends Phaser.Scene {
     const z = this.z(820);
     const actions = [
       ["+5 energy", () => (this.state.sides[this.playerSide].energy = Math.min(10, this.state.sides[this.playerSide].energy + 5))],
-      ["◀ 20", () => (this.state.caseValue = Math.max(1, this.state.caseValue - 20))],
-      ["20 ▶", () => (this.state.caseValue = Math.min(99, this.state.caseValue + 20))],
+      ["◀ 40", () => (this.state.caseValue = Math.max(this.state.rules.caseMin + 1, this.state.caseValue - 40))],
+      ["40 ▶", () => (this.state.caseValue = Math.min(this.state.rules.caseMax - 1, this.state.caseValue + 40))],
     ];
     actions.forEach(([label, act], i) => {
       const t = this.add

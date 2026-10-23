@@ -37,7 +37,8 @@ by whether they give players more to read, not more to calculate.
 | WAIT banks +1 extra energy | Makes saving up a real, visible choice. The owner especially likes this. |
 | COUNTER only cancels POWER | Turns COUNTER into a gamble instead of an always-good card. |
 | Removed card speed | It only mattered on the final turn. Both cards now land together. |
-| Rising stakes (+5 push per turn), turn-12 verdict | Tug-of-war stalls otherwise; median game is ~6 turns. |
+| Rising stakes (+5 push per turn), turn-20 verdict | Tug-of-war stalls otherwise. |
+| Longer games: meter doubled to 0–200 (start 100), verdict after turn 20 | Games were too short (median 7 turns, 1 in 10 over by turn 3): one uncountered Power covered the whole distance to a win. Doubling the distance keeps every card number and rule, gives twice as many reads per game (median 13, p10 8) and makes one Power a big swing rather than the game. Slowing the stakes or dropping them was tried in the simulator and barely helped or caused stalls (a quarter of games to the verdict). |
 | Clean card numbers: multiples of 5, one push per type and cost | Playtesters found numbers like 19 and 7 hard to add up; same-cost cards differing by 1–2 added nothing to read. |
 | Added BAIT (beats COUNTER) and AMBUSH (beats WAIT) | Closes the mind-game loop so every turn is a read, not just "push hardest". |
 | AI reads public info only (energy, recent plays) | It should be beatable by reading it, and never cheat. |
