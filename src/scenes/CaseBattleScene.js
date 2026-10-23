@@ -18,7 +18,7 @@ import NetworkManager from "../network/NetworkManager.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button, fit } from "../ui/widgets.js";
 import { ensureTypeIcons } from "../ui/cardIcons.js";
-import { CARD_H, CARD_W, TYPE_NAMES, buildCardBack, buildCardFace, buildSlotOutline } from "../ui/cardFace.js";
+import { CARD_H, CARD_W, TYPE_NAMES, buildCardBack, buildCardFace, buildRubberStamp, buildSlotOutline } from "../ui/cardFace.js";
 
 const W = 750;
 const H = 1334;
@@ -171,9 +171,13 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.input.on("pointermove", (pointer) => this.movePress(pointer));
     this.input.on("pointerup", (pointer) => this.endPress(pointer));
     this.input.on("gameout", () => this.cancelPress());
-    // A tap anywhere (except the corner buttons) skips ahead while a turn plays out.
+    // A tap anywhere skips ahead while a turn plays out, except on the corner buttons,
+    // a status tag, or the tap that closes the rules.
     this.input.on("pointerdown", (pointer, over) => {
-      if (!over.some((o) => this.cornerButtons.includes(o))) this.skipAnimation();
+      const tags = Object.values(this.statusTags ?? {});
+      if (over.some((o) => this.cornerButtons.includes(o) || tags.includes(o))) return;
+      if (this.time.now - (this.rulesClosedAt ?? -1e9) < 100) return;
+      this.skipAnimation();
     });
     this.input.keyboard?.on("keydown", (event) => this.onKey(event));
     this.keepMusic = false; // a rematch keeps the music going
@@ -723,7 +727,7 @@ export default class CaseBattleScene extends Phaser.Scene {
           ? "Final turn: the verdict follows the needle."
           : "",
     );
-    if (!first) this.showBanner("Turn", roman(turn));
+    if (!first) this.showBanner(`Turn ${roman(turn)}`);
     this.spokeThisTurn = false;
     if (first) {
       // Opening thoughts: the opponent's first, then yours.
@@ -1605,26 +1609,22 @@ export default class CaseBattleScene extends Phaser.Scene {
   }
 
   /**
-   * A band across the board: `text` in blackletter, then an optional `number`
-   * in upright serif. Blackletter draws the Roman numeral I like a J, so a
-   * numeral stays in the reading font ("Turn IX", never "Turn JX").
+   * A band across the board, e.g. "Turn IX". It is set in the upright serif:
+   * blackletter draws the Roman numeral I like a J ("Turn JX").
    */
-  showBanner(text, number) {
+  showBanner(text) {
     const z = this.z(SLOT.player.y);
     const band = this.add.rectangle(W / 2, SLOT.player.y, W, 110, z.paper, 0.94).setStrokeStyle(1, z.line).setDepth(40);
-    const word = this.add
-      .text(0, 0, text, { fontFamily: FONT_DISPLAY, fontSize: "76px", color: hex(z.ink) })
-      .setOrigin(0, 0.5);
-    const parts = [word];
-    if (number) {
-      parts.push(
-        this.add
-          .text(word.width + 22, 4, number, { fontFamily: FONT_BODY, fontSize: "64px", fontStyle: "600", color: hex(z.ink) })
-          .setOrigin(0, 0.5),
-      );
-    }
-    const width = parts.reduce((right, t) => Math.max(right, t.x + t.width), 0);
-    const t = this.add.container(W / 2 - width / 2, SLOT.player.y, parts).setDepth(41);
+    const t = this.add
+      .text(W / 2, SLOT.player.y, text, {
+        fontFamily: FONT_BODY,
+        fontSize: "64px",
+        fontStyle: "600",
+        color: hex(z.ink),
+        letterSpacing: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(41);
     band.scaleY = 0;
     this.tweens.add({ targets: band, scaleY: 1, duration: 140 });
     this.tweens.add({
@@ -1680,6 +1680,12 @@ export default class CaseBattleScene extends Phaser.Scene {
         const pill = this.add.graphics().fillStyle(this.theme.red, 1).fillRoundedRect(cx, -17, t.width + 24, 34, 17);
         c.add([pill, t]);
         cx += t.width + 32;
+      }
+      if (tags.length) {
+        // Tapping a tag explains it.
+        c.setInteractive(new Phaser.Geom.Rectangle(0, -20, cx, 40), Phaser.Geom.Rectangle.Contains);
+        c.input.cursor = "pointer";
+        c.on("pointerdown", () => this.showRules(1));
       }
       this.statusTags = { ...this.statusTags, [who]: c };
     }
@@ -1744,17 +1750,47 @@ export default class CaseBattleScene extends Phaser.Scene {
       .setInteractive();
   }
 
+  /** The ? button: opens the rules, or closes them if they're open. */
   toggleRules() {
-    if (this.rulesPanel) {
-      this.rulesPanel.destroy();
-      this.rulesPanel = null;
-      return;
-    }
-    const r = this.state.rules;
+    if (this.rulesPanel) this.hideRules();
+    else this.showRules(0);
+  }
+
+  hideRules() {
+    if (this.rulesPanel) this.rulesClosedAt = this.time.now;
+    this.rulesPanel?.destroy(true);
+    this.rulesPanel = null;
+  }
+
+  /**
+   * The rules in two pages: how it works, then the status effects (also
+   * opened by tapping a status tag beside a name). Tap outside the buttons to
+   * close.
+   */
+  showRules(page) {
+    this.hideRules();
     const ink = hex(this.theme.ink);
+    const soft = hex(this.theme.soft);
     const panel = this.add.container(0, 0).setDepth(100);
     const shade = this.overlay(100).setFillStyle(this.theme.paper, 0.97);
-    shade.on("pointerdown", () => this.toggleRules());
+    shade.on("pointerdown", () => this.hideRules());
+    panel.add(shade);
+    const pages = [() => this.rulesPage(panel, ink), () => this.statusPage(panel, ink, soft)];
+    pages[page]();
+
+    const other = page === 0 ? 1 : 0;
+    const nav = button(this, this.theme, W / 2, 1110, 440, page === 0 ? "Status effects ▶" : "◀ How it works", () =>
+      this.showRules(other),
+    );
+    const close = this.add
+      .text(W / 2, 1210, "Tap anywhere else to close", { fontFamily: FONT_BODY, fontSize: "26px", color: soft })
+      .setOrigin(0.5);
+    panel.add([nav.bg, nav.text, close]);
+    this.rulesPanel = panel;
+  }
+
+  rulesPage(panel, ink) {
+    const r = this.state.rules;
     const title = this.add
       .text(W / 2, 150, "How it works", { fontFamily: FONT_DISPLAY, fontSize: "64px", color: ink })
       .setOrigin(0.5);
@@ -1783,15 +1819,57 @@ export default class CaseBattleScene extends Phaser.Scene {
       ].join("\n"),
       { fontFamily: FONT_BODY, fontSize: "26px", color: ink, lineSpacing: 8 },
     );
-    const close = this.add
-      .text(W / 2, 1200, "Tap anywhere to close", {
+    panel.add([title, text]);
+  }
+
+  /** Each status effect with its red stamp, and who has it right now. */
+  statusPage(panel, ink, soft) {
+    const r = this.state.rules;
+    const title = this.add
+      .text(W / 2, 150, "Status Effects", { fontFamily: FONT_DISPLAY, fontSize: "64px", color: ink })
+      .setOrigin(0.5);
+    const intro = this.add.text(
+      70,
+      225,
+      "Some cards carry a red stamp. When one lands, its effect hits the other player from their next turn. Tap a red tag beside a name to come here.",
+      { fontFamily: FONT_BODY, fontSize: "26px", color: ink, lineSpacing: 6, wordWrap: { width: 610 } },
+    );
+    panel.add([title, intro]);
+    const rules = {
+      // Worded for either side, since the tag may be on you or on them.
+      shaken: `For 1 turn, the Shaken player's Power cards cost +${r.shakenExtraCost} ⬢.`,
+      cornered: "For 1 turn, the Cornered player can't Wait: they must play a card if they can.",
+      heat: `For ${EFFECTS.heat.turns} turns, before the cards land, the needle is pulled ${r.heatDrift} away from the player with Heat, toward the other side's goal (${r.heatDrift * EFFECTS.heat.turns} in all), whatever is played.`,
+    };
+    const names = { [this.playerSide]: "you", [this.opponentSide]: this.opponentCharacter.name.split(" ")[0] };
+    let y = intro.y + intro.height + 50;
+    for (const key of Object.keys(EFFECTS)) {
+      const stamp = buildRubberStamp(this, 0, y, EFFECTS[key].name, 24);
+      stamp.setX(70 + stamp.width / 2);
+      const body = this.add.text(70, y + stamp.height / 2 + 12, rules[key], {
         fontFamily: FONT_BODY,
         fontSize: "26px",
-        color: hex(this.theme.soft),
-      })
-      .setOrigin(0.5);
-    panel.add([shade, title, text, close]);
-    this.rulesPanel = panel;
+        color: ink,
+        lineSpacing: 6,
+        wordWrap: { width: 610 },
+      });
+      panel.add([stamp, body]);
+      y = body.y + body.height;
+      // Who has it now, so the page also answers "what is that tag doing?".
+      const on = Object.entries(names).filter(([side]) => this.state.sides[side].status?.[key] > 0);
+      if (on.length) {
+        const turnsLeft = (side) => this.state.sides[side].status[key];
+        const now = this.add.text(
+          70,
+          y + 6,
+          on.map(([side, who]) => `On ${who} now: ${turnsLeft(side)} turn${turnsLeft(side) > 1 ? "s" : ""} left`).join(" · "),
+          { fontFamily: FONT_BODY, fontSize: "24px", fontStyle: "600", color: hex(this.theme.red) },
+        );
+        panel.add(now);
+        y = now.y + now.height;
+      }
+      y += 44;
+    }
   }
 
   showDisconnected() {

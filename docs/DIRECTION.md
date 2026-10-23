@@ -51,7 +51,8 @@ After several rounds of look boards, the owner chose:
   titles and big moments. **Anything that has to be read** (card names and
   numbers, buttons, character names, rules) uses upright EB Garamond (no
   italics), and muted text is kept dark enough to read. Roman numerals
-  are never set in blackletter, which draws I like J ("Turn JX"). The owner found blackletter and grey text hard to
+  are never set in blackletter, which draws I like J ("Turn JX"), so the
+  round banner is in EB Garamond. The owner found blackletter and grey text hard to
   read in play.
 - **Mostly black and white**, colour only in the character portraits, and **a
   touch of red** (the needle, the Vigilante's numbers, your selected card, big
