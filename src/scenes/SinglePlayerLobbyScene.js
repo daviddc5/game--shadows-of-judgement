@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { getTheme, paintBackground } from "../theme.js";
 import { backLink, bodyText, button, characterPicker, displayText } from "../ui/widgets.js";
 import { getCharacter } from "../case/characters.js";
+import { isOn } from "../flags.js";
 
 export default class SinglePlayerLobbyScene extends Phaser.Scene {
   constructor() {
@@ -11,7 +12,7 @@ export default class SinglePlayerLobbyScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.debugMode = import.meta.env.DEV && !!data?.debugMode;
+    this.debugMode = isOn("test_mode_enabled") && !!data?.debugMode;
     this.selectedCharacter = null;
   }
 

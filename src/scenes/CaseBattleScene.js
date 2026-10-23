@@ -16,6 +16,7 @@ import { pickLine } from "../case/dialogue.js";
 import { getCase } from "../case/campaign.js";
 import { isMuted, playDuelMusic, playSfx, setMuted, stopMusic } from "../audio.js";
 import NetworkManager from "../network/NetworkManager.js";
+import { isOn } from "../flags.js";
 import { FONTS, getTheme, hex, paintBackground, zone } from "../theme.js";
 import { button, fit } from "../ui/widgets.js";
 import { ensureTypeIcons } from "../ui/cardIcons.js";
@@ -167,10 +168,8 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.createPlayerPanel();
     this.createButtons();
 
-    if (import.meta.env.DEV) {
-      window.__caseScene = this;
-      if (this.registry.get("debugMode") && !this.online) this.createDebugControls();
-    }
+    if (import.meta.env.DEV) window.__caseScene = this;
+    if (isOn("test_mode_enabled") && this.registry.get("debugMode") && !this.online) this.createDebugControls();
     this.press = null;
     this.inspect = null;
     this.input.on("pointermove", (pointer) => this.movePress(pointer));
