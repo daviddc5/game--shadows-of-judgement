@@ -57,7 +57,7 @@ pipeline:
                     connectorRef: gameparpush
                     repo: europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
                     tags:
-                      - <+codebase.commitSha>-<+pipeline.executionId>
+                      - <+codebase.commitSha>-<+pipeline.sequenceId>
                     buildArgs:
                       VITE_FME_CLIENT_KEY: <+secrets.getValue("fme_client_key")>
                     caching: true
@@ -115,7 +115,7 @@ pipeline:
                         - identifier: shadowsdocker
                           type: GoogleArtifactRegistry
                           spec:
-                            version: <+codebase.commitSha>-<+pipeline.executionId>
+                            version: <+codebase.commitSha>-<+pipeline.sequenceId>
           environment:
             environmentRef: development
             deployToAll: false
@@ -200,7 +200,7 @@ pipeline:
                           gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
                           image_repo=europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
-                          image_tag='<+codebase.commitSha>-<+pipeline.executionId>'
+                          image_tag='<+codebase.commitSha>-<+pipeline.sequenceId>'
                           image_uri="$image_repo:$image_tag"
 
                           gcloud run deploy shadows-of-judgment \
