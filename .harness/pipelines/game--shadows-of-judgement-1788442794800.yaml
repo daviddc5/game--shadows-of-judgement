@@ -95,6 +95,12 @@ pipeline:
                     approverInputs: []
                     isAutoRejectEnabled: false
         failureStrategies: []
+        when:
+          stageStatus: Success
+          condition: >-
+            <+pipeline.triggerType> == "WEBHOOK" &&
+            <+trigger.event> == "PUSH" &&
+            <+trigger.targetBranch> == "main"
     - stage:
         name: CD
         identifier: CD
@@ -305,3 +311,9 @@ pipeline:
                 - AllErrors
               action:
                 type: StageRollback
+        when:
+          stageStatus: Success
+          condition: >-
+            <+pipeline.triggerType> == "WEBHOOK" &&
+            <+trigger.event> == "PUSH" &&
+            <+trigger.targetBranch> == "main"
