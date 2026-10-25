@@ -57,7 +57,7 @@ pipeline:
                     connectorRef: gameparpush
                     repo: europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
                     tags:
-                      - <+codebase.commitSha>
+                      - <+codebase.commitSha>-<+pipeline.executionId>
                     buildArgs:
                       VITE_FME_CLIENT_KEY: <+secrets.getValue("fme_client_key")>
                     caching: true
@@ -115,7 +115,7 @@ pipeline:
                         - identifier: shadowsdocker
                           type: GoogleArtifactRegistry
                           spec:
-                            version: <+codebase.commitSha>
+                            version: <+codebase.commitSha>-<+pipeline.executionId>
           environment:
             environmentRef: development
             deployToAll: false
@@ -149,7 +149,12 @@ pipeline:
                           chmod 600 "$workdir/key.json"
                           gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
-                          previous_revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format=json --quiet | python3 -c 'import json,sys; traffic=json.load(sys.stdin)["status"]["traffic"]; assert len(traffic)==1 and traffic[0]["percent"]==100, "Expected one revision with 100% traffic"; print(traffic[0]["revisionName"])')
+                          previous_revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.traffic[0].revisionName)' --quiet)
+                          traffic_percent=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.traffic[0].percent)' --quiet)
+                          if [[ -z "$previous_revision" || "$traffic_percent" != "100" ]]; then
+                            printf 'Expected one serving revision with 100%% traffic; got %s at %s%%\n' "$previous_revision" "$traffic_percent" >&2
+                            exit 1
+                          fi
                           printf 'Serving before deployment: %s\n' "$previous_revision"
                     environmentVariables:
                       - name: GCP_KEY
@@ -170,8 +175,8 @@ pipeline:
                           type: Abort
               - step:
                   type: ShellScript
-                  name: ShellScript_1
-                  identifier: ShellScript_1
+                  name: Deploy and verify immutable image
+                  identifier: Deploy_and_verify_immutable_image
                   spec:
                     shell: Bash
                     executionTarget: {}
@@ -194,8 +199,12 @@ pipeline:
                           chmod 600 "$workdir/key.json"
                           gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
+                          image_repo=europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
+                          image_tag='<+codebase.commitSha>-<+pipeline.executionId>'
+                          image_uri="$image_repo:$image_tag"
+
                           gcloud run deploy shadows-of-judgment \
-                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+codebase.commitSha> \
+                            --image "$image_uri" \
                             --region europe-west1 \
                             --project shadowsofjudgement \
                             --allow-unauthenticated \
@@ -203,11 +212,37 @@ pipeline:
                             --quiet
 
                           service_url=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.url)' --quiet)
-                          curl -fsSL --retry 3 --retry-delay 2 --max-time 20 "$service_url/" > /dev/null
+                          revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.latestReadyRevisionName)' --quiet)
+                          expected_digest=$(gcloud artifacts docker images describe "$image_uri" --project shadowsofjudgement --format='value(image_summary.digest)')
+                          deployed_digest=$(gcloud run revisions describe "$revision" --region europe-west1 --project shadowsofjudgement --format='value(status.imageDigest)' --quiet)
+                          if [[ -z "$expected_digest" || "$deployed_digest" != *"@$expected_digest" ]]; then
+                            printf 'Deployed image digest does not match this CI execution. Expected %s, got %s\n' "$expected_digest" "$deployed_digest" >&2
+                            exit 1
+                          fi
+
+                          if [[ -z "$FME_CLIENT_KEY" ]]; then
+                            printf 'FME client key is not available to the deployment verification step\n' >&2
+                            exit 1
+                          fi
+                          curl -fsSL --retry 3 --retry-delay 2 --max-time 20 "$service_url/" -o "$workdir/index.html"
+                          bundle_path=$(grep -oE 'src="[^"]+\.js"' "$workdir/index.html" | head -n 1 | cut -d '"' -f 2)
+                          if [[ -z "$bundle_path" ]]; then
+                            printf 'Could not find the game JavaScript bundle in the deployed HTML\n' >&2
+                            exit 1
+                          fi
+                          curl -fsSL --retry 3 --retry-delay 2 --max-time 20 "$service_url$bundle_path" -o "$workdir/game.js"
+                          if ! grep -Fq "$FME_CLIENT_KEY" "$workdir/game.js" || ! grep -Fq 'test_mode_enabled' "$workdir/game.js"; then
+                            printf 'The deployed game bundle is missing the feature flag SDK configuration\n' >&2
+                            exit 1
+                          fi
+                          printf 'Verified revision %s serves image %s and contains the feature flag configuration\n' "$revision" "$deployed_digest"
                     environmentVariables:
                       - name: GCP_KEY
                         type: Secret
                         value: gcp-key-fresh
+                      - name: FME_CLIENT_KEY
+                        type: Secret
+                        value: fme_client_key
                     outputVariables: []
                     delegateSelectors:
                       - docker-delegate
@@ -245,7 +280,12 @@ pipeline:
                           gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
                           gcloud run services update-traffic shadows-of-judgment --region europe-west1 --project shadowsofjudgement --to-revisions "$PREVIOUS_REVISION=100" --quiet
-                          gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format=json --quiet | python3 -c 'import json,os,sys; traffic=json.load(sys.stdin)["status"]["traffic"]; assert len(traffic)==1 and traffic[0]["percent"]==100 and traffic[0]["revisionName"]==os.environ["PREVIOUS_REVISION"], "Rollback traffic does not match the prior revision"'
+                          restored_revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.traffic[0].revisionName)' --quiet)
+                          restored_percent=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.traffic[0].percent)' --quiet)
+                          if [[ "$restored_revision" != "$PREVIOUS_REVISION" || "$restored_percent" != "100" ]]; then
+                            printf 'Rollback traffic verification failed: expected %s at 100%%, got %s at %s%%\n' "$PREVIOUS_REVISION" "$restored_revision" "$restored_percent" >&2
+                            exit 1
+                          fi
                           printf 'Restored 100%% of traffic to %s\n' "$PREVIOUS_REVISION"
                     environmentVariables:
                       - name: GCP_KEY
