@@ -96,7 +96,7 @@ pipeline:
                     isAutoRejectEnabled: false
         failureStrategies: []
         when:
-          stageStatus: Success
+          pipelineStatus: Success
           condition: >-
             <+pipeline.triggerType> == "WEBHOOK" &&
             <+trigger.event> == "PUSH" &&
@@ -312,7 +312,7 @@ pipeline:
               action:
                 type: StageRollback
         when:
-          stageStatus: Success
+          pipelineStatus: Success
           condition: >-
             <+pipeline.triggerType> == "WEBHOOK" &&
             <+trigger.event> == "PUSH" &&
