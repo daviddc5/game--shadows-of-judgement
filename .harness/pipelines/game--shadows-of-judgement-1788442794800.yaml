@@ -221,9 +221,49 @@ pipeline:
                           revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.latestReadyRevisionName)' --quiet)
                           expected_digest=$(gcloud artifacts docker images describe "$image_uri" --project shadowsofjudgement --format='value(image_summary.digest)')
                           deployed_digest=$(gcloud run revisions describe "$revision" --region europe-west1 --project shadowsofjudgement --format='value(status.imageDigest)' --quiet)
-                          if [[ -z "$expected_digest" || "$deployed_digest" != *"@$expected_digest" ]]; then
-                            printf 'Deployed image digest does not match this CI execution. Expected %s, got %s\n' "$expected_digest" "$deployed_digest" >&2
+                          if [[ -z "$expected_digest" || -z "$deployed_digest" ]]; then
+                            printf 'Could not resolve the expected or deployed image digest. Expected %s, got %s\n' "$expected_digest" "$deployed_digest" >&2
                             exit 1
+                          fi
+                          if [[ "$deployed_digest" != *"@$expected_digest" ]]; then
+                            registry_host=${image_repo%%/*}
+                            registry_path=${image_repo#*/}
+                            registry_token=$(gcloud auth print-access-token)
+                            printf 'header = "Authorization: Bearer %s"\n' "$registry_token" > "$workdir/registry-curl.conf"
+                            chmod 600 "$workdir/registry-curl.conf"
+                            unset registry_token
+                            curl -fsSL --retry 3 --retry-delay 2 --max-time 20 \
+                              --config "$workdir/registry-curl.conf" \
+                              -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json' \
+                              --dump-header "$workdir/manifest.headers" \
+                              --output "$workdir/image-manifest.json" \
+                              "https://$registry_host/v2/$registry_path/manifests/$image_tag"
+                            registry_digest=$(awk -F ': *' 'tolower($1) == "docker-content-digest" { gsub("\\r", "", $2); digest=$2 } END { print digest }' "$workdir/manifest.headers")
+                            if [[ "$registry_digest" != "$expected_digest" ]]; then
+                              printf 'Image tag resolved to %s during verification, expected %s\n' "$registry_digest" "$expected_digest" >&2
+                              exit 1
+                            fi
+                            deployed_manifest_digest=${deployed_digest##*@}
+                            if ! python3 - "$deployed_manifest_digest" "$workdir/image-manifest.json" <<'PY'
+                          import json
+                          import sys
+
+                          deployed_digest = sys.argv[1]
+                          with open(sys.argv[2], encoding="utf-8") as manifest_file:
+                              manifest = json.load(manifest_file)
+
+                          is_expected_platform_image = any(
+                              entry.get("digest") == deployed_digest
+                              and entry.get("platform", {}).get("os") == "linux"
+                              and entry.get("platform", {}).get("architecture") == "amd64"
+                              for entry in manifest.get("manifests", [])
+                          )
+                          sys.exit(0 if is_expected_platform_image else 1)
+                          PY
+                            then
+                              printf 'Deployed digest %s is not the linux/amd64 image in expected index %s\n' "$deployed_digest" "$expected_digest" >&2
+                              exit 1
+                            fi
                           fi
 
                           if [[ -z "$FME_CLIENT_KEY" ]]; then
