@@ -217,6 +217,13 @@ pipeline:
                             --platform managed \
                             --quiet
 
+                          # Traffic stays pinned to an old revision after a rollback or manual pin, so shift it explicitly.
+                          gcloud run services update-traffic shadows-of-judgment \
+                            --region europe-west1 \
+                            --project shadowsofjudgement \
+                            --to-latest \
+                            --quiet
+
                           service_url=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.url)' --quiet)
                           service_url=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.url)' --quiet)
                           revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.latestCreatedRevisionName)' --quiet)
