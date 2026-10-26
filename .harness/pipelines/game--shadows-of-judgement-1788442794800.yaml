@@ -240,7 +240,7 @@ pipeline:
                               --dump-header "$workdir/manifest.headers" \
                               --output "$workdir/image-manifest.json" \
                               "https://$registry_host/v2/$registry_path/manifests/$image_tag"
-                            registry_digest=$(awk -F ': *' 'tolower($1) == "docker-content-digest" { gsub("\\r", "", $2); digest=$2 } END { print digest }' "$workdir/manifest.headers")
+                            registry_digest=$(awk 'tolower($0) ~ /^docker-content-digest:/ { sub(/^[^:]*: */, ""); gsub(/\r/, ""); digest=$0 } END { print digest }' "$workdir/manifest.headers")
                             if [[ "$registry_digest" != "$expected_digest" ]]; then
                               printf 'Image tag resolved to %s during verification, expected %s\n' "$registry_digest" "$expected_digest" >&2
                               exit 1
