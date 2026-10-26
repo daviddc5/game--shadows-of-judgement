@@ -1,4 +1,3 @@
-                            registry_digest=$(awk 'tolower($1) == "docker-content-digest:" { gsub("\\r", "", $2); digest=$2 } END { print digest }' "$workdir/manifest.headers")
 pipeline:
   identifier: Build_daviddc5_game__shadows_of_judgement_1788442912046
   name: Build game--shadows-of-judgement
