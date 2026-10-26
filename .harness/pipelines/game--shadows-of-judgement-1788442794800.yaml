@@ -225,7 +225,6 @@ pipeline:
                             --quiet
 
                           service_url=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.url)' --quiet)
-                          service_url=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.url)' --quiet)
                           revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.latestCreatedRevisionName)' --quiet)
                           expected_digest=$(gcloud artifacts docker images describe "$image_uri" --project shadowsofjudgement --format='value(image_summary.digest)')
                           deployed_digest=$(gcloud run revisions describe "$revision" --region europe-west1 --project shadowsofjudgement --format='value(status.imageDigest)' --quiet)
