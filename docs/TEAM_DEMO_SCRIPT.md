@@ -6,6 +6,7 @@
 - Open Harness run #198 as a historical successful CD run, and run #209 as the latest PR validation. Run #209 passed its build and skipped production approval/CD.
 - In the project-scoped Harness Delegates page, confirm `docker-delegate` is **Connected** with a recent heartbeat. Confirm the local Docker container is healthy.
 - Check that no delegate token is in demo notes. Revoke/rotate any token that was exposed.
+- Check Triggers → Events: recent Push Trigger events should read "Target execution requested", not "Invalid runtime input yaml".
 - Restore the flag's original production targeting after the demo.
 
 ## 1. Goal and Architecture: 30 Seconds
