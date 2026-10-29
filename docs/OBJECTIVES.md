@@ -88,5 +88,6 @@ Treat it as discretionary. It competes with 157 remaining sessions on a hard Nov
 
 - [UX and engagement improvements](UX_IMPROVEMENTS.md) — discretionary game work
 - [Deployment guide](DEPLOYMENT.md) — current Cloud Run baseline
+- [Team demo script](TEAM_DEMO_SCRIPT.md) — five-minute Harness and feature-flag demo, with current verification limits
 - [Game design document](GDD.md)
 - [Design notes](design-notes/)

@@ -57,7 +57,7 @@ pipeline:
                     connectorRef: gameparpush
                     repo: europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
                     tags:
-                      - <+codebase.commitSha>
+                      - <+codebase.commitSha>-<+pipeline.sequenceId>
                     buildArgs:
                       VITE_FME_CLIENT_KEY: <+secrets.getValue("fme_client_key")>
                     caching: true
@@ -95,6 +95,12 @@ pipeline:
                     approverInputs: []
                     isAutoRejectEnabled: false
         failureStrategies: []
+        when:
+          pipelineStatus: Success
+          condition: >-
+            <+pipeline.triggerType> == "WEBHOOK" &&
+            <+trigger.event> == "PUSH" &&
+            <+trigger.targetBranch> == "main"
     - stage:
         name: CD
         identifier: CD
@@ -115,7 +121,7 @@ pipeline:
                         - identifier: shadowsdocker
                           type: GoogleArtifactRegistry
                           spec:
-                            version: <+codebase.commitSha>
+                            version: <+codebase.commitSha>-<+pipeline.sequenceId>
           environment:
             environmentRef: development
             deployToAll: false
@@ -149,7 +155,12 @@ pipeline:
                           chmod 600 "$workdir/key.json"
                           gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
-                          previous_revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format=json --quiet | python3 -c 'import json,sys; traffic=json.load(sys.stdin)["status"]["traffic"]; assert len(traffic)==1 and traffic[0]["percent"]==100, "Expected one revision with 100% traffic"; print(traffic[0]["revisionName"])')
+                          previous_revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.traffic[0].revisionName)' --quiet)
+                          traffic_percent=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.traffic[0].percent)' --quiet)
+                          if [[ -z "$previous_revision" || "$traffic_percent" != "100" ]]; then
+                            printf 'Expected one serving revision with 100%% traffic; got %s at %s%%\n' "$previous_revision" "$traffic_percent" >&2
+                            exit 1
+                          fi
                           printf 'Serving before deployment: %s\n' "$previous_revision"
                     environmentVariables:
                       - name: GCP_KEY
@@ -170,8 +181,8 @@ pipeline:
                           type: Abort
               - step:
                   type: ShellScript
-                  name: ShellScript_1
-                  identifier: ShellScript_1
+                  name: Deploy and verify immutable image
+                  identifier: Deploy_and_verify_immutable_image
                   spec:
                     shell: Bash
                     executionTarget: {}
@@ -194,20 +205,97 @@ pipeline:
                           chmod 600 "$workdir/key.json"
                           gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
+                          image_repo=europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment
+                          image_tag='<+codebase.commitSha>-<+pipeline.sequenceId>'
+                          image_uri="$image_repo:$image_tag"
+
                           gcloud run deploy shadows-of-judgment \
-                            --image europe-west1-docker.pkg.dev/shadowsofjudgement/cloud-run-source-deploy/shadows-of-judgment:<+codebase.commitSha> \
+                            --image "$image_uri" \
                             --region europe-west1 \
                             --project shadowsofjudgement \
                             --allow-unauthenticated \
                             --platform managed \
                             --quiet
 
+                          # Traffic stays pinned to an old revision after a rollback or manual pin, so shift it explicitly.
+                          gcloud run services update-traffic shadows-of-judgment \
+                            --region europe-west1 \
+                            --project shadowsofjudgement \
+                            --to-latest \
+                            --quiet
+
                           service_url=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.url)' --quiet)
-                          curl -fsSL --retry 3 --retry-delay 2 --max-time 20 "$service_url/" > /dev/null
+                          revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.latestCreatedRevisionName)' --quiet)
+                          expected_digest=$(gcloud artifacts docker images describe "$image_uri" --project shadowsofjudgement --format='value(image_summary.digest)')
+                          deployed_digest=$(gcloud run revisions describe "$revision" --region europe-west1 --project shadowsofjudgement --format='value(status.imageDigest)' --quiet)
+                          if [[ -z "$expected_digest" || -z "$deployed_digest" ]]; then
+                            printf 'Could not resolve the expected or deployed image digest. Expected %s, got %s\n' "$expected_digest" "$deployed_digest" >&2
+                            exit 1
+                          fi
+                          if [[ "$deployed_digest" != *"@$expected_digest" ]]; then
+                            registry_host=${image_repo%%/*}
+                            registry_path=${image_repo#*/}
+                            registry_token=$(gcloud auth print-access-token)
+                            printf 'header = "Authorization: Bearer %s"\n' "$registry_token" > "$workdir/registry-curl.conf"
+                            chmod 600 "$workdir/registry-curl.conf"
+                            unset registry_token
+                            curl -fsSL --retry 3 --retry-delay 2 --max-time 20 \
+                              --config "$workdir/registry-curl.conf" \
+                              -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json' \
+                              --dump-header "$workdir/manifest.headers" \
+                              --output "$workdir/image-manifest.json" \
+                              "https://$registry_host/v2/$registry_path/manifests/$image_tag"
+                            registry_digest=$(awk 'tolower($0) ~ /^docker-content-digest:/ { sub(/^[^:]*: */, ""); gsub(/\r/, ""); digest=$0 } END { print digest }' "$workdir/manifest.headers")
+                            if [[ "$registry_digest" != "$expected_digest" ]]; then
+                              printf 'Image tag resolved to %s during verification, expected %s\n' "$registry_digest" "$expected_digest" >&2
+                              exit 1
+                            fi
+                            deployed_manifest_digest=${deployed_digest##*@}
+                            if ! python3 - "$deployed_manifest_digest" "$workdir/image-manifest.json" <<'PY'
+                          import json
+                          import sys
+
+                          deployed_digest = sys.argv[1]
+                          with open(sys.argv[2], encoding="utf-8") as manifest_file:
+                              manifest = json.load(manifest_file)
+
+                          is_expected_platform_image = any(
+                              entry.get("digest") == deployed_digest
+                              and entry.get("platform", {}).get("os") == "linux"
+                              and entry.get("platform", {}).get("architecture") == "amd64"
+                              for entry in manifest.get("manifests", [])
+                          )
+                          sys.exit(0 if is_expected_platform_image else 1)
+                          PY
+                            then
+                              printf 'Deployed digest %s is not the linux/amd64 image in expected index %s\n' "$deployed_digest" "$expected_digest" >&2
+                              exit 1
+                            fi
+                          fi
+
+                          if [[ -z "$FME_CLIENT_KEY" ]]; then
+                            printf 'FME client key is not available to the deployment verification step\n' >&2
+                            exit 1
+                          fi
+                          curl -fsSL --retry 3 --retry-delay 2 --max-time 20 "$service_url/" -o "$workdir/index.html"
+                          bundle_path=$(grep -oE 'src="[^"]+\.js"' "$workdir/index.html" | head -n 1 | cut -d '"' -f 2)
+                          if [[ -z "$bundle_path" ]]; then
+                            printf 'Could not find the game JavaScript bundle in the deployed HTML\n' >&2
+                            exit 1
+                          fi
+                          curl -fsSL --retry 3 --retry-delay 2 --max-time 20 "$service_url$bundle_path" -o "$workdir/game.js"
+                          if ! grep -Fq "$FME_CLIENT_KEY" "$workdir/game.js" || ! grep -Fq 'test_mode_enabled' "$workdir/game.js"; then
+                            printf 'The deployed game bundle is missing the feature flag SDK configuration\n' >&2
+                            exit 1
+                          fi
+                          printf 'Verified revision %s serves image %s and contains the feature flag configuration\n' "$revision" "$deployed_digest"
                     environmentVariables:
                       - name: GCP_KEY
                         type: Secret
                         value: gcp-key-fresh
+                      - name: FME_CLIENT_KEY
+                        type: Secret
+                        value: fme_client_key
                     outputVariables: []
                     delegateSelectors:
                       - docker-delegate
@@ -245,7 +333,12 @@ pipeline:
                           gcloud auth activate-service-account --key-file="$workdir/key.json" --quiet
 
                           gcloud run services update-traffic shadows-of-judgment --region europe-west1 --project shadowsofjudgement --to-revisions "$PREVIOUS_REVISION=100" --quiet
-                          gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format=json --quiet | python3 -c 'import json,os,sys; traffic=json.load(sys.stdin)["status"]["traffic"]; assert len(traffic)==1 and traffic[0]["percent"]==100 and traffic[0]["revisionName"]==os.environ["PREVIOUS_REVISION"], "Rollback traffic does not match the prior revision"'
+                          restored_revision=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.traffic[0].revisionName)' --quiet)
+                          restored_percent=$(gcloud run services describe shadows-of-judgment --region europe-west1 --project shadowsofjudgement --format='value(status.traffic[0].percent)' --quiet)
+                          if [[ "$restored_revision" != "$PREVIOUS_REVISION" || "$restored_percent" != "100" ]]; then
+                            printf 'Rollback traffic verification failed: expected %s at 100%%, got %s at %s%%\n' "$PREVIOUS_REVISION" "$restored_revision" "$restored_percent" >&2
+                            exit 1
+                          fi
                           printf 'Restored 100%% of traffic to %s\n' "$PREVIOUS_REVISION"
                     environmentVariables:
                       - name: GCP_KEY
@@ -265,3 +358,9 @@ pipeline:
                 - AllErrors
               action:
                 type: StageRollback
+        when:
+          pipelineStatus: Success
+          condition: >-
+            <+pipeline.triggerType> == "WEBHOOK" &&
+            <+trigger.event> == "PUSH" &&
+            <+trigger.targetBranch> == "main"

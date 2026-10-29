@@ -158,6 +158,44 @@ npm run deploy
 ./deploy.sh
 ```
 
+## Harness Production CD Delegate
+
+Harness production CD uses the Docker Delegate running on the local machine. Keeping it local avoids an always-on cloud VM, but it must be running and eligible when the production CD stage fetches artifacts and runs its deployment steps. PR validation skips production approval and CD, so it does not require the delegate.
+
+The CD shell steps require Bash, `curl`, `awk`, and Python 3 (standard library only). They download the Google Cloud CLI when `gcloud` is not already installed. The image verification reads the OCI index to confirm Cloud Run's `linux/amd64` digest belongs to the immutable CI image.
+
+Before approving a production deployment:
+
+1. List Docker containers and identify the Harness Delegate container:
+
+    ```bash
+    docker ps -a --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Image}}'
+    ```
+
+2. Start it if stopped, or restart it if Docker reports it as unhealthy:
+
+    ```bash
+    docker start <delegate-container-id>
+    # If it is already running but unhealthy:
+    docker restart <delegate-container-id>
+    ```
+
+3. Confirm Docker reports it as `running healthy`:
+
+    ```bash
+    docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' <delegate-container-id>
+    ```
+
+4. In the project's **Delegates** page, confirm the delegate is **Connected**, has a recent heartbeat, and has the `docker-delegate` selector used by the deployment shell steps. A project-scoped delegate may not appear in the account-level Delegates list; check the scope where it was installed.
+
+For a first-time project-scoped install, open **Project Settings > Project-level resources > Delegates**, select **New Delegate**, and choose **Docker**. Run the generated command on the local machine; keep its delegate token out of Git and chat. If Docker reports the container healthy but the project-level Delegates page has no connected delegate, install it at the project scope with a fresh generated command rather than reusing an old token or hand-building a command. An empty account-level list alone does not mean the project delegate is missing.
+
+Keep the delegate running until the production CD execution completes. Afterward, stop it when it is not needed:
+
+```bash
+docker stop <delegate-container-id>
+```
+
 ## Deleting the Service
 
 ```bash
