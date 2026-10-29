@@ -161,10 +161,50 @@ Card art: the owner tried AI-generated card art and didn't like it (it looked
 "AI-ish"). Cards keep their placeholders until the owner learns to draw or works
 with an artist.
 
+### Art style (chosen, Oct 2026)
+
+A **gothic manga thriller with noir touches**: drawn like Death Note
+(Takeshi Obata) and Yu-Gi-Oh (Kazuki Takahashi), set in a noir night city
+(rain, trench coats, hard shadows). Black and white ink with screentone and the
+one touch of red, which matches the look already chosen. The game's premise
+is close to Death Note's (a detective against a vigilante who believes he is
+delivering justice, each reading the other), and the blackletter was already
+picked for its Death Note feel.
+
+- **No AI art in the shipped game.** AI is fine for ideas in words and for
+  brainstorming, not for images that are copied or traced. The current
+  portraits and music are AI-made and should be replaced before a paid
+  release.
+- **The owner is learning to draw** in this style (paper and ink first,
+  digital later), alongside working on the game, with the game as the main
+  focus. Art comes in as it's ready.
+- **What to draw first:** Deniz and Giovanni as manga characters with 3–4
+  expressions each (calm, smug, sweating, shocked), since the portraits
+  already change with mood and are the most visible art; then the Power
+  cards.
+- **Where it shows up:** the big-moment cut-ins (Power, Countered!, a sprung
+  trap) can become manga panels (close-up eyes, a shocked face), and the
+  inner thoughts already work like Light's and L's monologues.
+
 ## Ideas considered and parked
 
 - **Pokémon-style teams of characters.** Wanted long term, not now: lots of art
   and balancing before the core is proven.
+- **Top-down overworld, Pokémon style** (walk around a city; events start a
+  duel). Parked: the battle comes first, it only helps single player, and it
+  needs a lot of art (tiles, walking sprites, buildings). The cheaper step is
+  a **city map of locations** for the campaign (tap the harbour, a scene
+  plays, some locations start a duel, card rewards between cases), like Slay
+  the Spire's map. It uses the same story-triggers-a-duel structure, so a
+  walkable overworld could replace the tapping later.
+- **WebGPU effects.** Phaser 3 has no WebGPU, so it would be a separate
+  canvas layered over the game, loaded only when the browser supports it, an
+  Effects setting (Standard / Rich), driven by the turn events the scene
+  already plays back. Only compute-heavy effects justify it: ink spreading in
+  water behind the meter (the best fit: it shows momentum), cards that
+  crumple, tear or burn on a showdown, and the losing side dissolving into
+  ash on the verdict. Avoid rain, fog and glow, which the owner moved away
+  from. First experiment if picked up: the ink behind the meter.
 - **Hidden-target districts (asymmetric deduction).** Vigilante hides a target,
   Detective gathers clues. Thematic, but two roles to learn. Possible later.
 
@@ -185,12 +225,15 @@ owner).
 
 **Decisions waiting on the owner:**
 
-- **Longer games.** Matches feel short (simulator: median 7 turns, 1 in 10
-  over by turn 3). Proposed: Case meter 0 to 150 starting at 75, 15 turns
-  (`caseStart=75 caseMax=150 maxTurns=15`): median 10 turns, shortest 10% go
-  5 turns, 12% decided by the verdict, wins still 50/50, card numbers
-  unchanged. The meter, its labels and How to Play currently assume 100, so
-  they must read `RULES` instead. Not built yet.
+- **Longer games.** Built on branch `claude/longer-games-direction-e9aoos`,
+  not merged: Case meter 0 to 200 starting at 100, verdict after turn 20.
+  Simulator: median 13 turns (was 7), shortest 10% go 8 (was 3), 9% decided
+  by the verdict, wins still 50/50, card numbers unchanged. The meter, its
+  labels, portrait moods and How to Play now read `RULES`. Needs a human
+  playtest before merging. If 13 turns feels long, the middle option is
+  `caseMax=160 caseStart=80 maxTurns=18` (median 11). Late turns push hard
+  (a Quick pushes 90 by turn 18), so watch whether the stakes drown out the
+  differences between cards.
 - **Status effect sounds.** Options are on a tap-to-hear page (press cameras,
   printing press or telephone for Heat on Deniz; siren, police radio or
   two-tone siren for Heat on Giovanni; heartbeat, fast clock or dread for
@@ -235,10 +278,10 @@ changes (the online flow was last tested headlessly before the fanned hand).
    a day, points can be bought for cosmetics or faster collecting, never
    power. Needs accounts and a database. See
    [COLLECTION_AND_SHOP.md](COLLECTION_AND_SHOP.md).
-5. **Art.** Card art is placeholder; the owner may draw it (pixel art or noir
-   silhouettes suit the look) or commission it. Avoid AI art in anything sold:
-   the portraits and the music are AI-made, which matters for a paid release or
-   crowdfunding.
+5. **Art.** See "Art style" above: gothic manga, drawn by the owner as they
+   learn, or commissioned. Card art is placeholder until then. Avoid AI art in
+   anything sold: the portraits and the music are AI-made, which matters for a
+   paid release or crowdfunding.
 6. **Commercial path** (owner's question): too early to crowdfund. First build
    an audience (itch.io page, short clips, a Discord), real art and more
    content, then a Steam page with wishlists, then crowdfunding or a publisher.
