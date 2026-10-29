@@ -30,7 +30,7 @@ RUN npm ci --omit=dev
 COPY server/*.js ./
 
 # The server runs the same rules engine as the client (imported as ../src/case)
-COPY src/case/package.json src/case/cards.js src/case/rules.js /app/src/case/
+COPY src/case/package.json src/case/cards.js src/case/rules.js src/case/characters.js /app/src/case/
 
 # Copy built client from Stage 1
 COPY --from=build /app/dist ./dist

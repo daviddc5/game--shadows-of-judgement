@@ -2,13 +2,18 @@
 // Usage: npm run simulate -- [games] [rule=value ...]
 import { RULES, createMatch, resolveTurn, startTurn } from "../src/case/rules.js";
 import { chooseAiPlay } from "../src/case/ai.js";
+import { passivesFor } from "../src/case/characters.js";
 
 const games = Number(process.argv[2] || 5000);
 // Optional overrides, e.g. npm run simulate -- 5000 pushScale=1.5 escalation=0.1
+// Each side plays its default character's ability; override with e.g.
+// detective=none vigilante=hunch.
 const rules = { ...RULES };
+const passives = passivesFor();
 process.argv.slice(3).forEach((arg) => {
   const [key, value] = arg.split("=");
-  rules[key] = Number(value);
+  if (key === "detective" || key === "vigilante") passives[key] = value === "none" ? null : value;
+  else rules[key] = Number(value);
 });
 const wins = { detective: 0, vigilante: 0, draw: 0 };
 const reasons = { capture: 0, escape: 0, verdict: 0 };
@@ -19,7 +24,7 @@ const effects = {}; // status effects put on the opponent
 let plays = 0;
 
 for (let g = 0; g < games; g++) {
-  const state = createMatch({ rules });
+  const state = createMatch({ rules, passives });
   while (!state.winner) {
     const choice = {
       detective: chooseAiPlay(state, "detective"),
@@ -45,7 +50,7 @@ for (let g = 0; g < games; g++) {
 lengths.sort((a, b) => a - b);
 const pct = (n) => `${((100 * n) / games).toFixed(1)}%`;
 const at = (q) => lengths[Math.floor(q * (lengths.length - 1))];
-console.log(`games: ${games}`);
+console.log(`games: ${games}, abilities: detective ${passives.detective ?? "none"}, vigilante ${passives.vigilante ?? "none"}`);
 console.log(`wins: detective ${pct(wins.detective)}, vigilante ${pct(wins.vigilante)}, draw ${pct(wins.draw)}`);
 console.log(`ended by: capture ${pct(reasons.capture)}, escape ${pct(reasons.escape)}, verdict ${pct(reasons.verdict)}`);
 console.log(`turns: p10 ${at(0.1)}, median ${at(0.5)}, p90 ${at(0.9)}`);

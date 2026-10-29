@@ -127,6 +127,24 @@ describe("Case meter rules", () => {
     expect(state.endReason).toBe("verdict");
   });
 
+  it("Hunch makes Counters and Baits cost 1 less, and nothing else", () => {
+    const state = createMatch({ passives: { detective: "hunch" } });
+    const cost = (side, type) => costFor(state, side, card(side, type));
+    expect(cost("detective", "COUNTER")).toBe(card("detective", "COUNTER").cost - 1);
+    expect(cost("detective", "BAIT")).toBe(card("detective", "BAIT").cost - 1);
+    expect(cost("detective", "POWER")).toBe(card("detective", "POWER").cost);
+    expect(cost("vigilante", "COUNTER")).toBe(card("vigilante", "COUNTER").cost);
+  });
+
+  it("Patience saves +1 more energy on a Wait", () => {
+    const state = createMatch({ passives: { vigilante: "patience" } });
+    state.sides.detective.energy = 2;
+    state.sides.vigilante.energy = 2;
+    resolveTurn(state, play(false, false));
+    expect(state.sides.detective.energy).toBe(2 + RULES.waitBonus);
+    expect(state.sides.vigilante.energy).toBe(2 + RULES.waitBonus + 1);
+  });
+
   it("rejects cards the player cannot afford", () => {
     const state = setup("POWER", null);
     state.sides.detective.energy = 0;

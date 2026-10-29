@@ -8,6 +8,7 @@ import {
   resolveTurn,
   startTurn,
 } from "../src/case/rules.js";
+import { passivesFor } from "../src/case/characters.js";
 
 export const SIDE_BY_CHARACTER = {
   "Independent Detective": "detective",
@@ -34,7 +35,10 @@ export function createRoom(roomId, players, { rng = Math.random } = {}) {
   return {
     roomId,
     players, // { detective: {socketId, username}, vigilante: {...} }
-    state: createMatch({ rng }),
+    state: createMatch({
+      rng,
+      passives: passivesFor({ detective: players.detective.characterId, vigilante: players.vigilante.characterId }),
+    }),
     choices: {}, // side -> hand index or null (WAIT) for the current turn
     createdAt: Date.now(),
   };
@@ -58,8 +62,14 @@ export function playerView(room, side) {
     rules: state.rules,
     winner: state.winner,
     endReason: state.endReason,
-    you: { energy: me.energy, hand: me.hand, history: me.history, status: me.status },
-    opponent: { energy: foe.energy, handCount: foe.hand.length, history: foe.history, status: foe.status },
+    you: { energy: me.energy, hand: me.hand, history: me.history, status: me.status, passive: me.passive },
+    opponent: {
+      energy: foe.energy,
+      handCount: foe.hand.length,
+      history: foe.history,
+      status: foe.status,
+      passive: foe.passive,
+    },
   };
 }
 

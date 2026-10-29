@@ -1,6 +1,7 @@
 // Small themed building blocks shared by the menu scenes.
 import { FONTS, hex, zone } from "../theme.js";
 import { CHARACTERS, portraitKey } from "../case/characters.js";
+import { PASSIVES } from "../case/rules.js";
 import { buildRubberStamp, paintFrame, paintPhotoCorners, paintPhotoMat } from "./cardFace.js";
 
 /** Shrinks a text object until it fits `maxW` × `maxH` (or reaches `min` px). */
@@ -104,7 +105,7 @@ const SIDES = [
 ];
 
 const TILE = 150;
-const PANEL = { w: 660, h: 340, gap: 360 };
+const PANEL = { w: 660, h: 370, gap: 380 };
 
 /**
  * One case-file panel per side, styled like that side's cards, with its
@@ -117,7 +118,7 @@ export function characterPicker(scene, theme, top, onSelect) {
   const tiles = [];
   const panels = [];
   SIDES.forEach((s, i) => {
-    const y = top + i * PANEL.gap;
+    const y = top - 15 + i * PANEL.gap;
     const card = theme.cards[s.side];
     const ink = hex(card.ink);
     const frame = scene.add.graphics().setPosition(375, y);
@@ -137,16 +138,20 @@ export function characterPicker(scene, theme, top, onSelect) {
     });
     const left = 375 - PANEL.w / 2 + 36;
     scene.add
-      .text(left, y - 136, s.name, { fontFamily: FONTS.body, fontSize: "36px", fontStyle: "600", color: ink })
+      .text(left, y - 151, s.name, { fontFamily: FONTS.body, fontSize: "36px", fontStyle: "600", color: ink })
       .setOrigin(0, 0.5);
+    // The goal, then each character's ability.
+    const abilities = list
+      .filter((c) => PASSIVES[c.passive])
+      .map((c) => `${c.name.split(" ")[0]} · ${PASSIVES[c.passive].name}: ${PASSIVES[c.passive].text}.`);
     const goal = scene.add
-      .text(left, y - 110, s.goal, { fontFamily: FONTS.body, fontSize: "24px", color: ink, wordWrap: { width: PANEL.w - 72 } })
+      .text(left, y - 125, [s.goal, ...abilities].join("\n"), { fontFamily: FONTS.body, fontSize: "24px", color: ink, wordWrap: { width: PANEL.w - 72 } })
       .setOrigin(0, 0);
-    fit(goal, PANEL.w - 72, 64, 18);
+    fit(goal, PANEL.w - 72, 84, 18);
 
     list.forEach((c, j) => {
       const x = 375 + (j - (list.length - 1) / 2) * (TILE + 60);
-      const ty = y + 38;
+      const ty = y + 48;
       const mat = scene.add.graphics();
       paintPhotoMat(mat, x, ty, TILE + 16, TILE + 16);
       scene.add.image(x, ty, portraitKey(c)).setDisplaySize(TILE, TILE);

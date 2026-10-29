@@ -27,6 +27,13 @@ export const EFFECTS = {
   heat: { name: "Heat", turns: 2, text: "the meter drifts your way for 2 turns" },
 };
 
+// Each character has one passive ability (`passive` in characters.js). It
+// lasts the whole match and both players can see it.
+export const PASSIVES = {
+  hunch: { name: "Hunch", text: "Counters and Baits cost 1 less" },
+  patience: { name: "Patience", text: "Waiting saves +1 more energy" },
+};
+
 const noStatus = () => ({ shaken: 0, cornered: 0, heat: 0 });
 
 /** How far a card moves the meter this turn (`amount` defaults to its normal push). */
@@ -69,7 +76,7 @@ function draw(player, count, rng) {
   }
 }
 
-export function createMatch({ rng = Math.random, rules = RULES } = {}) {
+export function createMatch({ rng = Math.random, rules = RULES, passives = {} } = {}) {
   const sides = {};
   SIDE_IDS.forEach((id) => {
     sides[id] = {
@@ -79,6 +86,8 @@ export function createMatch({ rng = Math.random, rules = RULES } = {}) {
       discard: [],
       history: [], // what this side played each turn (null = waited)
       status: noStatus(), // turns left of each effect on this side
+      passive: passives[id] ?? null, // a key of PASSIVES
+
     };
   });
   const state = {
@@ -105,11 +114,19 @@ export function startTurn(state, rng = Math.random) {
   return state;
 }
 
-/** What a card costs this side right now (Shaken makes Power cost more). */
+/** What a card costs this side right now (Shaken makes Power cost more, Hunch makes tricks cheaper). */
 export function costFor(state, side, card) {
-  const shaken = state.sides[side].status?.shaken > 0 && card.type === "POWER";
-  return card.cost + (shaken ? state.rules.shakenExtraCost : 0);
+  const { status, passive } = state.sides[side];
+  const shaken = status?.shaken > 0 && card.type === "POWER";
+  const hunch = passive === "hunch" && (card.type === "COUNTER" || card.type === "BAIT");
+  return card.cost + (shaken ? state.rules.shakenExtraCost : 0) - (hunch ? 1 : 0);
 }
+
+/** Extra energy this side gets for waiting. */
+export function waitBonusFor(state, side) {
+  return state.rules.waitBonus + (state.sides[side].passive === "patience" ? 1 : 0);
+}
+
 
 export function canAfford(state, side, card) {
   return !!card && costFor(state, side, card) <= state.sides[side].energy;
@@ -164,7 +181,7 @@ export function resolveTurn(state, plays) {
       p.discard.push(card);
       played[side] = card;
     } else {
-      p.energy = Math.min(rules.maxEnergy, p.energy + rules.waitBonus);
+      p.energy = Math.min(rules.maxEnergy, p.energy + waitBonusFor(state, side));
       played[side] = null;
       events.push({ type: "wait", side, energy: p.energy });
     }
@@ -257,5 +274,6 @@ export function publicView(state, side) {
     handCount: p.hand.length,
     history: [...p.history],
     status: { ...p.status },
+    passive: p.passive,
   };
 }

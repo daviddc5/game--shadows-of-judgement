@@ -1,5 +1,5 @@
 import { SIDES } from "./cards.js";
-import { canAfford, costFor, mustPlay, otherSide, publicView, pushFor } from "./rules.js";
+import { canAfford, costFor, mustPlay, otherSide, publicView, pushFor, waitBonusFor } from "./rules.js";
 
 const POWER_THREAT_ENERGY = 6; // cheapest POWER card cost
 const TYPICAL_POWER = 60; // average push of a POWER card
@@ -50,7 +50,8 @@ function expectedGain(state, side, card, p) {
   if (!card) {
     // WAIT: nothing pushes and risks an AMBUSH. It is worth it mainly when
     // the bonus energy makes a POWER card in hand playable next turn.
-    const { energyPerTurn, waitBonus } = state.rules;
+    const { energyPerTurn } = state.rules;
+    const waitBonus = waitBonusFor(state, side);
     const unlocks = me.hand.find(
       (c) =>
         c.type === "POWER" &&

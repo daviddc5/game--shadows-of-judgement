@@ -151,8 +151,13 @@ both sides.
 Each side can have several characters (`src/case/characters.js`); the player
 picks side and character on the character-select screen, the AI picks a random
 character for its side, and online opponents see the character you chose.
-Characters are cosmetic for now (portrait and name); the long-term plan is a
-passive ability and signature cards each (see COLLECTION_AND_SHOP.md). Current
+Each character has one **passive ability** (`passive` in `characters.js`,
+`PASSIVES` in `rules.js`), shown as an outlined tag beside their name, on the
+character-select screen and on an Abilities page in the rules. Deniz has
+**Hunch** (his Counters and Baits cost 1 less: the cheeky trickster) and
+Giovanni has **Patience** (Waiting saves +1 more energy: calm and
+calculating). Both feed the energy read. Signature cards are the next step
+(see COLLECTION_AND_SHOP.md). Current
 roster: Deniz Kaya (Detective) and Giovanni Santoro (Vigilante). Draft
 AI-made portraits for two more characters (Mara Vale, Wren) are kept in
 `art/drafts/` but not used: the owner is holding off on adding more AI art.
@@ -253,8 +258,8 @@ owner).
    Counter really cancels your Power and a Bait really lands). See
    [CAMPAIGN.md](CAMPAIGN.md).
 3. The next campaign case, "The Harbour Fire" (start behind on the meter).
-4. One passive ability per character (Deniz, Giovanni), the first step toward
-   more characters, signature cards and later the shop.
+4. ~~One passive ability per character~~ Built on the longer-games branch
+   (Hunch and Patience, see Characters above); needs a human playtest.
 
 **Not yet tested:** a multiplayer match on the live server after the latest
 changes (the online flow was last tested headlessly before the fanned hand).
@@ -262,8 +267,8 @@ changes (the online flow was last tested headlessly before the fanned hand).
 ## Roadmap
 
 1. **Now: give the game characters.** In order: characters think (inner
-   thoughts, done), cards with status effects (done), then one passive ability
-   per character and ally (character) cards. See
+   thoughts, done), cards with status effects (done), one passive ability
+   per character (built on a branch), then ally (character) cards. See
    [CHARACTERS_PLAN.md](CHARACTERS_PLAN.md).
 2. **Campaign.** Started: a Campaign screen with a guided tutorial as Case 0,
    three placeholder cases. See [CAMPAIGN.md](CAMPAIGN.md).

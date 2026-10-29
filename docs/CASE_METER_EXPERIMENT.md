@@ -38,6 +38,11 @@ running the same engine via `server/caseRoom.js`).
     turn if they can afford any card.
   - **Heat** (Most Wanted, Smear Campaign; cost 3, push 10): the meter drifts
     10 your way at the start of each of the next 2 turns.
+- **Character abilities.** Each character has one passive ability, always on
+  and visible to both players as an outlined tag by their name:
+  - **Hunch** (Deniz, Detective): his Counters and Baits cost 1 less.
+  - **Patience** (Giovanni, Vigilante): Waiting saves +1 more energy (+4 in
+    all instead of +3).
 - **Rising stakes.** Every card gains +5 push per turn, so games end in about
   13 turns. After turn 20, whichever side the needle leans wins.
 

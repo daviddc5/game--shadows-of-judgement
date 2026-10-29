@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { CHARACTERS, getCharacter, portraitFiles, portraitKey, randomCharacter } from "./characters.js";
+import { CHARACTERS, getCharacter, passivesFor, portraitFiles, portraitKey, randomCharacter } from "./characters.js";
+import { PASSIVES } from "./rules.js";
 
 describe("characters", () => {
   it("every side has at least one character with a neutral portrait", () => {
@@ -7,6 +8,16 @@ describe("characters", () => {
       expect(CHARACTERS[side].length).toBeGreaterThan(0);
       CHARACTERS[side].forEach((c) => expect(c.files.neutral).toBeTruthy());
     }
+  });
+
+  it("every character's ability exists, and passivesFor maps ids to them", () => {
+    Object.values(CHARACTERS)
+      .flat()
+      .forEach((c) => expect(PASSIVES[c.passive]).toBeTruthy());
+    expect(passivesFor()).toEqual({
+      detective: CHARACTERS.detective[0].passive,
+      vigilante: CHARACTERS.vigilante[0].passive,
+    });
   });
 
   it("character ids are unique", () => {

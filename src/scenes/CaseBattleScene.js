@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { SIDES } from "../case/cards.js";
 import {
   EFFECTS,
+  PASSIVES,
   canAfford,
   createMatch,
   mustPlay,
@@ -9,9 +10,10 @@ import {
   pushFor,
   resolveTurn,
   startTurn,
+  waitBonusFor,
 } from "../case/rules.js";
 import { chooseAiPlay } from "../case/ai.js";
-import { getCharacter, portraitKey, randomCharacter } from "../case/characters.js";
+import { getCharacter, passivesFor, portraitKey, randomCharacter } from "../case/characters.js";
 import { pickLine } from "../case/dialogue.js";
 import { getCase } from "../case/campaign.js";
 import { isMuted, playDuelMusic, playSfx, setMuted, stopMusic } from "../audio.js";
@@ -113,6 +115,7 @@ function applyView(state, view) {
     hand: new Array(view.opponent.handCount).fill(null),
     history: view.opponent.history,
     status: view.opponent.status,
+    passive: view.opponent.passive,
   };
 }
 
@@ -141,7 +144,6 @@ export default class CaseBattleScene extends Phaser.Scene {
     } else {
       const playerCharacter = this.registry.get("playerCharacter");
       this.playerSide = playerCharacter === "Vigilante" ? "vigilante" : "detective";
-      this.state = createMatch();
     }
     this.opponentSide = otherSide(this.playerSide);
     // Who each side is played as. getCharacter falls back to the side's default,
@@ -150,6 +152,13 @@ export default class CaseBattleScene extends Phaser.Scene {
     this.opponentCharacter = this.online
       ? getCharacter(this.opponentSide, this.online.opponent?.characterId)
       : randomCharacter(this.opponentSide);
+    if (!this.online) {
+      const passives = passivesFor({
+        [this.playerSide]: this.playerCharacter.id,
+        [this.opponentSide]: this.opponentCharacter.id,
+      });
+      this.state = createMatch({ passives });
+    }
     this.theme = getTheme();
     this.selectedIndex = null;
     this.busy = false;
@@ -1320,7 +1329,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const red = this.theme.red;
 
     if (event.type === "wait") {
-      this.floatText(x, y + 70, `+${this.state.rules.waitBonus} ⬢ saved`, hex(z.soft), 28, FONT_BODY);
+      this.floatText(x, y + 70, `+${waitBonusFor(this.state, event.side)} ⬢ saved`, hex(z.soft), 28, FONT_BODY);
       playSfx(this, "charge");
       return;
     }
@@ -1673,11 +1682,14 @@ export default class CaseBattleScene extends Phaser.Scene {
   updateWaitButton() {
     const { rules } = this.state;
     const cornered = mustPlay(this.state, this.playerSide);
-    this.waitButton.setLabel(cornered ? "Cornered" : `Wait  +${rules.energyPerTurn + rules.waitBonus} ⬢`);
+    this.waitButton.setLabel(cornered ? "Cornered" : `Wait  +${rules.energyPerTurn + waitBonusFor(this.state, this.playerSide)} ⬢`);
     this.waitButton.setEnabled(!cornered);
   }
 
-  /** Red tags beside each side's energy for the status effects on them. */
+  /**
+   * Tags beside each side's energy: their ability first (outlined, always
+   * there), then a red one for each status effect on them.
+   */
   updateStatusTags() {
     for (const [who, side, x, y] of [
       ["player", this.playerSide, 470, 906],
@@ -1691,6 +1703,16 @@ export default class CaseBattleScene extends Phaser.Scene {
       // Below a raised hand card (depth 20), so the card you're looking at is never drawn over.
       const c = this.add.container(x, y).setDepth(15);
       let cx = 0;
+      const ability = PASSIVES[this.state.sides[side].passive];
+      if (ability) {
+        const ink = this.z(y).ink;
+        const t = this.add
+          .text(cx + 12, 0, ability.name, { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: hex(ink) })
+          .setOrigin(0, 0.5);
+        const pill = this.add.graphics().lineStyle(2, ink, 1).strokeRoundedRect(cx, -17, t.width + 24, 34, 17);
+        c.add([pill, t]);
+        cx += t.width + 32;
+      }
       for (const label of tags) {
         const t = this.add
           .text(cx + 12, 0, label, { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: "#f4f2ec" })
@@ -1699,11 +1721,11 @@ export default class CaseBattleScene extends Phaser.Scene {
         c.add([pill, t]);
         cx += t.width + 32;
       }
-      if (tags.length) {
-        // Tapping a tag explains it.
+      if (cx > 0) {
+        // Tapping a tag explains it: on the Status effects page, or Abilities if there are no effects.
         c.setInteractive(new Phaser.Geom.Rectangle(0, -20, cx, 40), Phaser.Geom.Rectangle.Contains);
         c.input.cursor = "pointer";
-        c.on("pointerdown", () => this.showRules(1));
+        c.on("pointerdown", () => this.showRules(tags.length ? 2 : 1));
       }
       this.statusTags = { ...this.statusTags, [who]: c };
     }
@@ -1793,13 +1815,16 @@ export default class CaseBattleScene extends Phaser.Scene {
     const shade = this.overlay(100).setFillStyle(this.theme.paper, 0.97);
     shade.on("pointerdown", () => this.hideRules());
     panel.add(shade);
-    const pages = [() => this.rulesPage(panel, ink), () => this.statusPage(panel, ink, soft)];
+    const pages = [
+      () => this.rulesPage(panel, ink),
+      () => this.abilitiesPage(panel, ink),
+      () => this.statusPage(panel, ink, soft),
+    ];
     pages[page]();
 
-    const other = page === 0 ? 1 : 0;
-    const nav = button(this, this.theme, W / 2, 1110, 440, page === 0 ? "Status effects ▶" : "◀ How it works", () =>
-      this.showRules(other),
-    );
+    const next = (page + 1) % pages.length;
+    const label = ["◀ How it works", "Abilities ▶", "Status effects ▶"][next];
+    const nav = button(this, this.theme, W / 2, 1110, 440, label, () => this.showRules(next));
     const close = this.add
       .text(W / 2, 1210, "Tap anywhere else to close", { fontFamily: FONT_BODY, fontSize: "26px", color: soft })
       .setOrigin(0.5);
@@ -1837,7 +1862,48 @@ export default class CaseBattleScene extends Phaser.Scene {
       ].join("\n"),
       { fontFamily: FONT_BODY, fontSize: "26px", color: ink, lineSpacing: 8 },
     );
+    fit(text, 620, 1050 - text.y, 20); // stay above the page button with larger text
     panel.add([title, text]);
+  }
+
+  /** Each side's character ability, in the same outlined tag as beside their name. */
+  abilitiesPage(panel, ink) {
+    const title = this.add
+      .text(W / 2, 150, "Abilities", { fontFamily: FONT_DISPLAY, fontSize: "64px", color: ink })
+      .setOrigin(0.5);
+    const intro = this.add.text(
+      70,
+      225,
+      "Every character has one ability. It is always on, and both players can see it in the outlined tag beside a name.",
+      { fontFamily: FONT_BODY, fontSize: "26px", color: ink, lineSpacing: 6, wordWrap: { width: 610 } },
+    );
+    panel.add([title, intro]);
+    let y = intro.y + intro.height + 50;
+    for (const [side, character] of [
+      [this.playerSide, this.playerCharacter],
+      [this.opponentSide, this.opponentCharacter],
+    ]) {
+      const ability = PASSIVES[this.state.sides[side].passive];
+      if (!ability) continue;
+      const who = side === this.playerSide ? `${character.name} (you)` : character.name;
+      const name = this.add.text(70, y, who, { fontFamily: FONT_BODY, fontSize: "26px", fontStyle: "600", color: ink });
+      const tag = this.add
+        .text(82, name.y + name.height + 26, ability.name, { fontFamily: FONT_BODY, fontSize: "24px", fontStyle: "600", color: ink })
+        .setOrigin(0, 0.5);
+      const pill = this.add
+        .graphics()
+        .lineStyle(2, this.theme.ink, 1)
+        .strokeRoundedRect(70, tag.y - 18, tag.width + 24, 36, 18);
+      const body = this.add.text(70, tag.y + 30, `${ability.text}.`, {
+        fontFamily: FONT_BODY,
+        fontSize: "26px",
+        color: ink,
+        lineSpacing: 6,
+        wordWrap: { width: 610 },
+      });
+      panel.add([name, pill, tag, body]);
+      y = body.y + body.height + 50;
+    }
   }
 
   /** Each status effect with its red stamp, and who has it right now. */

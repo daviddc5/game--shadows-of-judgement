@@ -38,6 +38,12 @@ describe("playerView", () => {
     expect(view.opponent.hand).toBeUndefined();
     expect(view.opponent.handCount).toBe(view.you.hand.length);
   });
+
+  it("shows both sides' abilities, taken from their characters", () => {
+    const view = playerView(newRoom(), "detective");
+    expect(view.you.passive).toBe("hunch");
+    expect(view.opponent.passive).toBe("patience");
+  });
 });
 
 describe("submitPlay", () => {

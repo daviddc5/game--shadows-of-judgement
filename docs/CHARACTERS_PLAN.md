@@ -75,6 +75,30 @@ is unlikely to play Power.
 
 Check every new card with `npm run simulate` before playtesting.
 
+## 2b. One passive ability per character (built)
+
+Each character has one ability that is always on and that both players can
+see (an outlined tag beside the name; explained on the rules' Abilities page
+and on character select). Picked by the owner from options run in the
+simulator (20,000 games each; no abilities is 49/51):
+
+| Option | Detective / Vigilante wins |
+| --- | --- |
+| Patience alone (Waiting saves +1 more) | about +11 points for its side |
+| Hunch, Counters only (cost 1 less) | about +7 |
+| Quick Study (Quick cards push +5) | about +7 |
+| Sleight of Hand (sprung traps push +10 more) | about +1.5 |
+| Deep Pockets (Power costs 1 less) | about +25: far too strong |
+| **Hunch (Counters and Baits cost 1 less) vs Patience** | **51.5 / 48.4 (50,000 games)** |
+
+So Deniz has **Hunch** and Giovanni **Patience**. Both create reads: a
+Deniz with 1 energy can still Counter, so a Power into him is riskier, and
+Baiting Giovanni's Counters is cheap for Deniz. A waiting Giovanni banks
+energy fast, so a Power from him is never far off.
+
+`npm run simulate` plays each side's default character's ability; try others
+with e.g. `detective=none vigilante=hunch`.
+
 ## 3. Ally cards
 
 Most cards stay one-shot actions. A few are people who join your side and
