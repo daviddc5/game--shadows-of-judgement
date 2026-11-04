@@ -1,13 +1,15 @@
 import Phaser from "phaser";
 import { SIDES } from "../case/cards.js";
 import {
+  ALLIES,
   EFFECTS,
   PASSIVES,
+  allyOf,
   canAfford,
+  cardPushFor,
   createMatch,
   mustPlay,
   otherSide,
-  pushFor,
   resolveTurn,
   startTurn,
   waitBonusFor,
@@ -116,6 +118,7 @@ function applyView(state, view) {
     history: view.opponent.history,
     status: view.opponent.status,
     passive: view.opponent.passive,
+    ally: view.opponent.ally,
   };
 }
 
@@ -1221,7 +1224,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     const strength = { player: 0, opponent: 0 };
     for (const e of events) {
       if (!["push", "counter", "sprung"].includes(e.type)) continue;
-      const amount = pushFor(this.state, e.card, e.type === "sprung" ? e.card.bigPush : e.card.push);
+      const amount = cardPushFor(this.state, e.side, e.card, e.type === "sprung");
       strength[e.side === this.playerSide ? "player" : "opponent"] += amount;
     }
     return strength;
@@ -1343,7 +1346,7 @@ export default class CaseBattleScene extends Phaser.Scene {
       this.hintText.setText(
         target?.type === "BAIT"
           ? "Baited! That looked like a Power play."
-          : "A Counter only stops Power cards.",
+          : "A Counter only stops Power cards and Allies.",
       );
       await wait(this, 700);
       return;
@@ -1402,6 +1405,32 @@ export default class CaseBattleScene extends Phaser.Scene {
       await this.tweenMeter(event.to);
       this.updatePortraits();
       await wait(this, 300);
+      return;
+    }
+
+    if (event.type === "allyDrift") {
+      this.floatText(this.meterX(event.to), METER.y + 60, ALLIES[event.ally].name, hex(z.ink), 40);
+      await this.tweenMeter(event.to);
+      this.updatePortraits();
+      await wait(this, 300);
+      return;
+    }
+
+    if (event.type === "ally") {
+      const at = who === "player" ? { x: 80, y: 880 } : { x: 100, y: 190 };
+      this.tweens.add({ targets: face, y: y - 16, duration: 160, yoyo: true, ease: "Quad.easeOut" });
+      this.floatText(at.x + 140, at.y, `${ALLIES[event.ally].name} joins!`, hex(this.z(at.y).ink), 48);
+      playSfx(this, "charge");
+      this.think(who, "ALLY");
+      this.updateStatusTags();
+      await wait(this, 800);
+      return;
+    }
+
+    if (event.type === "allyLeaves") {
+      const at = who === "player" ? { x: 80, y: 880 } : { x: 100, y: 190 };
+      this.floatText(at.x + 140, at.y, `${ALLIES[event.ally].name} leaves`, hex(this.z(at.y).soft), 36, FONT_BODY);
+      await wait(this, 500);
       return;
     }
 
@@ -1688,7 +1717,8 @@ export default class CaseBattleScene extends Phaser.Scene {
 
   /**
    * Tags beside each side's energy: their ability first (outlined, always
-   * there), then a red one for each status effect on them.
+   * there), their ally if one is helping (filled, with turns left), then a
+   * red one for each status effect on them.
    */
   updateStatusTags() {
     for (const [who, side, x, y] of [
@@ -1713,6 +1743,21 @@ export default class CaseBattleScene extends Phaser.Scene {
         c.add([pill, t]);
         cx += t.width + 32;
       }
+      const ally = allyOf(this.state, side);
+      if (ally) {
+        const z = this.z(y);
+        const t = this.add
+          .text(cx + 12, 0, `${ally.name} ${this.state.sides[side].ally.turns}`, {
+            fontFamily: FONT_BODY,
+            fontSize: "22px",
+            fontStyle: "600",
+            color: hex(z.paper),
+          })
+          .setOrigin(0, 0.5);
+        const pill = this.add.graphics().fillStyle(z.ink, 1).fillRoundedRect(cx, -17, t.width + 24, 34, 17);
+        c.add([pill, t]);
+        cx += t.width + 32;
+      }
       for (const label of tags) {
         const t = this.add
           .text(cx + 12, 0, label, { fontFamily: FONT_BODY, fontSize: "22px", fontStyle: "600", color: "#f4f2ec" })
@@ -1722,7 +1767,7 @@ export default class CaseBattleScene extends Phaser.Scene {
         cx += t.width + 32;
       }
       if (cx > 0) {
-        // Tapping a tag explains it: on the Status effects page, or Abilities if there are no effects.
+        // Tapping a tag explains it: on the Status effects page, or Abilities and Allies if there are no effects.
         c.setInteractive(new Phaser.Geom.Rectangle(0, -20, cx, 40), Phaser.Geom.Rectangle.Contains);
         c.input.cursor = "pointer";
         c.on("pointerdown", () => this.showRules(tags.length ? 2 : 1));
@@ -1823,7 +1868,7 @@ export default class CaseBattleScene extends Phaser.Scene {
     pages[page]();
 
     const next = (page + 1) % pages.length;
-    const label = ["◀ How it works", "Abilities ▶", "Status effects ▶"][next];
+    const label = ["◀ How it works", "Abilities & Allies ▶", "Status effects ▶"][next];
     const nav = button(this, this.theme, W / 2, 1110, 440, label, () => this.showRules(next));
     const close = this.add
       .text(W / 2, 1210, "Tap anywhere else to close", { fontFamily: FONT_BODY, fontSize: "26px", color: soft })
@@ -1849,9 +1894,10 @@ export default class CaseBattleScene extends Phaser.Scene {
         "",
         "Every special card beats one thing:",
         "   Power: a big push, unless countered",
-        "   Counter: stops Power, otherwise fizzles",
+        "   Counter: stops Power or an Ally, otherwise fizzles",
         "   Bait: a big push if they Counter",
         "   Ambush: a big push if they Wait",
+        `   Ally: joins you for ${ALLIES.lin.turns} turns and helps`,
         "",
         `You gain +${r.energyPerTurn} ⬢ a turn (max ${r.maxEnergy}). Waiting`,
         `gives an extra +${r.waitBonus} ⬢. Watch their energy:`,
@@ -1869,16 +1915,19 @@ export default class CaseBattleScene extends Phaser.Scene {
   /** Each side's character ability, in the same outlined tag as beside their name. */
   abilitiesPage(panel, ink) {
     const title = this.add
-      .text(W / 2, 150, "Abilities", { fontFamily: FONT_DISPLAY, fontSize: "64px", color: ink })
+      .text(W / 2, 150, "Abilities & Allies", { fontFamily: FONT_DISPLAY, fontSize: "60px", color: ink })
       .setOrigin(0.5);
     const intro = this.add.text(
       70,
       225,
-      "Every character has one ability. It is always on, and both players can see it in the outlined tag beside a name.",
+      "Every character has one ability, always on and shown in the outlined tag beside their name.",
       { fontFamily: FONT_BODY, fontSize: "26px", color: ink, lineSpacing: 6, wordWrap: { width: 610 } },
     );
-    panel.add([title, intro]);
-    let y = intro.y + intro.height + 50;
+    // Everything below the title; shrunk to fit above the page button with larger text.
+    const content = this.add.container(0, 0);
+    content.add(intro);
+    panel.add([title, content]);
+    let y = intro.y + intro.height + 36;
     for (const [side, character] of [
       [this.playerSide, this.playerCharacter],
       [this.opponentSide, this.opponentCharacter],
@@ -1901,8 +1950,40 @@ export default class CaseBattleScene extends Phaser.Scene {
         lineSpacing: 6,
         wordWrap: { width: 610 },
       });
-      panel.add([name, pill, tag, body]);
-      y = body.y + body.height + 50;
+      content.add([name, pill, tag, body]);
+      y = body.y + body.height + 36;
+    }
+
+    // Allies: each side's ally card, and whether they're helping right now.
+    const heading = this.add.text(70, y, "Allies", { fontFamily: FONT_DISPLAY, fontSize: "44px", color: ink });
+    const allyIntro = this.add.text(
+      70,
+      heading.y + heading.height + 8,
+      "An Ally pushes nothing: they join you next turn and help while they stay. A Counter cancels them as they arrive.",
+      { fontFamily: FONT_BODY, fontSize: "26px", color: ink, lineSpacing: 6, wordWrap: { width: 610 } },
+    );
+    content.add([heading, allyIntro]);
+    y = allyIntro.y + allyIntro.height + 24;
+    for (const side of [this.playerSide, this.opponentSide]) {
+      const card = SIDES[side].cards.find((k) => k.type === "ALLY");
+      if (!card) continue;
+      const ally = ALLIES[card.ally];
+      const left = this.state.sides[side].ally?.id === card.ally ? this.state.sides[side].ally.turns : 0;
+      const whose = side === this.playerSide ? "yours" : "theirs";
+      const line = this.add.text(
+        70,
+        y,
+        `${ally.name} (${whose}): ${ally.text} for ${ally.turns} turns.${left ? ` Helping now: ${left} turn${left > 1 ? "s" : ""} left.` : ""}`,
+        { fontFamily: FONT_BODY, fontSize: "26px", color: ink, lineSpacing: 6, wordWrap: { width: 610 } },
+      );
+      content.add(line);
+      y = line.y + line.height + 16;
+    }
+    const top = intro.y;
+    const bottom = 1050;
+    if (y > bottom) {
+      const scale = (bottom - top) / (y - top);
+      content.setScale(scale).setPosition((W / 2) * (1 - scale), top * (1 - scale));
     }
   }
 

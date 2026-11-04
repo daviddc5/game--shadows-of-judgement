@@ -11,6 +11,7 @@
 //                 their card landed (QUICK and NORMAL only sometimes)
 //   COUNTER       their Counter stopped a Power card
 //   BAIT, AMBUSH  their trap sprang
+//   ALLY          their ally joined them
 //   WAIT          they waited (rarely)
 //   fizzle        the other side's Counter had nothing to stop
 //   winning       the chase moved their way and they are close to their goal
@@ -28,6 +29,7 @@ export const LINES = {
     COUNTER: ["Called it! Big moves are so easy to read.", "Ha! I had a trick up my sleeve for that."],
     BAIT: ["Fake raid, real results! Heh.", "Took the bait! I'm hilarious."],
     AMBUSH: ["Nap time? Nope! I brought snacks for the stakeout.", "Caught resting! Good thing I never sleep on a case."],
+    ALLY: ["Backup's here! Now it's a party.", "Two brains, one case. Unfair? Yep."],
     WAIT: ["Let's see what they've got. Popcorn ready.", "Saving my best trick for later."],
     fizzle: ["Blocked nothing! That was kind of funny.", "Ooh, jumpy! Somebody's nervous."],
     winning: ["This is way too much fun!", "Almost got 'em! Don't stop now!"],
@@ -47,6 +49,7 @@ export const LINES = {
     COUNTER: ["Predictable. I counted on it.", "Every move, foreseen."],
     BAIT: ["Exactly as I planned.", "They guarded the wrong door. Perfect."],
     AMBUSH: ["Resting? A luxury I never allow myself.", "While they slept, I worked."],
+    ALLY: ["A friend of the family. Grazie.", "Every boss needs good people."],
     WAIT: ["Patience is a weapon.", "Let them make the first mistake."],
     fizzle: ["Afraid of shadows. What a pity.", "Nerves. They always betray the amateur."],
     winning: ["Check. Soon, checkmate.", "One more street, and I am a rumour again."],

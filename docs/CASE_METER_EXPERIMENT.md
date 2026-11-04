@@ -19,7 +19,7 @@ running the same engine via `server/caseRoom.js`).
   | Card | Does | Beats | Loses to |
   | --- | --- | --- | --- |
   | POWER | Big push | Ordinary cards | COUNTER |
-  | COUNTER | Cancels POWER (its energy is still spent) and pushes; fizzles otherwise | POWER | BAIT |
+  | COUNTER | Cancels POWER or ALLY (its energy is still spent) and pushes; fizzles otherwise | POWER, ALLY | BAIT |
   | BAIT | Small push, big push if the opponent COUNTERs | COUNTER | Ordinary cards |
   | AMBUSH | Small push, big push if the opponent WAITs | WAIT | Ordinary cards |
 - **Scarce, visible energy.** +2 per turn, max 10. WAIT gives +1 extra. Both
@@ -38,6 +38,10 @@ running the same engine via `server/caseRoom.js`).
     turn if they can afford any card.
   - **Heat** (Most Wanted, Smear Campaign; cost 3, push 10): the meter drifts
     10 your way at the start of each of the next 2 turns.
+- **Ally cards** (Dr. Lin, Vera; cost 3): push nothing; the person joins you
+  from next turn for 3 turns. Dr. Lin: your Quick and Normal cards push +20.
+  Vera: the meter drifts 10 toward Escape each turn. One ally per side. A
+  Counter cancels an Ally on the turn they arrive, as it does a Power card.
 - **Character abilities.** Each character has one passive ability, always on
   and visible to both players as an outlined tag by their name:
   - **Hunch** (Deniz, Detective): his Counters and Baits cost 1 less.

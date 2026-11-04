@@ -4,7 +4,7 @@
 // number. A status effect is a red rubber stamp over the photo. Everything is
 // drawn from the player's board theme.
 import { FONTS, hex } from "../theme.js";
-import { EFFECTS, costFor, pushFor } from "../case/rules.js";
+import { ALLIES, EFFECTS, cardPushFor, costFor, pushFor } from "../case/rules.js";
 import { iconKey } from "./cardIcons.js";
 import { buildPlaceholderArt } from "./cardArtPlaceholder.js";
 import { fit } from "./widgets.js";
@@ -28,6 +28,7 @@ export const TYPE_NAMES = {
   POWER: "Power",
   BAIT: "Bait",
   AMBUSH: "Ambush",
+  ALLY: "Ally",
 };
 
 const MAT_COLOR = 0xefece3;
@@ -206,6 +207,7 @@ export function buildCardFace(scene, card, side) {
     POWER: "A Counter cancels it",
     BAIT: `${sprung} if they Counter, else ${small}`,
     AMBUSH: `${sprung} if they Wait, else ${small}`,
+    ALLY: card.ally && ALLIES[card.ally].short,
   };
   const rule = scene.add
     .text(0, top + 186, (card.effect && effectRule[card.effect]) || typeRule[card.type] || card.flavor || "", {
@@ -220,15 +222,17 @@ export function buildCardFace(scene, card, side) {
     .setAlpha(faded(0.85));
   fit(rule, 150, 36, 14);
 
-  // Bottom row: "Pushes" and how far the card moves the Case meter. Traps show
-  // their sprung value.
-  const push = pushFor(state, card, card.bigPush ?? card.push);
+  // Bottom row: "Pushes" and how far the card moves the Case meter (with your
+  // ally's help). Traps show their sprung value; an ally shows how many turns
+  // they stay.
+  const ally = card.type === "ALLY" && ALLIES[card.ally];
+  const push = ally ? ally.turns : cardPushFor(state, side, card, !!card.bigPush);
   const numberColor = side === "vigilante" ? hex(red) : ink;
   const rowY = top + 223;
   const divider = scene.add.graphics();
   divider.lineStyle(1, style.edge, 1).lineBetween(-77, top + 204, 77, top + 204);
   const pushLabel = scene.add
-    .text(left + 13, rowY, "Pushes", { fontFamily: BODY, fontSize: "20px", color: ink })
+    .text(left + 13, rowY, ally ? "Turns" : "Pushes", { fontFamily: BODY, fontSize: "20px", color: ink })
     .setOrigin(0, 0.5)
     .setAlpha(faded(0.8));
   const number = scene.add

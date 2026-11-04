@@ -197,6 +197,31 @@ function alley(g, rng, box) {
   g.fillStyle(RED, 1).fillRect(-2, far - 17, 1.5, 1.5).fillRect(1, far - 17, 1.5, 1.5);
 }
 
+/** ALLY: someone in a lit doorway, come to help. */
+function doorway(g, rng, box, moonColor) {
+  const { left, top, bottom, w } = box;
+  // A brick wall.
+  g.fillStyle(0x3d3e45, 1).fillRect(left, top, w, bottom - top);
+  g.lineStyle(1, 0x2a2b30, 1);
+  for (let y = top + 6, row = 0; y < bottom; y += 7, row++) {
+    g.lineBetween(left, y, left + w, y);
+    for (let x = left + (row % 2) * 7; x < left + w; x += 14) g.lineBetween(x, y, x, y + 7);
+  }
+  // The doorway, light spilling onto the street, and a figure in a hat.
+  const dw = 30;
+  const dx = left + w * (0.4 + rng() * 0.2);
+  const dt = top + 10;
+  g.fillStyle(WINDOW, 0.25).fillPoints([{ x: dx - dw / 2, y: bottom }, { x: dx + dw / 2, y: bottom }, { x: dx + dw, y: bottom + 0 }, { x: dx - dw, y: bottom }], true);
+  g.fillStyle(WINDOW, 1).fillRect(dx - dw / 2, dt, dw, bottom - dt);
+  g.fillStyle(NEAR_CITY, 1).fillCircle(dx, dt + 20, 6);
+  g.fillRect(dx - 9, dt + 13, 18, 3).fillRect(dx - 5, dt + 9, 10, 5);
+  g.fillPoints([{ x: dx - 5, y: dt + 26 }, { x: dx + 5, y: dt + 26 }, { x: dx + 10, y: bottom }, { x: dx - 10, y: bottom }], true);
+  // A window with its own light, and the side's moon colour on a lamp.
+  g.fillStyle(rng() < 0.5 ? WINDOW : 0x2a2b30, 1).fillRect(left + 10, top + 14, 12, 14);
+  g.fillStyle(moonColor, 1).fillCircle(left + w - 16, top + 18, 3);
+  g.fillStyle(NEAR_CITY, 1).fillRect(left + w - 17, top + 21, 2, bottom - top - 21);
+}
+
 /**
  * Returns the display objects for a placeholder centred at (0, y) inside a
  * card container, w × h in size. `side` decides the moon colour.
@@ -214,6 +239,7 @@ export function buildPlaceholderArt(scene, card, side, y, w, h, edgeColor) {
     case "COUNTER": streetlamp(g, rng, box, vigilante ? RED : null); break;
     case "BAIT": harbour(g, rng, box, moonColor); break;
     case "AMBUSH": alley(g, rng, box); break;
+    case "ALLY": doorway(g, rng, box, moonColor); break;
     default: rooftops(g, rng, box, moonColor);
   }
 

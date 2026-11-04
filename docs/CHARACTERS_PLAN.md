@@ -99,7 +99,34 @@ energy fast, so a Power from him is never far off.
 `npm run simulate` plays each side's default character's ability; try others
 with e.g. `detective=none vigilante=hunch`.
 
-## 3. Ally cards
+## 3. Ally cards (first two built)
+
+Built on the longer-games branch: one Ally card per side (type ALLY, cost 3,
+`ALLIES` in `rules.js`). An ally pushes nothing; they join from next turn for
+3 turns, shown as a filled tag with turns left beside the name, and leave on
+their own. One ally per side (a new one replaces the old). **A Counter also
+cancels an Ally on the turn they arrive**, so high energy now hints at a
+Power *or* an Ally.
+
+| Ally | Side | While in play (3 turns) |
+| --- | --- | --- |
+| Dr. Lin, forensic analyst | Detective | Quick and Normal cards push +20 |
+| Vera, reporter on the payroll | Vigilante | The meter drifts 10 toward Escape each turn |
+
+Tuning (simulator): Vera's steady drift beat Dr. Lin's boost (Lin +10 on
+Normals vs Vera 10 was 47 / 53), so Lin helps Quick and Normal cards and
+gives +20: 49.9 / 50.0 over 50,000 games. Making the help grow with the
+stakes, like card pushes, kept allies relevant late but made Vera a
+guaranteed big push every turn (37 / 63), so it stays fixed: an ally is an
+early investment, which is itself a read. The AI plays an ally about once
+every 4–5 games (one copy per deck, and it holds one for about 5 turns a
+game), so real players will show whether they are worth more.
+
+Left out for now: Marco (Waits save +1 extra) duplicates Giovanni's Patience,
+and Reyes (see a card in their hand) needs hidden-hand care online, like
+Wiretapped. Removal cards beyond the Counter are also left for later.
+
+The original plan:
 
 Most cards stay one-shot actions. A few are people who join your side and
 stay on the board for 2–3 turns, shown as a small portrait next to your name.

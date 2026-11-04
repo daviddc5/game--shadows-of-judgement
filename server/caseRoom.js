@@ -62,13 +62,14 @@ export function playerView(room, side) {
     rules: state.rules,
     winner: state.winner,
     endReason: state.endReason,
-    you: { energy: me.energy, hand: me.hand, history: me.history, status: me.status, passive: me.passive },
+    you: { energy: me.energy, hand: me.hand, history: me.history, status: me.status, passive: me.passive, ally: me.ally },
     opponent: {
       energy: foe.energy,
       handCount: foe.hand.length,
       history: foe.history,
       status: foe.status,
       passive: foe.passive,
+      ally: foe.ally,
     },
   };
 }

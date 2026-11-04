@@ -1,10 +1,11 @@
 import { SIDES } from "./cards.js";
-import { canAfford, costFor, mustPlay, otherSide, publicView, pushFor, waitBonusFor } from "./rules.js";
+import { ALLIES, canAfford, cardPushFor, costFor, mustPlay, otherSide, publicView, pushFor, waitBonusFor } from "./rules.js";
 
 const POWER_THREAT_ENERGY = 6; // cheapest POWER card cost
 const TYPICAL_POWER = 60; // average push of a POWER card
 const TYPICAL_COUNTER = 20;
 const TYPICAL_TRAP_BONUS = 28; // bigPush - push for BAIT/AMBUSH
+const TYPICAL_ALLY = 20; // what an ally is worth over their stay
 
 /**
  * Guesses what the opponent will do this turn from public information only:
@@ -15,7 +16,7 @@ export function predictOpponent(state, side) {
   const me = publicView(state, side);
   const lastMine = me.history[me.history.length - 1];
 
-  const p = { POWER: 0, COUNTER: 0, BAIT: 0, AMBUSH: 0, WAIT: 0.1 };
+  const p = { POWER: 0, COUNTER: 0, BAIT: 0, AMBUSH: 0, ALLY: 0, WAIT: 0.1 };
   // Shaken makes their Power cards cost more.
   const threat = POWER_THREAT_ENERGY + (foe.status?.shaken > 0 ? state.rules.shakenExtraCost : 0);
   if (foe.energy >= threat) p.POWER = foe.energy >= threat + 2 ? 0.4 : 0.3;
@@ -27,6 +28,8 @@ export function predictOpponent(state, side) {
   }
   // They bait when they look threatening and we can afford a COUNTER.
   if (foe.energy >= 3 && me.energy >= 2) p.BAIT = foe.energy >= 5 ? 0.12 : 0.06;
+  // They bring in an ally when they have none.
+  if (foe.energy >= 3 && !(foe.ally?.turns > 0)) p.ALLY = 0.08;
   // Saving up for a POWER card, or too poor to do much.
   if (foe.energy === 4 || foe.energy === 5) p.WAIT += 0.15;
   if (foe.energy < 2) p.WAIT += 0.3;
@@ -68,7 +71,13 @@ function expectedGain(state, side, card, p) {
       gain = (1 - p.COUNTER) * unit(card.push) - p.COUNTER * theirs(TYPICAL_COUNTER);
       break;
     case "COUNTER":
-      gain = p.POWER * (unit(card.push) + theirs(TYPICAL_POWER)) - p.BAIT * theirs(TYPICAL_TRAP_BONUS);
+      gain =
+        p.POWER * (unit(card.push) + theirs(TYPICAL_POWER)) +
+        p.ALLY * (unit(card.push) + TYPICAL_ALLY) -
+        p.BAIT * theirs(TYPICAL_TRAP_BONUS);
+      break;
+    case "ALLY":
+      gain = (1 - p.COUNTER) * allyValue(state, side, card) - p.COUNTER * theirs(TYPICAL_COUNTER);
       break;
     case "BAIT":
       gain = p.COUNTER * unit(card.bigPush) + (1 - p.COUNTER) * unit(card.push);
@@ -77,10 +86,19 @@ function expectedGain(state, side, card, p) {
       gain = p.WAIT * unit(card.bigPush) + (1 - p.WAIT) * unit(card.push);
       break;
     default:
-      gain = unit(card.push);
+      gain = cardPushFor(state, side, card);
   }
   if (card.effect) gain += effectValue(state, side, card.effect, p);
   return gain - costFor(state, side, card) * energyValue;
+}
+
+/** Rough worth, in meter points, of an ally joining this side. */
+function allyValue(state, side, card) {
+  const ally = ALLIES[card.ally];
+  const current = state.sides[side].ally;
+  const overlap = current?.turns > 1 ? 0.3 : 1; // replacing one still helping is mostly waste
+  const perTurn = (ally.drift ?? 0) * 0.9 + (ally.pushBonus ?? 0) * 0.5; // Quick and Normal are about half of plays
+  return overlap * ally.turns * perTurn;
 }
 
 /** Rough worth, in meter points, of putting a status effect on the opponent. */

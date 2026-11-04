@@ -57,7 +57,7 @@ console.log(`turns: p10 ${at(0.1)}, median ${at(0.5)}, p90 ${at(0.9)}`);
 const share = (n) => `${((100 * (n || 0)) / plays).toFixed(1)}%`;
 console.log(
   "plays: " +
-    ["QUICK", "NORMAL", "POWER", "COUNTER", "BAIT", "AMBUSH", "WAIT"]
+    ["QUICK", "NORMAL", "POWER", "COUNTER", "BAIT", "AMBUSH", "ALLY", "WAIT"]
       .map((t) => `${t} ${share(played[t])}`)
       .join(", "),
 );

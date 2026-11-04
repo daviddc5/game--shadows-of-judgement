@@ -9,6 +9,7 @@ export const CARD_TYPES = {
   POWER: { color: 0xf2b33d, label: "POWER" },
   BAIT: { color: 0xb36bff, label: "BAIT" },
   AMBUSH: { color: 0xff8a3d, label: "AMBUSH" },
+  ALLY: { color: 0x9aa0a6, label: "ALLY" },
 };
 
 // Pushes are the numbers shown on turn 1, all multiples of 5, and every card of
@@ -21,6 +22,8 @@ export const CARD_TYPES = {
 //   COUNTER cancels POWER (and pushes); fizzles against anything else
 //   BAIT    small push, or `bigPush` if the opponent played COUNTER
 //   AMBUSH  small push, or `bigPush` if the opponent WAITED
+//   ALLY    no push; a person joins your side for a few turns (ALLIES in
+//           rules.js), unless a COUNTER cancels them as they arrive
 const detectiveCards = [
   { id: "d_canvass", name: "Canvass Witnesses", type: "QUICK", cost: 1, push: 10, copies: 1, flavor: "Someone always saw something." },
   { id: "d_tail", name: "Tail the Suspect", type: "QUICK", cost: 2, push: 15, copies: 1, flavor: "Two cars back. Never closer." },
@@ -35,6 +38,7 @@ const detectiveCards = [
   { id: "d_lockdown", name: "Lockdown", type: "NORMAL", cost: 3, push: 10, effect: "cornered", copies: 1, flavor: "Every exit, every bridge." },
   { id: "d_most_wanted", name: "Most Wanted", type: "NORMAL", cost: 3, push: 10, effect: "heat", copies: 1, flavor: "A face on every wall." },
   { id: "d_stakeout", name: "Stakeout", type: "AMBUSH", cost: 2, push: 5, bigPush: 30, copies: 1, flavor: "Sooner or later, you'll rest." },
+  { id: "d_lin", name: "Dr. Lin", type: "ALLY", cost: 3, push: 0, ally: "lin", copies: 1, flavor: "Forensic analyst. Never wrong twice." },
 ];
 
 const vigilanteCards = [
@@ -51,6 +55,7 @@ const vigilanteCards = [
   { id: "v_blackmail", name: "Blackmail", type: "NORMAL", cost: 3, push: 10, effect: "cornered", copies: 1, flavor: "One photo. One favour." },
   { id: "v_smear", name: "Smear Campaign", type: "NORMAL", cost: 3, push: 10, effect: "heat", copies: 1, flavor: "Read all about the detective." },
   { id: "v_night_raid", name: "Night Raid", type: "AMBUSH", cost: 2, push: 5, bigPush: 30, copies: 1, flavor: "While the task force sleeps." },
+  { id: "v_vera", name: "Vera", type: "ALLY", cost: 3, push: 0, ally: "vera", copies: 1, flavor: "Reporter on the payroll." },
 ];
 
 export const SIDES = {

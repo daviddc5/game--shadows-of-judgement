@@ -1,6 +1,7 @@
 // One simple line symbol per card type, drawn once as a white 64×64 texture
 // and tinted wherever it is used. Keys: "type-icon-POWER", "type-icon-COUNTER", …
 //   POWER crown · COUNTER shield · BAIT mask · AMBUSH dagger · QUICK bolt · NORMAL ink drop
+//   ALLY two people
 
 const SIZE = 64;
 
@@ -47,6 +48,10 @@ const DRAW = {
   NORMAL(g) {
     g.fillCircle(32, 42, 17);
     g.fillTriangle(32, 4, 16, 36, 48, 36);
+  },
+  ALLY(g) {
+    g.fillCircle(22, 18, 10).fillEllipse(22, 50, 32, 30);
+    g.fillCircle(44, 22, 9).fillEllipse(44, 52, 28, 26);
   },
 };
 

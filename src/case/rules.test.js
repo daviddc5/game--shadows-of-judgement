@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { RULES, costFor, createMatch, mustPlay, resolveTurn, startTurn, pushFor } from "./rules.js";
+import { ALLIES, RULES, costFor, createMatch, mustPlay, resolveTurn, startTurn, pushFor } from "./rules.js";
 import { chooseAiPlay } from "./ai.js";
 import { SIDES } from "./cards.js";
 
@@ -143,6 +143,44 @@ describe("Case meter rules", () => {
     resolveTurn(state, play(false, false));
     expect(state.sides.detective.energy).toBe(2 + RULES.waitBonus);
     expect(state.sides.vigilante.energy).toBe(2 + RULES.waitBonus + 1);
+  });
+
+  it("an Ally pushes nothing, joins from next turn and leaves after its turns", () => {
+    const state = setup("ALLY", null);
+    const lin = state.sides.detective.hand[0];
+    const { events } = resolveTurn(state, play(true, false));
+    expect(state.caseValue).toBe(RULES.caseStart);
+    expect(events.some((e) => e.type === "ally" && e.ally === lin.ally)).toBe(true);
+    expect(state.sides.detective.ally).toEqual({ id: lin.ally, turns: ALLIES[lin.ally].turns });
+    for (let t = 0; t < ALLIES[lin.ally].turns; t++) {
+      startTurn(state);
+      expect(state.sides.detective.ally).not.toBeNull();
+      resolveTurn(state, play(false, false));
+    }
+    expect(state.sides.detective.ally).toBeNull();
+  });
+
+  it("Dr. Lin adds to Quick and Normal pushes while helping", () => {
+    const state = setup("QUICK", null);
+    state.sides.detective.ally = { id: "lin", turns: 2 };
+    const quick = state.sides.detective.hand[0];
+    resolveTurn(state, play(true, false));
+    expect(state.caseValue).toBe(RULES.caseStart + pushFor(state, quick) + ALLIES.lin.pushBonus);
+  });
+
+  it("Vera drifts the meter toward the Vigilante each turn", () => {
+    const state = setup(null, null);
+    state.sides.vigilante.ally = { id: "vera", turns: 2 };
+    resolveTurn(state, play(false, false));
+    expect(state.caseValue).toBe(RULES.caseStart - ALLIES.vera.drift);
+  });
+
+  it("a Counter cancels an Ally as they arrive", () => {
+    const state = setup("COUNTER", "ALLY");
+    const { events } = resolveTurn(state, play(true, true));
+    expect(events.some((e) => e.type === "cancelled" && e.side === "vigilante")).toBe(true);
+    expect(events.some((e) => e.type === "counter" && e.side === "detective")).toBe(true);
+    expect(state.sides.vigilante.ally).toBeNull();
   });
 
   it("rejects cards the player cannot afford", () => {

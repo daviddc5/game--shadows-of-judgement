@@ -268,7 +268,8 @@ changes (the online flow was last tested headlessly before the fanned hand).
 
 1. **Now: give the game characters.** In order: characters think (inner
    thoughts, done), cards with status effects (done), one passive ability
-   per character (built on a branch), then ally (character) cards. See
+   per character and the first ally cards (both built on a branch, see
+   CHARACTERS_PLAN.md). See
    [CHARACTERS_PLAN.md](CHARACTERS_PLAN.md).
 2. **Campaign.** Started: a Campaign screen with a guided tutorial as Case 0,
    three placeholder cases. See [CAMPAIGN.md](CAMPAIGN.md).

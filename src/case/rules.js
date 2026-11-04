@@ -34,6 +34,15 @@ export const PASSIVES = {
   patience: { name: "Patience", text: "Waiting saves +1 more energy" },
 };
 
+// Ally cards (type ALLY, `ally` is a key here) push nothing: the person joins
+// your side for `turns` turns, starting next turn, and helps while there. One
+// ally per side; a new one replaces the old. A Counter on the turn they are
+// played cancels them, like a Power card.
+export const ALLIES = {
+  lin: { name: "Dr. Lin", turns: 3, pushBonus: 20, short: "Quick, Normal +20", text: "Quick and Normal cards push +20" },
+  vera: { name: "Vera", turns: 3, drift: 10, short: "Meter +10 a turn", text: "The meter drifts 10 toward Escape each turn" },
+};
+
 const noStatus = () => ({ shaken: 0, cornered: 0, heat: 0 });
 
 /** How far a card moves the meter this turn (`amount` defaults to its normal push). */
@@ -41,6 +50,19 @@ export function pushFor(state, card, amount = card.push) {
   const { pushScale, escalation, escalationFlat } = state.rules;
   const turns = state.turn - 1;
   return Math.round(amount * pushScale * (1 + escalation * turns) + escalationFlat * turns);
+}
+
+/** The ally helping this side right now, or null. */
+export function allyOf(state, side) {
+  const ally = state.sides[side].ally;
+  return ally?.turns > 0 ? ALLIES[ally.id] : null;
+}
+
+/** How far this side's card pushes this turn, with its ally's help (and its trap's big push if `sprung`). */
+export function cardPushFor(state, side, card, sprung = false) {
+  if (card.type === "ALLY") return 0;
+  const bonus = card.type === "NORMAL" || card.type === "QUICK" ? (allyOf(state, side)?.pushBonus ?? 0) : 0;
+  return pushFor(state, card, sprung ? card.bigPush : card.push) + bonus;
 }
 
 /** True when a BAIT or AMBUSH card's condition is met by the opponent's play. */
@@ -87,6 +109,7 @@ export function createMatch({ rng = Math.random, rules = RULES, passives = {} } 
       history: [], // what this side played each turn (null = waited)
       status: noStatus(), // turns left of each effect on this side
       passive: passives[id] ?? null, // a key of PASSIVES
+      ally: null, // { id: key of ALLIES, turns: turns left }
 
     };
   });
@@ -136,6 +159,11 @@ export function canAfford(state, side, card) {
 export function mustPlay(state, side) {
   const p = state.sides[side];
   return p.status?.cornered > 0 && p.hand.some((card) => canAfford(state, side, card));
+}
+
+/** Cards a Counter cancels. */
+function counterable(card) {
+  return card?.type === "POWER" || card?.type === "ALLY";
 }
 
 function clampCase(state, value) {
@@ -188,13 +216,13 @@ export function resolveTurn(state, plays) {
     p.history.push(card ? card.type : null);
   });
 
-  // Counters cancel POWER cards and punish them; otherwise they fizzle.
+  // Counters cancel POWER and ALLY cards and punish them; otherwise they fizzle.
   const cancelled = {};
   SIDE_IDS.forEach((side) => {
     const card = played[side];
     const target = played[otherSide(side)];
     if (card?.type !== "COUNTER") return;
-    if (target?.type === "POWER") {
+    if (counterable(target)) {
       cancelled[otherSide(side)] = true;
     }
   });
@@ -213,6 +241,14 @@ export function resolveTurn(state, plays) {
     running -= SIDES[side].direction * rules.heatDrift;
     events.push({ type: "heat", side, from, to: clampCase(state, running) });
   });
+  // An ally like Vera drags the meter toward their side's goal.
+  SIDE_IDS.forEach((side) => {
+    const drift = allyOf(state, side)?.drift;
+    if (!drift) return;
+    const from = clampCase(state, running);
+    running += SIDES[side].direction * drift;
+    events.push({ type: "allyDrift", side, ally: state.sides[side].ally.id, from, to: clampCase(state, running) });
+  });
   for (const side of order) {
     const card = played[side];
     const direction = SIDES[side].direction;
@@ -220,13 +256,14 @@ export function resolveTurn(state, plays) {
       events.push({ type: "cancelled", side, card });
       continue;
     }
-    if (card.type === "COUNTER" && played[otherSide(side)]?.type !== "POWER") {
+    if (card.type === "COUNTER" && !counterable(played[otherSide(side)])) {
       events.push({ type: "fizzle", side, card });
       continue;
     }
+    if (card.type === "ALLY") continue; // joins after the pushes, below
     const sprung = trapSprung(card, played[otherSide(side)]);
     const from = clampCase(state, running);
-    running += direction * pushFor(state, card, sprung ? card.bigPush : card.push);
+    running += direction * cardPushFor(state, side, card, sprung);
     events.push({
       type: card.type === "COUNTER" ? "counter" : sprung ? "sprung" : "push",
       side,
@@ -244,6 +281,22 @@ export function resolveTurn(state, plays) {
     if (!status) return;
     Object.keys(status).forEach((k) => (status[k] = Math.max(0, status[k] - 1)));
   });
+  // Allies count down too and leave when their time is up, then new ones join.
+  SIDE_IDS.forEach((side) => {
+    const p = state.sides[side];
+    if (!p.ally) return;
+    p.ally.turns -= 1;
+    if (p.ally.turns <= 0) {
+      if (!state.winner) events.push({ type: "allyLeaves", side, ally: p.ally.id });
+      p.ally = null;
+    }
+  });
+  for (const side of order) {
+    const card = played[side];
+    if (card.type !== "ALLY" || cancelled[side] || state.winner) continue;
+    state.sides[side].ally = { id: card.ally, turns: ALLIES[card.ally].turns };
+    events.push({ type: "ally", side, ally: card.ally, card });
+  }
   for (const side of order) {
     const effect = played[side].effect;
     if (!effect || cancelled[side] || state.winner) continue;
@@ -275,5 +328,6 @@ export function publicView(state, side) {
     history: [...p.history],
     status: { ...p.status },
     passive: p.passive,
+    ally: p.ally ? { ...p.ally } : null,
   };
 }

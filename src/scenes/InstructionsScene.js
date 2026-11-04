@@ -83,9 +83,10 @@ export default class InstructionsScene extends Phaser.Scene {
         subtitle: "Every special card beats one thing",
         sections: [
           { type: "POWER", heading: "Power", body: "A huge push, but a Counter stops it cold." },
-          { type: "COUNTER", heading: "Counter", body: "Cancels a Power card and pushes for you. Against anything else, it fizzles." },
+          { type: "COUNTER", heading: "Counter", body: "Cancels a Power or Ally card and pushes for you. Against anything else, it fizzles." },
           { type: "BAIT", heading: "Bait", body: "Looks like a threat. A big push if they Counter, small otherwise." },
           { type: "AMBUSH", heading: "Ambush", body: "A big push if they Wait, small otherwise." },
+          { type: "ALLY", heading: "Ally", body: "Pushes nothing, but someone joins you for 3 turns and helps." },
         ],
       },
       {
