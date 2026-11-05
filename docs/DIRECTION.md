@@ -178,8 +178,9 @@ picked for its Death Note feel.
 
 - **No AI art in the shipped game.** AI is fine for ideas in words and for
   brainstorming, not for images that are copied or traced. The current
-  portraits and music are AI-made and should be replaced before a paid
-  release.
+  portraits and music are AI-made (most likely with Gemini: the portraits
+  carry its sparkle watermark) and should be replaced before a paid release.
+  The portrait prompts are in `design-notes/CharacterDesignNotes.MD`.
 - **The owner is learning to draw** in this style (paper and ink first,
   digital later), alongside working on the game, with the game as the main
   focus. Art comes in as it's ready.
